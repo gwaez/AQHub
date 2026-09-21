@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AQAAR Command</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet" />
+<style>
+:root{--bg:#07111c;--panel:#0c1826;--card:#0f2033;--line:rgba(125,211,252,.16);--text:#e8f3ff;--muted:#8aa4bc;--cyan:#22d3ee;--ok:#34d399;--warn:#fbbf24;--hot:#fb7185}
+*{box-sizing:border-box}html,body{height:100%;margin:0}
+body{color:var(--text);font-family:"IBM Plex Sans Arabic",system-ui,sans-serif;background:radial-gradient(900px 500px at 100% 0%,rgba(34,211,238,.1),transparent 55%),var(--bg)}
+.app{max-width:1480px;margin:0 auto;padding:12px;min-height:100%;display:flex;flex-direction:column;gap:10px}
+.top{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;padding:10px 12px;border:1px solid var(--line);border-radius:16px;background:rgba(12,24,38,.92)}
+.brand{display:flex;gap:8px;align-items:center}.logo{width:32px;height:32px;border-radius:10px;background:linear-gradient(135deg,var(--cyan),#60a5fa)}
+.brand h1{margin:0;font-size:.95rem}.brand p{margin:0;color:var(--muted);font-size:.72rem}
+.views,.filters{display:flex;gap:4px;flex-wrap:wrap;padding:3px;border-radius:12px;background:rgba(0,0,0,.22);border:1px solid var(--line)}
+.chipbtn{border:0;background:transparent;color:var(--muted);padding:6px 10px;border-radius:9px;font:inherit;font-size:.78rem;font-weight:600;cursor:pointer}
+.chipbtn.on{background:rgba(34,211,238,.16);color:var(--cyan)}
+.chipbtn b{font-family:"JetBrains Mono",monospace;margin-right:4px}
+.actions,.toolbar{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.btn,input,select,textarea{border:1px solid var(--line);background:rgba(15,32,51,.95);color:var(--text);border-radius:10px;padding:7px 10px;font:inherit;outline:none}
+.btn{cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:5px;font-weight:500;font-size:.8rem}
+.btn.primary{background:linear-gradient(135deg,var(--cyan),#60a5fa);color:#04131a;border:0;font-weight:700}
+.btn.ghost{color:var(--muted);background:transparent}.btn:disabled{opacity:.4;cursor:not-allowed}
+.icon{position:relative;width:34px;height:34px;padding:0;display:grid;place-items:center}
+.badge{position:absolute;top:-4px;left:-4px;min-width:15px;height:15px;border-radius:999px;background:var(--hot);color:#fff;font-size:.62rem;display:grid;place-items:center}
+.toolbar input[type=search]{min-width:180px;flex:1}
+.main{flex:1}
+.kanban{display:grid;grid-template-columns:repeat(5,minmax(180px,1fr));gap:8px;align-items:start}
+@media(max-width:1100px){.kanban{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:700px){.kanban{grid-template-columns:1fr}}
+.col{border:1px solid var(--line);border-radius:14px;background:rgba(12,24,38,.7);padding:6px;min-height:380px}
+.col.over{outline:2px solid rgba(34,211,238,.45)}
+.col-h{display:flex;justify-content:space-between;align-items:center;padding:2px 4px 6px;margin-bottom:4px;border-bottom:1px solid var(--line);color:var(--muted);font-size:.75rem;font-weight:600}
+.sw{width:7px;height:7px;border-radius:50%;display:inline-block;margin-left:5px;background:currentColor;box-shadow:0 0 7px currentColor}
+.cards{display:flex;flex-direction:column;gap:5px;min-height:60px}
+.card{border:1px solid var(--line);border-radius:10px;padding:6px 8px;background:rgba(15,32,51,.96);cursor:grab;transition:.12s}
+.card:hover{border-color:rgba(34,211,238,.35)}
+.card.dragging{opacity:.35}
+.card .title{font-size:.8rem;font-weight:650;line-height:1.25;margin:0 0 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.meta{display:flex;flex-wrap:wrap;gap:4px;align-items:center}
+.tag{font-size:.62rem;padding:1px 6px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
+.tag.src{color:#a5f3fc}.tag.bot{color:#fde68a;border-color:rgba(251,191,36,.35)}
+.prio{display:inline-flex;gap:2px;align-items:center;cursor:pointer;border:1px solid var(--line);border-radius:999px;padding:1px 6px;font-size:.62rem;color:var(--muted);background:transparent}
+.prio .pip{width:5px;height:5px;border-radius:50%;background:#334155}
+.prio[data-p=low] .pip:nth-child(1){background:var(--ok)}
+.prio[data-p=medium] .pip:nth-child(-n+2){background:var(--warn)}
+.prio[data-p=high] .pip:nth-child(-n+3){background:var(--hot)}
+.prio[data-p=urgent] .pip{background:var(--hot);box-shadow:0 0 5px var(--hot)}
+.row{display:flex;gap:4px;margin-top:4px}
+.mini{flex:1;border:1px solid var(--line);background:rgba(34,211,238,.06);color:var(--cyan);border-radius:8px;padding:3px 6px;font:inherit;font-size:.65rem;cursor:pointer}
+.mini.ghost{color:var(--muted);background:transparent}.mini:disabled{opacity:.3}
+.list{display:flex;flex-direction:column;gap:4px}
+.list-row{display:grid;grid-template-columns:1.5fr .6fr .6fr .6fr auto;gap:6px;align-items:center;padding:7px 9px;border:1px solid var(--line);border-radius:10px;background:rgba(15,32,51,.95);cursor:pointer;font-size:.8rem}
+.list-row .t{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.list-row .s{color:var(--muted);font-size:.72rem}
+.matrix{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.mx{border:1px solid var(--line);border-radius:14px;min-height:180px;padding:8px;background:rgba(12,24,38,.7)}
+.mx h3{margin:0 0 6px;font-size:.78rem;color:var(--muted)}.mx .cards{display:flex;flex-wrap:wrap;gap:5px}.mx .card{width:calc(50% - 3px);min-width:140px}
+.focus{max-width:680px;margin:0 auto}.focus-hero{padding:12px;border:1px solid var(--line);border-radius:14px;margin-bottom:8px;background:rgba(34,211,238,.06)}
+.focus-hero h2{margin:0 0 4px;font-size:.95rem}.focus-hero p{margin:0;color:var(--muted);font-size:.78rem}
+.empty{color:var(--muted);text-align:center;padding:14px 6px;border:1px dashed var(--line);border-radius:10px;font-size:.75rem}
+.backdrop{position:fixed;inset:0;background:rgba(2,8,16,.55);backdrop-filter:blur(3px);opacity:0;pointer-events:none;transition:.15s;z-index:40}
+.backdrop.show{opacity:1;pointer-events:auto}
+.sheet{position:fixed;left:50%;bottom:14px;transform:translate(-50%,110%);width:min(500px,calc(100vw - 20px));max-height:min(78vh,620px);background:rgba(12,24,38,.98);border:1px solid rgba(34,211,238,.28);border-radius:18px;box-shadow:0 18px 50px rgba(0,0,0,.45);z-index:41;display:flex;flex-direction:column;transition:transform .18s}
+.sheet.open{transform:translate(-50%,0)}
+.sheet-h{padding:10px 12px 6px;display:flex;justify-content:space-between;gap:8px;align-items:start}
+.sheet-h .eid{font-family:"JetBrains Mono",monospace;font-size:.68rem;color:var(--cyan)}
+.sheet-h h2{margin:3px 0 0;font-size:.92rem;line-height:1.3}
+.quick{display:flex;gap:4px;flex-wrap:wrap;padding:0 12px 8px}
+.qchip{border:1px solid var(--line);background:rgba(0,0,0,.2);color:var(--muted);border-radius:999px;padding:4px 8px;font:inherit;font-size:.7rem;cursor:pointer}
+.qchip.on{color:var(--cyan);border-color:rgba(34,211,238,.4);background:rgba(34,211,238,.1)}
+.sheet-b{padding:0 12px 10px;overflow:auto;display:grid;gap:8px}
+.field{display:grid;gap:4px}.field span{font-size:.7rem;color:var(--muted);font-weight:500}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.sheet textarea{min-height:54px;resize:vertical}
+.botbox{border:1px solid rgba(251,191,36,.28);background:rgba(251,191,36,.06);border-radius:12px;padding:8px;display:grid;gap:6px}
+.botbox .lab{font-size:.72rem;color:#fde68a;font-weight:600}
+.checks{display:grid;gap:4px}
+.check{display:flex;gap:6px;align-items:center;padding:5px 7px;border:1px solid var(--line);border-radius:8px;background:rgba(0,0,0,.18)}
+.check input[type=checkbox]{width:auto}.check input[type=text]{flex:1;border:0;background:transparent;padding:0}
+.comments{display:grid;gap:4px;max-height:110px;overflow:auto}
+.comment{padding:6px 8px;border-radius:8px;background:rgba(0,0,0,.22);font-size:.72rem}
+.comment .by{color:var(--cyan);font-size:.65rem}
+.sheet-f{padding:8px 12px;border-top:1px solid var(--line);display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap}
+.hint{color:var(--muted);font-size:.68rem;line-height:1.4}
+.toast-wrap{position:fixed;top:12px;left:12px;z-index:60;display:grid;gap:6px;width:min(320px,calc(100vw - 24px))}
+.toast{background:#102033;border:1px solid rgba(34,211,238,.3);border-radius:12px;padding:9px 11px}
+.toast b{display:block;font-size:.82rem}.toast span{color:var(--muted);font-size:.72rem}
+.toast .actions{margin-top:6px;display:flex;gap:4px}
+.notes{position:fixed;top:58px;left:12px;width:min(320px,calc(100vw - 24px));max-height:45vh;overflow:auto;z-index:55;display:none;background:#102033;border:1px solid var(--line);border-radius:12px}
+.notes.show{display:block}.notes-h{padding:8px 10px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;font-weight:600;font-size:.82rem}
+.note{padding:7px 10px;border-bottom:1px solid rgba(255,255,255,.04)}.note .t{font-size:.78rem;font-weight:600}.note .d{color:var(--muted);font-size:.7rem}
+
+.modetog{display:flex;gap:4px;padding:3px;border-radius:10px;background:rgba(0,0,0,.25);border:1px solid var(--line)}
+.modetog button{flex:1;border:0;background:transparent;color:var(--muted);padding:6px 8px;border-radius:8px;font:inherit;font-size:.72rem;font-weight:600;cursor:pointer}
+.modetog button.on{background:rgba(34,211,238,.18);color:var(--cyan)}
+.btn.danger{background:linear-gradient(135deg,#fb7185,#e11d48);color:#fff;border:0;font-weight:700}
+.btn.gold{background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#1a1000;border:0;font-weight:700}
+.btn.run{width:100%;justify-content:center;margin-top:2px}
+.runov{position:fixed;inset:0;z-index:80;background:rgba(2,6,12,.92);display:none;flex-direction:column;padding:14px;font-family:"JetBrains Mono","IBM Plex Sans Arabic",monospace}
+.runov.show{display:flex}
+.runov-h{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;padding:8px 10px;border:1px solid rgba(34,211,238,.25);border-radius:12px;background:rgba(8,18,28,.95)}
+.runov-h .ttl{font-size:.85rem;font-weight:700;color:var(--cyan)}
+.runov-h .meta{color:var(--muted);font-size:.72rem}
+.stchip{padding:4px 10px;border-radius:999px;font-size:.7rem;font-weight:700;border:1px solid var(--line);text-transform:uppercase;letter-spacing:.04em}
+.stchip.running{color:#fbbf24;border-color:rgba(251,191,36,.45);background:rgba(251,191,36,.12);animation:pulse 1.2s ease infinite}
+.stchip.done{color:#34d399;border-color:rgba(52,211,153,.4);background:rgba(52,211,153,.1)}
+.stchip.stopped{color:#94a3b8;border-color:rgba(148,163,184,.35);background:rgba(148,163,184,.08)}
+.stchip.error{color:#fb7185;border-color:rgba(251,113,133,.45);background:rgba(251,113,133,.12)}
+.stchip.queued{color:#67e8f9;border-color:rgba(103,232,249,.35)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.55}}
+.runlog{flex:1;margin-top:10px;overflow:auto;border:1px solid rgba(34,211,238,.2);border-radius:12px;background:#050b12;padding:10px 12px;font-size:.78rem;line-height:1.55;white-space:pre-wrap;word-break:break-word}
+.runlog .ln{color:#9fb6cb}.runlog .ln .tm{color:#475569;margin-left:8px}
+.runov-f{display:flex;gap:8px;justify-content:flex-end;padding-top:10px;flex-wrap:wrap}
+.bgchip{position:fixed;bottom:16px;left:16px;z-index:70;display:none;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;background:rgba(15,32,51,.96);border:1px solid rgba(251,191,36,.4);box-shadow:0 8px 24px rgba(0,0,0,.4);cursor:pointer;font-size:.75rem;font-weight:600;color:#fde68a}
+.bgchip.show{display:inline-flex}
+.bgchip .dot{width:8px;height:8px;border-radius:50%;background:#fbbf24;box-shadow:0 0 8px #fbbf24;animation:pulse 1.2s ease infinite}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="brand"><div class="logo"></div><div><h1>AQAAR Command</h1><p>كروت خفيفة · أوامر بوت · إيميل مباشر</p></div></div>
+    <div class="views" id="viewSwitch">
+      <button class="chipbtn on" type="button" data-view="kanban">كانبان</button>
+      <button class="chipbtn" type="button" data-view="list">قائمة</button>
+      <button class="chipbtn" type="button" data-view="matrix">أولوية</button>
+      <button class="chipbtn" type="button" data-view="focus">تركيز</button>
+    </div>
+    <div class="filters" id="statFilters">
+      <button class="chipbtn on" type="button" data-filter="all">الكل <b id="statTotal">0</b></button>
+      <button class="chipbtn" type="button" data-filter="doing">الجاري <b id="statDoing">0</b></button>
+      <button class="chipbtn" type="button" data-filter="hot">الحرج <b id="statHot">0</b></button>
+      <button class="chipbtn" type="button" data-filter="done">تم <b id="statDone">0</b></button>
+      <button class="chipbtn" type="button" data-filter="bot">أوامر بوت <b id="statBot">0</b></button>
+    </div>
+    <div class="actions">
+      <button class="btn icon" id="btnNotif" type="button">🔔<span class="badge" id="notifBadge" hidden>0</span></button>
+      <button class="btn" id="btnSync" type="button">مزامنة إيميل</button>
+      <a class="btn ghost" href="./index.html">Control</a>
+      <button class="btn" id="btnReload" type="button">تحديث</button>
+      <button class="btn primary" id="btnAdd" type="button">جديد</button>
+      <button class="btn" id="btnSave" type="button" disabled>حفظ</button>
+    </div>
+  </header>
+  <div class="toolbar">
+    <input id="q" type="search" placeholder="بحث..." />
+    <select id="filterSource"><option value="">المصدر</option><option>email</option><option>teams</option><option>crm</option><option>whatsapp</option><option>manual</option><option>other</option></select>
+    <select id="filterPriority"><option value="">الأهمية</option><option>urgent</option><option>high</option><option>medium</option><option>low</option></select>
+  </div>
+  <div class="main" id="main"></div>
+</div>
+<div class="backdrop" id="backdrop"></div>
+<section class="sheet" id="sheet" aria-hidden="true">
+  <div class="sheet-h"><div><div class="eid" id="sId">T-000</div><h2 id="sTitle">تاسك</h2></div><button class="btn ghost" type="button" id="btnClose">إغلاق</button></div>
+  <div class="quick" id="quickStatus"></div>
+  <div class="sheet-b">
+    <label class="field"><span>العنوان</span><input id="fTitle" /></label>
+    <div class="row2">
+      <label class="field"><span>الأهمية</span><select id="fPriority"><option>low</option><option>medium</option><option>high</option><option>urgent</option></select></label>
+      <label class="field"><span>الاستحقاق</span><input id="fDue" type="date" /></label>
+    </div>
+    <div class="botbox">
+      <div class="lab">أمر تنفيذي للبوت</div>
+      <label class="field"><span>نوع الأمر</span>
+        <select id="fBotAction">
+          <option value="none">بدون</option>
+          <option value="draft_reply">جهّز رد</option>
+          <option value="remind">فكّرني لاحقًا / نوت تذكير</option>
+          <option value="follow_up">متابعة</option>
+          <option value="research">ابحث / لخّص</option>
+          <option value="move_trash">حط في تراش</option>
+          <option value="custom">مخصص / أخرى</option>
+        </select>
+      </label>
+      <label class="field"><span>تعليمات البوت</span><textarea id="fBotInstruction" placeholder="مثال: جهّز رد مهني وأنا أراجعه قبل الإرسال"></textarea></label>
+      <div class="field"><span>وضع التشغيل</span>
+        <div class="modetog" id="runModeToggle" role="group" aria-label="وضع التشغيل">
+          <button type="button" data-mode="live" class="on" id="modeLive">على الشاشة</button>
+          <button type="button" data-mode="background" id="modeBg">في الخلفية</button>
+        </div>
+      </div>
+      <button class="btn primary run" type="button" id="btnRunBot">نفّذ الأمر الآن</button>
+      <p class="hint" style="margin:0">الوضع الافتراضي: على الشاشة (تقدر توقف فورًا). جهّز الرد بس، ومش هيتبعت إيميل تلقائي.</p>
+    </div>
+    <label class="field"><span>نوت سريعة / تعليق</span>
+      <div class="comments" id="commentsBox"></div>
+      <div class="row" style="margin-top:4px">
+        <input id="fComment" placeholder="اكتب نوت أو طلب..." style="flex:1" />
+        <button class="btn" type="button" id="btnAddComment">إضافة</button>
+      </div>
+    </label>
+    <div class="row2">
+      <label class="field"><span>المصدر</span><select id="fSource"><option>manual</option><option>email</option><option>teams</option><option>crm</option><option>whatsapp</option><option>other</option></select></label>
+      <label class="field"><span>المسؤول</span><input id="fAssignee" /></label>
+    </div>
+    <label class="field"><span>مرجع المصدر</span><input id="fSourceRef" /></label>
+    <label class="field"><span>مسودة رد مقترحة</span><textarea id="fSuggested" placeholder="تظهر تلقائي من الإيميل الجديد..."></textarea></label>
+    <input type="hidden" id="fStatus" /><input type="hidden" id="fEntryId" /><input type="hidden" id="fTags" /><input type="hidden" id="fProgress" value="0" /><input type="hidden" id="fNotes" />
+    <p class="hint">الكروت متعمدة قصيرة. الأوامر هنا يتنفّذها البوت لما تطلب، مش تلقائيًا.</p>
+  </div>
+  <div class="sheet-f">
+    <button class="btn" type="button" id="btnDelete">حذف</button>
+    <button class="btn" type="button" id="btnOpenSrc">فتح المصدر</button>
+    <button class="btn gold" type="button" id="btnOpenRoom">فتح غرفة التاسك</button>
+    <button class="btn primary" type="button" id="btnApply">تم</button>
+  </div>
+</section>
+<div class="notes" id="notifPanel"><div class="notes-h"><span>إشعارات</span><button class="btn ghost" type="button" id="btnClearNotif">مسح</button></div><div id="notifList"></div></div>
+
+<div class="runov" id="runOverlay" aria-hidden="true">
+  <div class="runov-h">
+    <div>
+      <div class="ttl" id="runTitle">Bot run</div>
+      <div class="meta" id="runMeta"></div>
+    </div>
+    <span class="stchip queued" id="runStatus">queued</span>
+  </div>
+  <div class="runlog" id="runLog"></div>
+  <div class="runov-f">
+    <button class="btn danger" type="button" id="btnStopRun">إيقاف فوري</button>
+    <button class="btn" type="button" id="btnCloseRun" disabled>إغلاق</button>
+  </div>
+</div>
+<button class="bgchip" type="button" id="bgChip" hidden><span class="dot"></span><span id="bgChipText">شغال في الخلفية</span></button>
+
+<div class="toast-wrap" id="toasts"></div>
+<script>
+const STATUSES=[{id:'backlog',label:'لاحقاً',color:'#a78bfa'},{id:'todo',label:'مطلوب',color:'#38bdf8'},{id:'doing',label:'جاري',color:'#fbbf24'},{id:'blocked',label:'معلّق',color:'#fb7185'},{id:'done',label:'تم',color:'#34d399'}];
+const PRIOS=['low','medium','high','urgent'];
+const isHttp=location.protocol.startsWith('http');
+let state={version:1,title:'Aqaar Command',tasks:[]};
+let view=localStorage.getItem('aqaar.view')||'kanban';
+let filter=localStorage.getItem('aqaar.filter')||'all';
+let editingId=null,dirty=false,dragId=null,tempComments=[];
+let notifications=[],unread=0;
+const $=id=>document.getElementById(id);
+const nowIso=()=>new Date().toISOString();
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function markDirty(v=true){dirty=v;$('btnSave').disabled=!dirty||!isHttp}
+function toast(title,detail,actions){
+  const el=document.createElement('div'); el.className='toast';
+  el.innerHTML='<b>'+esc(title)+'</b><span>'+esc(detail||'')+'</span>';
+  if(actions&&actions.length){ const row=document.createElement('div'); row.className='actions';
+    actions.forEach(a=>{ const b=document.createElement('button'); b.className='btn'; b.textContent=a.label; b.onclick=a.onClick; row.appendChild(b)}); el.appendChild(row) }
+  $('toasts').prepend(el); setTimeout(()=>el.remove(),7000);
+}
+function notify(type,title,detail,silent){ notifications.unshift({type,title,detail,at:new Date()}); notifications=notifications.slice(0,50); unread++; renderNotifs(); if(!silent) toast(title,detail) }
+function renderNotifs(){ const b=$('notifBadge'); if(unread>0){b.hidden=false;b.textContent=String(Math.min(99,unread))}else b.hidden=true;
+  const list=$('notifList'); if(!notifications.length){list.innerHTML='<div class="note"><div class="d">لا إشعارات</div></div>';return}
+  list.innerHTML=notifications.map(n=>'<div class="note"><div class="t">'+esc(n.title)+'</div><div class="d">'+esc(n.detail||'')+'</div></div>').join('') }
+function normalize(t){
+  const status=['backlog','todo','doing','blocked','done'].includes(t.status)?t.status:(t.status==='in_progress'?'doing':'todo');
+  return {id:t.id,title:t.title||'',status,priority:t.priority||'medium',source:t.source||'manual',sourceRef:t.sourceRef||t.source_ref||'',entryId:t.entryId||t.entryID||'',tags:t.tags||[],notes:t.notes||'',botAction:t.botAction||'none',botInstruction:t.botInstruction||'',comments:Array.isArray(t.comments)?t.comments:[],suggestedReply:t.suggestedReply||'',due:t.due||null,assignee:t.assignee||'',checklist:Array.isArray(t.checklist)?t.checklist:[],progress:typeof t.progress==='number'?t.progress:0,createdAt:t.createdAt||null,updatedAt:t.updatedAt||null,createdBy:t.createdBy||'',chat:Array.isArray(t.chat)?t.chat:[],timeline:Array.isArray(t.timeline)?t.timeline:[],pendingSend:t.pendingSend||null,pendingTrash:!!t.pendingTrash};
+}
+async function api(path,opts){const r=await fetch(path,opts); if(!r.ok) throw new Error(await r.text()||('HTTP '+r.status)); return r}
+async function reload(silent){
+  if(!isHttp) return; const prev=new Map(state.tasks.map(t=>[t.id,{...t}]));
+  const res=await api('/api/tasks'); state=await res.json(); if(!Array.isArray(state.tasks)) state.tasks=[]; state.tasks=state.tasks.map(normalize);
+  if(prev.size){ for(const t of state.tasks){ const old=prev.get(t.id); if(!old) notify('new','تاسك جديد',t.title,silent); else if(old.status!==t.status) notify(t.status==='done'?'done':'move',t.status==='done'?'خلصت ✅':'اتنقلت',t.title,silent)} }
+  markDirty(false); render();
+}
+async function save(){ state.updatedAt=nowIso(); await api('/api/tasks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(state)}); await api('/api/audit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({at:state.updatedAt,actor:'User',action:'board.save'})}); markDirty(false); notify('done','اتحفظ','') }
+async function syncMail(opts){
+  const silent = !!(opts && opts.silent);
+  if(!silent) toast('مزامنة الإيميل…','بقرأ الوارد غير المقروء');
+  try{
+    const r=await api('/api/mail/sync',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+    const j=await r.json(); await reload(true);
+    if(!silent){
+      toast('مزامنة تمّت', (j.added||0)+' جديد'+(j.unreadTotal!=null?(' · غير مقروء '+j.unreadTotal):'')+(j.scanned!=null?(' · فحص '+j.scanned):''));
+    } else if(j.added>0){
+      notify('new', j.added+' إيميل جديد', 'اتحوّلوا لتاسكات', true);
+    }
+  }catch(e){ if(!silent) toast('فشل المزامنة', e.message||e) }
+}
+function nextId(){let m=0; for(const t of state.tasks){const x=/^T-?(\d+)$/i.exec(t.id||''); if(x) m=Math.max(m,+x[1])} return 'T-'+String(m+1).padStart(3,'0')}
+function filtered(){
+  const q=$('q').value.trim().toLowerCase(), src=$('filterSource').value, pr=$('filterPriority').value;
+  return state.tasks.filter(t=>{
+    if(filter==='doing'&&t.status!=='doing') return false;
+    if(filter==='hot'&&!((t.priority==='high'||t.priority==='urgent')&&t.status!=='done')) return false;
+    if(filter==='done'&&t.status!=='done') return false;
+    if(filter==='bot'&&!(t.botAction&&t.botAction!=='none')) return false;
+    if(src&&t.source!==src) return false; if(pr&&t.priority!==pr) return false; if(!q) return true;
+    return [t.title,t.source,t.sourceRef,t.notes,t.botInstruction,t.assignee,...(t.tags||[])].join(' ').toLowerCase().includes(q);
+  });
+}
+function setView(v){view=v;localStorage.setItem('aqaar.view',v);document.querySelectorAll('#viewSwitch .chipbtn').forEach(b=>b.classList.toggle('on',b.dataset.view===v));render()}
+function setFilter(f){filter=f;localStorage.setItem('aqaar.filter',f);document.querySelectorAll('#statFilters .chipbtn').forEach(b=>b.classList.toggle('on',b.dataset.filter===f));render()}
+function cyclePriority(id,e){e.stopPropagation(); const t=state.tasks.find(x=>x.id===id); if(!t) return; t.priority=PRIOS[(PRIOS.indexOf(t.priority)+1)%PRIOS.length]; t.updatedAt=nowIso(); markDirty(true); render(); notify('move','الأهمية → '+t.priority,t.title)}
+async function openSource(id,e){ if(e) e.stopPropagation(); const t=state.tasks.find(x=>x.id===id); if(!t) return;
+  try{ const r=await api('/api/open',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:'email',entryId:t.entryId||'',query:t.sourceRef||t.title})}); const j=await r.json(); if(j.ok){notify('done','اتفتح المصدر',''); if(j.entryId&&!t.entryId){t.entryId=j.entryId;markDirty(true)}} else notify('hot','ما اتفتحش',j.error||'')}catch(err){notify('hot','فشل',err.message||err)} }
+function moveTask(id,status){ const t=state.tasks.find(x=>x.id===id); if(!t||t.status===status) return; const prev=t.status; t.status=status; if(status==='done') t.progress=100; t.updatedAt=nowIso(); markDirty(true); render(); notify(status==='done'?'done':'move',status==='done'?'خلصت ✅':prev+' → '+status,t.title) }
+function cardHTML(t){
+  const bot=t.botAction&&t.botAction!=='none'?`<span class="tag bot">${esc(t.botAction)}</span>`:'';
+  const canOpen=t.source==='email'||t.entryId||t.sourceRef;
+  return `<div class="title" data-room="1" title="${esc(t.title)}">${esc(t.title)}</div>
+    <div class="meta">
+      <button class="prio" type="button" data-p="${esc(t.priority)}"><span class="pip"></span><span class="pip"></span><span class="pip"></span></button>
+      <span class="tag src">${esc(t.source)}</span>${bot}
+    </div>
+    <div class="row"><button class="mini" data-room="1">غرفة</button><button class="mini" data-open="1" ${canOpen?'':'disabled'}>مصدر</button><button class="mini ghost" data-edit="1">نوت/أمر</button></div>`;
+}
+function openTaskRoom(id,e){ if(e) e.stopPropagation(); location.href='task.html?id='+encodeURIComponent(id) }
+function bindCard(el,t){ el.draggable=true; el.addEventListener('dragstart',e=>{dragId=t.id;el.classList.add('dragging');e.dataTransfer.setData('text/task-id',t.id)}); el.addEventListener('dragend',()=>el.classList.remove('dragging'));
+  el.querySelector('.prio').onclick=e=>cyclePriority(t.id,e);
+  el.querySelectorAll('[data-room]').forEach(n=>n.onclick=e=>openTaskRoom(t.id,e));
+  const openBtn=el.querySelector('[data-open]'); if(openBtn) openBtn.onclick=e=>openSource(t.id,e);
+  el.querySelector('[data-edit]').onclick=e=>{e.stopPropagation();openEdit(t.id)};
+  el.onclick=()=>openEdit(t.id);
+  el.addEventListener('dblclick',e=>{e.stopPropagation();openTaskRoom(t.id,e)}) }
+function renderKanban(list){ const wrap=document.createElement('div'); wrap.className='kanban';
+  for(const col of STATUSES){ const items=list.filter(t=>(t.status||'todo')===col.id); const sec=document.createElement('section'); sec.className='col';
+    sec.innerHTML=`<div class="col-h"><span><i class="sw" style="color:${col.color}"></i>${col.label}</span><span>${items.length}</span></div>`;
+    const cards=document.createElement('div'); cards.className='cards';
+    cards.addEventListener('dragover',e=>{e.preventDefault();sec.classList.add('over')}); cards.addEventListener('dragleave',()=>sec.classList.remove('over'));
+    cards.addEventListener('drop',e=>{e.preventDefault();sec.classList.remove('over'); const id=e.dataTransfer.getData('text/task-id')||dragId; if(id) moveTask(id,col.id)});
+    if(!items.length){const em=document.createElement('div');em.className='empty';em.textContent='—';cards.appendChild(em)}
+    for(const t of items){ const card=document.createElement('article'); card.className='card'; card.innerHTML=cardHTML(t); bindCard(card,t); cards.appendChild(card)}
+    sec.appendChild(cards); wrap.appendChild(sec)} return wrap }
+function renderList(list){ const wrap=document.createElement('div'); wrap.className='list'; if(!list.length){wrap.innerHTML='<div class="empty">لا نتائج</div>';return wrap}
+  [...list].sort((a,b)=>PRIOS.indexOf(b.priority)-PRIOS.indexOf(a.priority)).forEach(t=>{ const row=document.createElement('div'); row.className='list-row';
+    row.innerHTML=`<div class="t" data-room="1">${esc(t.title)}</div><div class="s">${esc(t.status)}</div><div class="s">${esc(t.priority)}</div><div class="s">${esc(t.source)}</div><div class="row"><button class="mini" data-room="1">غرفة</button><button class="mini" data-open="1">مصدر</button><button class="mini ghost" data-edit="1">نوت</button></div>`;
+    row.querySelectorAll('[data-room]').forEach(n=>n.onclick=e=>openTaskRoom(t.id,e)); row.querySelector('[data-open]').onclick=e=>openSource(t.id,e); row.querySelector('[data-edit]').onclick=e=>{e.stopPropagation();openEdit(t.id)}; row.onclick=()=>openEdit(t.id); wrap.appendChild(row)}); return wrap }
+function renderMatrix(list){ const wrap=document.createElement('div'); wrap.className='matrix';
+  [{title:'🔥 حرج',test:t=>(t.priority==='urgent'||t.priority==='high')&&t.status!=='done'},{title:'⚡ متوسط',test:t=>t.priority==='medium'&&t.status!=='done'},{title:'🧊 منخفض',test:t=>t.priority==='low'&&t.status!=='done'},{title:'✅ تم',test:t=>t.status==='done'}].forEach(b=>{ const box=document.createElement('div'); box.className='mx'; box.innerHTML=`<h3>${b.title}</h3>`; const cards=document.createElement('div'); cards.className='cards'; const show=list.filter(b.test);
+    if(!show.length) cards.innerHTML='<div class="empty">—</div>'; show.forEach(t=>{const card=document.createElement('article'); card.className='card'; card.innerHTML=cardHTML(t); bindCard(card,t); cards.appendChild(card)}); box.appendChild(cards); wrap.appendChild(box)}); return wrap }
+function renderFocus(list){ const wrap=document.createElement('div'); wrap.className='focus'; const hot=list.filter(t=>t.status!=='done'&&(t.priority==='urgent'||t.priority==='high'||t.status==='doing'||(t.botAction&&t.botAction!=='none')));
+  wrap.innerHTML=`<div class="focus-hero"><h2>وضع التركيز</h2><p>${hot.length} تاسك يحتاج انتباه (حرج / جاري / أوامر بوت)</p></div>`; const box=document.createElement('div'); box.className='cards'; const use=hot.length?hot:list.filter(t=>t.status!=='done').slice(0,6);
+  if(!use.length) box.innerHTML='<div class="empty">فاضي</div>'; use.forEach(t=>{const card=document.createElement('article'); card.className='card'; card.innerHTML=cardHTML(t); bindCard(card,t); box.appendChild(card)}); wrap.appendChild(box); return wrap }
+function render(){ const list=filtered();
+  $('statTotal').textContent=state.tasks.length; $('statDoing').textContent=state.tasks.filter(t=>t.status==='doing').length;
+  $('statHot').textContent=state.tasks.filter(t=>(t.priority==='high'||t.priority==='urgent')&&t.status!=='done').length;
+  $('statDone').textContent=state.tasks.filter(t=>t.status==='done').length;
+  $('statBot').textContent=state.tasks.filter(t=>t.botAction&&t.botAction!=='none').length;
+  document.querySelectorAll('#viewSwitch .chipbtn').forEach(b=>b.classList.toggle('on',b.dataset.view===view));
+  document.querySelectorAll('#statFilters .chipbtn').forEach(b=>b.classList.toggle('on',b.dataset.filter===filter));
+  const main=$('main'); main.innerHTML='';
+  if(view==='list') main.appendChild(renderList(list)); else if(view==='matrix') main.appendChild(renderMatrix(list)); else if(view==='focus') main.appendChild(renderFocus(list)); else main.appendChild(renderKanban(list));
+}
+function openEdit(id){ editingId=id; const t=id?state.tasks.find(x=>x.id===id):null; tempComments=t&&t.comments?t.comments.map(c=>({...c})): [];
+  $('sId').textContent=t?t.id:'NEW'; $('sTitle').textContent=t?t.title:'تاسك جديد';
+  $('fTitle').value=t?.title||''; $('fPriority').value=t?.priority||'medium'; $('fDue').value=(t?.due||'').toString().slice(0,10);
+  $('fBotAction').value=t?.botAction||'none'; $('fBotInstruction').value=t?.botInstruction||'';
+  $('fSource').value=t?.source||'manual'; $('fAssignee').value=t?.assignee||''; $('fSourceRef').value=t?.sourceRef||'';
+  $('fSuggested').value=t?.suggestedReply||''; $('fStatus').value=t?.status||'todo'; $('fEntryId').value=t?.entryId||'';
+  $('fTags').value=(t?.tags||[]).join(', '); $('fProgress').value=t?.progress??0; $('fNotes').value=t?.notes||''; $('fComment').value='';
+  renderComments(); renderQuick(t?.status||'todo'); $('btnDelete').style.display=t?'':'none';
+  setRunMode('live'); $('sheet').classList.add('open'); $('backdrop').classList.add('show');
+}
+function renderQuick(active){ const box=$('quickStatus'); box.innerHTML=''; STATUSES.forEach(s=>{ const b=document.createElement('button'); b.type='button'; b.className='qchip'+(s.id===active?' on':''); b.textContent=s.label; b.onclick=()=>{ $('fStatus').value=s.id; renderQuick(s.id)}; box.appendChild(b)}) }
+function renderComments(){ const box=$('commentsBox'); if(!tempComments.length){box.innerHTML='<div class="hint">مفيش نوتس لسه</div>';return}
+  box.innerHTML=tempComments.map(c=>'<div class="comment"><div class="by">'+esc(c.by||'user')+' · '+(c.at?new Date(c.at).toLocaleString('ar-EG'):'')+'</div>'+esc(c.text||'')+'</div>').join('') }
+function closeSheet(){ $('sheet').classList.remove('open'); $('backdrop').classList.remove('show'); editingId=null }
+function applyEdit(){ const title=$('fTitle').value.trim(); if(!title){toast('العنوان مطلوب','');return} const stamp=nowIso();
+  const payload={title,status:$('fStatus').value,priority:$('fPriority').value,source:$('fSource').value,sourceRef:$('fSourceRef').value.trim(),entryId:$('fEntryId').value.trim(),tags:$('fTags').value.split(',').map(s=>s.trim()).filter(Boolean),notes:$('fNotes').value,botAction:$('fBotAction').value,botInstruction:$('fBotInstruction').value.trim(),comments:tempComments,suggestedReply:$('fSuggested').value.trim(),due:$('fDue').value||null,assignee:$('fAssignee').value.trim(),progress:Number($('fProgress').value)||0,updatedAt:stamp};
+  if(!editingId){ state.tasks.unshift({id:nextId(),...payload,checklist:[],createdAt:stamp,createdBy:'User'}); notify('new','تاسك جديد',title) }
+  else { const t=state.tasks.find(x=>x.id===editingId); if(!t) return; const keep={chat:t.chat,timeline:t.timeline,pendingSend:t.pendingSend,pendingTrash:t.pendingTrash}; Object.assign(t,payload,keep); notify('move','اتحدّث',title) }
+  markDirty(true); closeSheet(); render();
+}
+function deleteEdit(){ if(!editingId||!confirm('حذف؟')) return; const t=state.tasks.find(x=>x.id===editingId); state.tasks=state.tasks.filter(x=>x.id!==editingId); notify('hot','اتحذف',t?t.title:editingId); markDirty(true); closeSheet(); render() }
+
+document.querySelectorAll('#viewSwitch .chipbtn').forEach(b=>b.onclick=()=>setView(b.dataset.view));
+document.querySelectorAll('#statFilters .chipbtn').forEach(b=>b.onclick=()=>setFilter(b.dataset.filter));
+$('btnReload').onclick=()=>reload(false).catch(e=>toast('خطأ',e.message||e));
+$('btnSave').onclick=()=>save().catch(e=>toast('خطأ',e.message||e));
+$('btnSync').onclick=()=>syncMail({silent:false});
+$('btnAdd').onclick=()=>openEdit(null);
+$('btnClose').onclick=closeSheet; $('backdrop').onclick=closeSheet;
+$('btnApply').onclick=applyEdit; $('btnDelete').onclick=deleteEdit;
+$('btnOpenSrc').onclick=()=>{ if(editingId) openSource(editingId); };
+$('btnOpenRoom').onclick=()=>{ if(editingId) openTaskRoom(editingId); else toast('افتح تاسك موجود',''); };
+$('btnAddComment').onclick=()=>{ const text=$('fComment').value.trim(); if(!text) return; tempComments.push({text,by:'user',at:nowIso()}); $('fComment').value=''; renderComments() };
+$('q').oninput=render; $('filterSource').onchange=render; $('filterPriority').onchange=render;
+$('fTitle').oninput=()=>$('sTitle').textContent=$('fTitle').value||'تاسك جديد';
+$('btnNotif').onclick=()=>{ $('notifPanel').classList.toggle('show'); if($('notifPanel').classList.contains('show')){unread=0;renderNotifs()} };
+$('btnClearNotif').onclick=()=>{notifications=[];unread=0;renderNotifs()};
+
+let runMode='live';
+let activeJobId=null, pollTimer=null, lastLogLen=0, bgJobId=null;
+
+function setRunMode(m){
+  runMode=(m==='background')?'background':'live';
+  $('modeLive').classList.toggle('on', runMode==='live');
+  $('modeBg').classList.toggle('on', runMode==='background');
+}
+$('modeLive').onclick=()=>setRunMode('live');
+$('modeBg').onclick=()=>setRunMode('background');
+$('fBotAction').onchange=()=>{
+  const a=$('fBotAction').value;
+  if(a==='move_trash') setRunMode('live');
+};
+
+function statusLabel(s){
+  const m={queued:'queued',running:'running',done:'done',stopped:'stopped',error:'error'};
+  return m[s]||s||'—';
+}
+function setStatusChip(st){
+  const el=$('runStatus'); el.className='stchip '+(st||'queued'); el.textContent=statusLabel(st);
+}
+function appendLogLines(logs){
+  const box=$('runLog');
+  const arr=Array.isArray(logs)?logs:[];
+  if(arr.length<=lastLogLen) return;
+  for(let i=lastLogLen;i<arr.length;i++){
+    const L=arr[i]||{}; const ln=document.createElement('div'); ln.className='ln';
+    const tm=L.t?new Date(L.t).toLocaleTimeString('ar-EG'):'';
+    ln.innerHTML='<span class="tm">'+esc(tm)+'</span> '+esc(L.msg||'');
+    box.appendChild(ln);
+  }
+  lastLogLen=arr.length; box.scrollTop=box.scrollHeight;
+}
+function showOverlay(show){
+  const ov=$('runOverlay');
+  if(show){ ov.classList.add('show'); ov.setAttribute('aria-hidden','false'); }
+  else { ov.classList.remove('show'); ov.setAttribute('aria-hidden','true'); }
+}
+function showBgChip(show, text){
+  const c=$('bgChip');
+  if(show){ c.hidden=false; c.classList.add('show'); if(text) $('bgChipText').textContent=text; }
+  else { c.hidden=true; c.classList.remove('show'); }
+}
+function stopPolling(){ if(pollTimer){ clearInterval(pollTimer); pollTimer=null } }
+
+async function refreshSuggestedFromTask(taskId){
+  try{
+    await reload(true);
+    const t=state.tasks.find(x=>x.id===taskId);
+    if(t && editingId===taskId){
+      $('fSuggested').value=t.suggestedReply||'';
+      tempComments=t.comments?t.comments.map(c=>({...c})):[];
+      renderComments();
+    }
+  }catch(e){}
+}
+
+async function onJobTerminal(job){
+  stopPolling();
+  const st=job.status;
+  setStatusChip(st);
+  $('btnStopRun').disabled=true;
+  $('btnCloseRun').disabled=false;
+  if(st==='done' && (job.action==='draft_reply'||job.action==='prepare_reply'||(job.result&&job.result.suggestedReply))){
+    await refreshSuggestedFromTask(job.taskId);
+    notify('done','الرد جاهز للمراجعة','ما اتبعتش إيميل');
+  } else if(st==='done'){
+    notify('done','الأمر خلص', job.taskId||'');
+    if(editingId===job.taskId) await refreshSuggestedFromTask(job.taskId);
+  } else if(st==='stopped'){
+    notify('hot','اتوقف', job.taskId||'');
+  } else if(st==='error'){
+    const err=(job.result&&(job.result.error||job.result.message))||'error';
+    notify('hot','فشل الأمر', String(err));
+  }
+  if(bgJobId===job.id && (st==='done'||st==='stopped'||st==='error')){
+    showBgChip(false); bgJobId=null;
+  }
+}
+
+async function pollJob(){
+  if(!activeJobId) return;
+  try{
+    const r=await api('/api/bot/job?id='+encodeURIComponent(activeJobId));
+    const job=await r.json();
+    if(job.error && !job.id){ setStatusChip('error'); appendLogLines([{t:nowIso(),msg:job.error}]); onJobTerminal({status:'error',result:job,taskId:editingId,id:activeJobId,action:''}); return }
+    setStatusChip(job.status);
+    appendLogLines(job.log||[]);
+    const running=job.status==='queued'||job.status==='running';
+    $('btnStopRun').disabled=!running;
+    $('btnCloseRun').disabled=running;
+    if(!running) await onJobTerminal(job);
+  }catch(e){
+    appendLogLines([{t:nowIso(),msg:'Poll error: '+(e.message||e)}]);
+  }
+}
+
+function openRunConsole(jobId, meta){
+  activeJobId=jobId; lastLogLen=0; $('runLog').innerHTML='';
+  $('runTitle').textContent=(meta.taskId||'')+' · '+(meta.action||'')+' · '+(meta.mode||'live');
+  $('runMeta').textContent=jobId;
+  setStatusChip('queued');
+  $('btnStopRun').disabled=false; $('btnCloseRun').disabled=true;
+  showOverlay(true);
+  stopPolling();
+  pollJob();
+  pollTimer=setInterval(pollJob, 500);
+}
+
+async function runBotNow(){
+  if(!isHttp){ toast('السيرفر مش شغال','شغّل Start-Board'); return }
+  const action=$('fBotAction').value;
+  if(!action||action==='none'){ toast('مفيش أمر','اختار نوع الأمر'); return }
+  const title=$('fTitle').value.trim();
+  if(!title){ toast('العنوان مطلوب',''); return }
+  applyEditKeepOpen();
+  if(!editingId){ toast('احفظ التاسك أولاً',''); return }
+  const mode=runMode;
+  const taskId=editingId;
+  try{
+    if(dirty) await save();
+    toast(mode==='live'?'شغال على الشاشة…':'شغال في الخلفية…', action);
+    const r=await api('/api/bot/run',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({taskId,mode})});
+    const j=await r.json();
+    if(!j.ok){ toast('فشل التشغيل', j.error||''); return }
+    const jobId=j.id;
+    if(mode==='live'){
+      openRunConsole(jobId,{taskId,action,mode});
+    } else {
+      bgJobId=jobId; activeJobId=jobId; lastLogLen=0;
+      showBgChip(true,'شغال في الخلفية');
+      notify('move','شغال في الخلفية', taskId+' · '+action);
+      stopPolling();
+      pollTimer=setInterval(pollJob, 800);
+    }
+  }catch(e){ toast('فشل', e.message||e) }
+}
+
+function applyEditKeepOpen(){
+  const title=$('fTitle').value.trim(); if(!title) return;
+  const stamp=nowIso();
+  const payload={title,status:$('fStatus').value,priority:$('fPriority').value,source:$('fSource').value,sourceRef:$('fSourceRef').value.trim(),entryId:$('fEntryId').value.trim(),tags:$('fTags').value.split(',').map(s=>s.trim()).filter(Boolean),notes:$('fNotes').value,botAction:$('fBotAction').value,botInstruction:$('fBotInstruction').value.trim(),comments:tempComments,suggestedReply:$('fSuggested').value.trim(),due:$('fDue').value||null,assignee:$('fAssignee').value.trim(),progress:Number($('fProgress').value)||0,updatedAt:stamp};
+  if(!editingId){
+    const id=nextId();
+    state.tasks.unshift({id,...payload,checklist:[],createdAt:stamp,createdBy:'User'});
+    editingId=id; $('sId').textContent=id; $('sTitle').textContent=title;
+  } else {
+    const t=state.tasks.find(x=>x.id===editingId); if(!t) return; Object.assign(t,payload);
+  }
+  markDirty(true); render();
+}
+
+async function stopBotNow(){
+  if(!activeJobId) return;
+  try{
+    $('btnStopRun').disabled=true;
+    appendLogLines([{t:nowIso(),msg:'Stop requested by user…'}]);
+    await api('/api/bot/stop',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:activeJobId})});
+    await pollJob();
+  }catch(e){ toast('فشل الإيقاف', e.message||e); $('btnStopRun').disabled=false }
+}
+
+$('btnRunBot').onclick=()=>runBotNow();
+$('btnStopRun').onclick=()=>stopBotNow();
+$('btnCloseRun').onclick=()=>{
+  showOverlay(false);
+  const st=($('runStatus').textContent||'').trim();
+  const stillBg=bgJobId && activeJobId===bgJobId && (st==='running'||st==='queued');
+  if(!stillBg){
+    if(!bgJobId || activeJobId!==bgJobId){ stopPolling(); }
+    if(!bgJobId) activeJobId=null;
+  }
+};
+$('bgChip').onclick=()=>{ if(bgJobId){ openRunConsole(bgJobId,{taskId:editingId||'',action:'background',mode:'background'}); } };
+
+
+setView(view); setFilter(filter);
+reload(true).then(()=>syncMail({silent:true}).catch(()=>{})).catch(e=>toast('فشل التحميل',e.message||e));
+setInterval(()=>{ if(isHttp&&!dirty){ reload(true).catch(()=>{}); syncMail({silent:true}).catch(()=>{}) } }, 180000);
+</script>
+</body>
+</html>

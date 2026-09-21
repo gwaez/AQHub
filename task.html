@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>غرفة التاسك · AQAAR</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet" />
+<style>
+:root{--bg:#07111c;--panel:#0c1826;--line:rgba(125,211,252,.16);--text:#e8f3ff;--muted:#8aa4bc;--cyan:#22d3ee;--ok:#34d399;--warn:#fbbf24;--hot:#fb7185;--gold:#fde68a;--orange:#fb923c}
+*{box-sizing:border-box}html,body{height:100%;margin:0}
+body{color:var(--text);font-family:"IBM Plex Sans Arabic",system-ui,sans-serif;background:radial-gradient(900px 500px at 100% 0%,rgba(34,211,238,.1),transparent 55%),var(--bg)}
+.app{max-width:1400px;margin:0 auto;padding:12px;min-height:100%;display:flex;flex-direction:column;gap:10px}
+.top{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start;justify-content:space-between;padding:10px 12px;border:1px solid var(--line);border-radius:16px;background:rgba(12,24,38,.92)}
+.brand{display:flex;gap:10px;align-items:flex-start;flex:1;min-width:220px}
+.logo{width:32px;height:32px;border-radius:10px;background:linear-gradient(135deg,var(--cyan),#60a5fa);flex-shrink:0}
+.eid{font-family:"JetBrains Mono",monospace;font-size:.7rem;color:var(--cyan)}
+.title-input{width:100%;max-width:520px;border:1px solid transparent;background:transparent;color:var(--text);font:inherit;font-size:1rem;font-weight:700;padding:2px 4px;border-radius:8px}
+.title-input:focus{border-color:rgba(34,211,238,.35);background:rgba(15,32,51,.6);outline:none}
+.meta-row{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+.chip{font-size:.68rem;padding:2px 8px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
+.chip.on{color:var(--cyan);border-color:rgba(34,211,238,.4);background:rgba(34,211,238,.1)}
+.chip.warn{color:var(--warn);border-color:rgba(251,191,36,.4)}.chip.hot{color:var(--hot);border-color:rgba(251,113,133,.4)}
+.actions{display:flex;gap:6px;flex-wrap:wrap}
+.btn,textarea,input{border:1px solid var(--line);background:rgba(15,32,51,.95);color:var(--text);border-radius:10px;padding:7px 10px;font:inherit;outline:none}
+.btn{cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:5px;font-size:.8rem;font-weight:600}
+.btn.primary{background:linear-gradient(135deg,var(--cyan),#60a5fa);color:#04131a;border:0}
+.btn.ghost{color:var(--muted);background:transparent}.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn.danger{background:linear-gradient(135deg,#fb7185,#e11d48);color:#fff;border:0}
+.btn.gold{background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#1a1000;border:0}
+.btn.ok{background:linear-gradient(135deg,#34d399,#059669);color:#04140e;border:0}
+.workspace{flex:1;display:grid;grid-template-columns:1.05fr .95fr;gap:10px;min-height:0}
+@media(max-width:900px){.workspace{grid-template-columns:1fr}}
+.panel{border:1px solid var(--line);border-radius:14px;background:rgba(12,24,38,.75);display:flex;flex-direction:column;min-height:420px;max-height:calc(100vh - 140px)}
+.panel-h{padding:10px 12px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
+.panel-h h2{margin:0;font-size:.85rem;font-weight:700;color:var(--cyan)}
+.panel-b{flex:1;overflow:auto;padding:10px 12px;min-height:0}
+.chat-col{display:flex;flex-direction:column;flex:1;min-height:0}
+/* Timeline spine */
+.tl-wrap{position:relative;padding:10px 0 18px}
+.tl-wrap::before{content:"";position:absolute;top:6px;bottom:6px;left:50%;width:3px;transform:translateX(-50%);background:linear-gradient(180deg,rgba(251,146,60,.2),rgba(251,146,60,.9),rgba(34,211,238,.55));border-radius:4px}
+.tl-item{position:relative;display:grid;grid-template-columns:1fr 40px 1fr;gap:0 6px;align-items:start;margin-bottom:16px}
+.tl-side{padding:4px}
+.tl-side .card{background:rgba(15,32,51,.95);border:1px solid rgba(251,146,60,.3);border-radius:12px;padding:8px 10px;box-shadow:0 6px 16px rgba(0,0,0,.28)}
+.tl-item.left .tl-side.b,.tl-item.right .tl-side.a{visibility:hidden}
+.tl-item.left .tl-side.a .card{border-inline-start:3px solid var(--cyan)}
+.tl-item.right .tl-side.b .card{border-inline-end:3px solid var(--orange)}
+.tl-node{z-index:2;width:36px;height:36px;margin:8px auto 0;border-radius:50%;display:grid;place-items:center;font-size:.9rem;background:radial-gradient(circle at 30% 30%,#fdba74,var(--orange));border:3px solid #07111c;box-shadow:0 0 0 2px rgba(251,146,60,.5);color:#1a1000}
+.tl-item:nth-child(4n+2) .tl-node{background:radial-gradient(circle at 30% 30%,#67e8f9,var(--cyan));color:#04131a;box-shadow:0 0 0 2px rgba(34,211,238,.45)}
+.tl-item:nth-child(4n+3) .tl-node{background:radial-gradient(circle at 30% 30%,#fde68a,var(--warn))}
+.tl-item:nth-child(4n+4) .tl-node{background:radial-gradient(circle at 30% 30%,#6ee7b7,var(--ok));color:#04140e}
+.tl-meta{font-size:.62rem;color:var(--muted);font-family:"JetBrains Mono",monospace;margin-bottom:3px}
+.tl-type{color:var(--orange);font-weight:700}
+.tl-text{font-size:.74rem;line-height:1.4;white-space:pre-wrap;word-break:break-word}
+.chat-msgs{flex:1;overflow:auto;display:flex;flex-direction:column;gap:8px;padding:10px 12px;min-height:120px}
+.bubble{max-width:92%;padding:8px 10px;border-radius:12px;font-size:.8rem;line-height:1.45;white-space:pre-wrap;word-break:break-word}
+.bubble.user{align-self:flex-start;background:rgba(34,211,238,.14);border:1px solid rgba(34,211,238,.28)}
+.bubble.bot{align-self:flex-end;background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.28)}
+.bubble.system{align-self:center;background:rgba(0,0,0,.25);border:1px dashed var(--line);color:var(--muted);font-size:.72rem;max-width:100%}
+.bubble .who{font-size:.62rem;color:var(--muted);margin-bottom:3px;font-family:"JetBrains Mono",monospace}
+.confirm-bar{display:none;flex-wrap:wrap;gap:6px;padding:8px 12px;border-top:1px solid rgba(251,191,36,.35);background:rgba(251,191,36,.08);align-items:center}
+.confirm-bar.show{display:flex}
+.confirm-bar .hint{flex:1;min-width:140px;font-size:.72rem;color:var(--gold);line-height:1.35}
+.suggest{display:flex;flex-wrap:wrap;gap:5px;padding:8px 12px;border-top:1px solid var(--line);background:rgba(0,0,0,.18)}
+.schip{border:1px solid rgba(251,191,36,.35);background:rgba(251,191,36,.08);color:var(--gold);border-radius:999px;padding:5px 10px;font:inherit;font-size:.72rem;font-weight:600;cursor:pointer}
+.draft-hint{display:none;padding:6px 12px 0;font-size:.68rem;color:var(--cyan)}.draft-hint.show{display:block}
+.composer{display:flex;gap:6px;padding:8px 12px;border-top:1px solid var(--line);align-items:flex-end}
+.composer textarea{flex:1;min-height:88px;max-height:200px;resize:vertical;line-height:1.4}
+.composer-actions{display:flex;flex-direction:column;gap:5px}
+.empty{color:var(--muted);text-align:center;padding:18px 8px;border:1px dashed var(--line);border-radius:10px;font-size:.75rem}
+.toast-wrap{position:fixed;top:12px;left:12px;z-index:60;display:grid;gap:6px;width:min(320px,calc(100vw - 24px))}
+.toast{background:#102033;border:1px solid rgba(34,211,238,.3);border-radius:12px;padding:9px 11px}
+.toast b{display:block;font-size:.82rem}.toast span{color:var(--muted);font-size:.72rem}
+.errbox{padding:10px;border:1px solid rgba(251,113,133,.4);border-radius:12px;background:rgba(251,113,133,.08);color:var(--hot);font-size:.8rem}
+.pending{padding:8px 10px;border:1px solid rgba(251,191,36,.4);border-radius:10px;background:rgba(251,191,36,.08);font-size:.75rem;margin:8px 12px 0}
+.pending b{color:var(--gold)}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <div class="logo"></div>
+      <div style="flex:1">
+        <div class="eid" id="taskIdLabel">—</div>
+        <input class="title-input" id="fTitle" placeholder="عنوان التاسك" />
+        <div class="meta-row" id="metaRow"></div>
+      </div>
+    </div>
+    <div class="actions">
+      <a class="btn ghost" id="btnBack" href="./board.html">رجوع للوحة</a>
+      <button class="btn" type="button" id="btnOpenSrc">فتح المصدر</button>
+      <button class="btn" type="button" id="btnSaveTitle" disabled>حفظ العنوان</button>
+    </div>
+  </header>
+  <div id="err" class="errbox" hidden></div>
+  <div class="workspace">
+    <section class="panel">
+      <div class="panel-h"><h2>الخط الزمني</h2><span class="chip" id="tlCount">0</span></div>
+      <div class="panel-b" id="timeline"></div>
+    </section>
+    <section class="panel">
+      <div class="panel-h"><h2>محادثة الوكيل</h2><span class="chip warn" id="pendingBadge" hidden>إرسال معلّق</span></div>
+      <div class="chat-col">
+        <div id="pendingBox" class="pending" hidden></div>
+        <div class="chat-msgs" id="chatMsgs"></div>
+        <div class="confirm-bar" id="confirmBar"></div>
+        <div class="suggest" id="suggestChips">
+          <button type="button" class="schip" data-msg="جهّز رد">جهّز رد</button>
+          <button type="button" class="schip" data-msg="فكّرني">فكّرني</button>
+          <button type="button" class="schip" data-msg="حط تراش">حط تراش</button>
+          <button type="button" class="schip" data-msg="ابعت المسودة بعد موافقتي">اقترح إرسال</button>
+          <button type="button" class="schip" data-msg="ايه رأيك؟">ايه رأيك؟</button>
+        </div>
+        <div class="draft-hint" id="draftHint">المسودة في التيكست بوكس — عدّل عليها، بعدين اضغط «اقترح إرسال» أو أزرار الموافقة الصفراء.</div>
+        <div class="composer">
+          <textarea id="chatInput" placeholder="اكتب للبوت… أو عدّل المسودة هنا قبل الإرسال" rows="4"></textarea>
+          <div class="composer-actions">
+            <button class="btn primary" type="button" id="btnSend">إرسال للشات</button>
+            <button class="btn gold" type="button" id="btnProposeDraft">اقترح إرسال</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+<div class="toast-wrap" id="toasts"></div>
+<script>
+const STATUSES={backlog:'لاحقاً',todo:'مطلوب',doing:'جاري',blocked:'معلّق',done:'تم'};
+const TL_ICON={created:'✦',status_change:'↻',comment:'💬',bot_run:'⚙',draft_ready:'✉',send_proposed:'📤',send_approved:'✅',send_sent:'🚀',send_cancelled:'🛑',remind:'⏰',trash:'🗑',chat:'💭',system:'ℹ',opinion:'💡'};
+const TL_LABEL={created:'إنشاء',status_change:'حالة',comment:'تعليق',bot_run:'تشغيل بوت',draft_ready:'مسودة',send_proposed:'اقتراح إرسال',send_approved:'موافقة',send_sent:'تم الإرسال',send_cancelled:'إلغاء',remind:'تذكير',trash:'تراش',chat:'محادثة',system:'نظام',opinion:'رأي'};
+const isHttp=location.protocol.startsWith('http');
+const $=id=>document.getElementById(id);
+const taskId=(new URLSearchParams(location.search).get('id')||'').trim();
+let task=null, dirtyTitle=false, draftTouched=false, lastSeeded='';
+
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function toast(t,d){const el=document.createElement('div');el.className='toast';el.innerHTML='<b>'+esc(t)+'</b><span>'+esc(d||'')+'</span>';$('toasts').prepend(el);setTimeout(()=>el.remove(),5000)}
+function fmtAt(at){if(!at)return '';try{return new Date(at).toLocaleString('ar-EG',{dateStyle:'short',timeStyle:'short'})}catch(e){return String(at)}}
+async function api(path,opts){const r=await fetch(path,opts);const text=await r.text();let j=null;try{j=JSON.parse(text)}catch(e){} if(!r.ok) throw new Error((j&&(j.error||j.message))||text||('HTTP '+r.status)); return j}
+
+function getDraft(){
+  if(!task) return '';
+  if(task.pendingSend&&task.pendingSend.body) return String(task.pendingSend.body);
+  if(task.suggestedReply) return String(task.suggestedReply);
+  if(task.suggestedReply) return String(task.suggestedReply);
+  return '';
+}
+function seedDraft(force){
+  const d=getDraft();
+  const input=$('chatInput');
+  if(!d){ $('draftHint').classList.remove('show'); return }
+  $('draftHint').classList.add('show');
+  if(force || (!draftTouched && (!input.value.trim() || input.value===lastSeeded))){
+    input.value=d; lastSeeded=d; draftTouched=false;
+  }
+}
+
+function renderMeta(){
+  const pri=task.priority||'medium';
+  const priCls=pri==='urgent'||pri==='high'?'hot':(pri==='medium'?'warn':'');
+  $('metaRow').innerHTML=
+    '<span class="chip on">'+(STATUSES[task.status]||task.status||'—')+'</span>'+
+    '<span class="chip '+priCls+'">'+esc(pri)+'</span>'+
+    '<span class="chip">'+esc(task.source||'manual')+'</span>'+
+    (task.botAction&&task.botAction!=='none'?'<span class="chip warn">بوت: '+esc(task.botAction)+'</span>':'')+
+    (task.pendingSend?'<span class="chip hot">pending send</span>':'')+
+    (task.pendingTrash?'<span class="chip hot">pending trash</span>':'');
+}
+
+function renderTimeline(){
+  const box=$('timeline');
+  const events=Array.isArray(task.timeline)?task.timeline.slice():[];
+  $('tlCount').textContent=String(events.length);
+  if(!events.length){ box.innerHTML='<div class="empty">مفيش أحداث لسه — ابدأ بالشات</div>'; return }
+  let html='<div class="tl-wrap">';
+  events.forEach((ev,i)=>{
+    const type=ev.type||'system';
+    const ico=TL_ICON[type]||'•';
+    const lab=TL_LABEL[type]||type;
+    const side=(i%2===0)?'right':'left';
+    const card='<div class="card"><div class="tl-meta"><span class="tl-type">'+esc(lab)+'</span> · '+esc(ev.actor||'')+' · '+esc(fmtAt(ev.at))+'</div><div class="tl-text">'+esc(ev.text||'')+'</div></div>';
+    html+='<div class="tl-item '+side+'"><div class="tl-side a">'+(side==='left'?card:'')+'</div><div class="tl-node">'+ico+'</div><div class="tl-side b">'+(side==='right'?card:'')+'</div></div>';
+  });
+  html+='</div>';
+  box.innerHTML=html;
+  box.scrollTop=box.scrollHeight;
+}
+
+function renderConfirm(){
+  const bar=$('confirmBar');
+  bar.innerHTML=''; bar.classList.remove('show');
+  if(task.pendingSend){
+    const ps=task.pendingSend;
+    bar.classList.add('show');
+    bar.innerHTML=
+      '<div class="hint"><b>موافقة مطلوبة — إرسال</b><br>إلى: '+esc(ps.to||'(غير محدد)')+' · '+esc(ps.subject||'')+'</div>'+
+      '<button class="btn ok" type="button" id="btnApproveSend">موافق — ابعت</button>'+
+      '<button class="btn ghost" type="button" id="btnCancelSend">إلغاء</button>'+
+      '<button class="btn" type="button" id="btnLoadBody">حمّل المسودة هنا</button>';
+    $('btnApproveSend').onclick=approveSend;
+    $('btnCancelSend').onclick=cancelSend;
+    $('btnLoadBody').onclick=()=>{ if(ps.body){ $('chatInput').value=ps.body; lastSeeded=ps.body; draftTouched=true; toast('اتحمّلت المسودة','عدّل ثم وافق من الزر'); } };
+  } else if(task.pendingTrash){
+    bar.classList.add('show');
+    bar.innerHTML=
+      '<div class="hint"><b>موافقة مطلوبة — تراش</b><br>نقل إيميل المصدر للمحذوفات.</div>'+
+      '<button class="btn danger" type="button" id="btnApproveTrash">موافق — تراش</button>'+
+      '<button class="btn ghost" type="button" id="btnCancelTrash">إلغاء</button>';
+    $('btnApproveTrash').onclick=()=>sendChat('yes');
+    $('btnCancelTrash').onclick=()=>sendChat('cancel');
+  }
+}
+
+function renderChat(){
+  const box=$('chatMsgs');
+  const msgs=Array.isArray(task.chat)?task.chat:[];
+  if(!msgs.length) box.innerHTML='<div class="empty">اكتب للبوت أو اضغط شريحة اقتراح</div>';
+  else box.innerHTML=msgs.map(m=>{
+    const role=m.role||'system';
+    const who=role==='user'?'أنت':(role==='bot'?'البوت':'نظام');
+    return '<div class="bubble '+esc(role)+'"><div class="who">'+esc(who)+' · '+esc(fmtAt(m.at))+'</div>'+esc(m.text||'')+'</div>';
+  }).join('');
+  box.scrollTop=box.scrollHeight;
+  const ps=task.pendingSend;
+  if(ps){
+    $('pendingBadge').hidden=false; $('pendingBox').hidden=false;
+    $('pendingBox').innerHTML='<b>مسودة إرسال معلّقة</b><br>إلى: '+esc(ps.to||'(غير محدد)')+'<br>الموضوع: '+esc(ps.subject||'')+'<br><span style="color:var(--muted)">عدّل النص تحت، ووافق من الأزرار الصفراء — من غير كتابة «موافق».</span>';
+  } else {
+    $('pendingBadge').hidden=true; $('pendingBox').hidden=true; $('pendingBox').innerHTML='';
+  }
+  renderConfirm();
+  seedDraft(false);
+}
+
+function renderAll(){
+  $('taskIdLabel').textContent=task.id||'—';
+  if(!dirtyTitle) $('fTitle').value=task.title||'';
+  document.title=(task.id||'')+' · '+(task.title||'غرفة التاسك');
+  renderMeta(); renderTimeline(); renderChat();
+}
+
+async function loadTask(){
+  if(!taskId){ $('err').hidden=false; $('err').textContent='ناقص ?id='; return }
+  if(!isHttp){ $('err').hidden=false; $('err').textContent='شغّل السيرفر وافتح عبر http://127.0.0.1:8766/task.html?id=...'; return }
+  try{
+    const j=await api('/api/task?id='+encodeURIComponent(taskId));
+    task=j.task||j;
+    if(!task||!task.id) throw new Error('not found');
+    $('err').hidden=true; dirtyTitle=false; $('btnSaveTitle').disabled=true;
+    draftTouched=false; lastSeeded='';
+    renderAll(); seedDraft(true);
+  }catch(e){ $('err').hidden=false; $('err').textContent='ما اتحملتش: '+(e.message||e) }
+}
+
+async function sendChat(text){
+  text=(text||'').trim(); if(!text||!task) return;
+  $('btnSend').disabled=true;
+  try{
+    const j=await api('/api/task/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({taskId:task.id,text})});
+    task=j.task||task;
+    const d=getDraft();
+    const botText=String((j.botMessage&&j.botMessage.text)||'');
+    const force=!!d && (d!==lastSeeded || /مسود|جهّز|جهز|draft|preview|جاهز/i.test(botText+text));
+    draftTouched=false;
+    renderAll();
+    if(force) seedDraft(true);
+    else if(!d) $('chatInput').value='';
+  }catch(e){ toast('فشل الشات', e.message||e) }
+  finally{ $('btnSend').disabled=false; $('chatInput').focus() }
+}
+
+async function proposeDraftSend(){
+  let body=$('chatInput').value.trim()||getDraft();
+  if(!body){ toast('مفيش مسودة','جهّز رد أو اكتب النص'); return }
+  await sendChat('propose send after my approval\n\n---\n'+body);
+}
+
+async function approveSend(){
+  try{
+    const edited=$('chatInput').value.trim();
+    if(edited && task.pendingSend){
+      await api('/api/task/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({taskId:task.id,text:'UPDATE_DRAFT_BODY:\n'+edited})});
+    }
+    const j=await api('/api/task/approve-send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({taskId:task.id})});
+    task=j.task||task; renderAll();
+    toast(j.ok?'اتبعت':'فشل', j.message||j.error||'');
+  }catch(e){ toast('فشل الإرسال', e.message||e); await loadTask() }
+}
+async function cancelSend(){
+  try{
+    const j=await api('/api/task/cancel-send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({taskId:task.id})});
+    task=j.task||task; renderAll(); toast('اتلغى','');
+  }catch(e){ toast('فشل الإلغاء', e.message||e) }
+}
+
+async function openSource(){
+  try{
+    const j=await api('/api/open',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:'email',entryId:task.entryId||'',query:task.sourceRef||task.title})});
+    toast(j.ok?'اتفتح':'ما اتفتحش', j.error||j.method||'');
+  }catch(e){ toast('فشل', e.message||e) }
+}
+async function saveTitle(){
+  const title=$('fTitle').value.trim(); if(!title) return;
+  try{
+    const data=await (await fetch('/api/tasks')).json();
+    const t=(data.tasks||[]).find(x=>x.id===task.id); if(!t) throw new Error('missing');
+    const prev=t.title; t.title=title; t.updatedAt=new Date().toISOString();
+    if(!Array.isArray(t.timeline)) t.timeline=[];
+    t.timeline.push({id:'TL-'+Date.now(),type:'system',text:'Title: '+prev+' → '+title,at:t.updatedAt,actor:'User'});
+    data.updatedAt=t.updatedAt;
+    await api('/api/tasks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+    task.title=title; dirtyTitle=false; $('btnSaveTitle').disabled=true; renderAll(); toast('اتحفظ','');
+  }catch(e){ toast('فشل الحفظ', e.message||e) }
+}
+
+// Fix board link if file is board.html
+fetch('./board.html',{method:'HEAD'}).then(r=>{ if(!r.ok) $('btnBack').href='./board.html' }).catch(()=>{});
+
+$('btnSend').onclick=()=>sendChat($('chatInput').value);
+$('btnProposeDraft').onclick=proposeDraftSend;
+$('chatInput').addEventListener('input',()=>{ draftTouched=true });
+$('chatInput').addEventListener('keydown',e=>{ if(e.key==='Enter'&&e.ctrlKey){ e.preventDefault(); sendChat($('chatInput').value)} });
+$('suggestChips').onclick=e=>{ const b=e.target.closest('.schip'); if(b) sendChat(b.dataset.msg) };
+$('btnOpenSrc').onclick=openSource;
+$('btnSaveTitle').onclick=saveTitle;
+$('fTitle').addEventListener('input',()=>{ dirtyTitle=true; $('btnSaveTitle').disabled=false });
+loadTask();
+</script>
+</body>
+</html>

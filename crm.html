@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Aqaar CRM — Dynamics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg0:#070b12; --text:#e8eef8; --muted:#8b9bb3; --accent:#5eead4; --accent-2:#38bdf8;
+    --accent-3:#a78bfa; --warn:#fbbf24; --ok:#34d399; --danger:#fb7185; --stroke:rgba(148,163,184,.14);
+    --card:rgba(18,28,48,.72); --radius:22px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:"IBM Plex Sans Arabic",sans-serif;color:var(--text);
+    background:radial-gradient(1200px 700px at 10% -10%,rgba(56,189,248,.16),transparent 55%),
+      radial-gradient(900px 600px at 100% 0%,rgba(167,139,250,.14),transparent 50%),
+      linear-gradient(180deg,var(--bg0),#0a101a);min-height:100vh}
+  .shell{max-width:920px;margin:0 auto;padding:28px 22px 60px}
+  .glass{background:var(--card);border:1px solid var(--stroke);border-radius:var(--radius);padding:22px;backdrop-filter:blur(18px)}
+  h1{margin:0 0 6px;font-size:1.35rem}
+  p{color:var(--muted);line-height:1.65}
+  .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:14px 0}
+  .badge{font-size:.75rem;font-weight:600;padding:5px 10px;border-radius:999px;border:1px solid var(--stroke)}
+  .badge.wait{color:var(--warn);border-color:rgba(251,191,36,.35);background:rgba(251,191,36,.08)}
+  .badge.on{color:var(--ok);border-color:rgba(52,211,153,.35);background:rgba(52,211,153,.08)}
+  .badge.off{color:var(--muted)}
+  code,mono,.mono{font-family:"JetBrains Mono",monospace;font-size:.85rem}
+  label{display:block;font-size:.85rem;color:var(--muted);margin:12px 0 6px}
+  input,textarea{width:100%;border-radius:12px;border:1px solid var(--stroke);background:rgba(0,0,0,.25);
+    color:var(--text);padding:10px 12px;font:inherit}
+  textarea{min-height:88px;font-family:"JetBrains Mono",monospace;font-size:.8rem}
+  .btn{appearance:none;border:1px solid var(--stroke);background:rgba(255,255,255,.03);color:var(--text);
+    border-radius:14px;padding:10px 14px;font:inherit;font-weight:600;cursor:pointer}
+  .btn.primary{background:linear-gradient(135deg,rgba(94,234,212,.95),rgba(56,189,248,.88));color:#062019;border:0}
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+  .muted{color:var(--muted);font-size:.88rem}
+  a{color:var(--accent-2)}
+  #log{white-space:pre-wrap;font-family:"JetBrains Mono",monospace;font-size:.78rem;color:var(--muted);margin-top:14px}
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="row" style="justify-content:space-between">
+    <div>
+      <h1>Dynamics CRM</h1>
+      <p style="margin:0" class="muted">إعداد وربط Dataverse — مزامنة قراءة فقط إلى لوحة التاسكات</p>
+    </div>
+    <a class="btn" href="./panel.html">← التحكم</a>
+  </div>
+
+  <div class="glass" style="margin-top:18px">
+    <div class="row">
+      <span class="badge wait" id="badge">…</span>
+      <span class="mono" id="orgLabel">—</span>
+    </div>
+    <p id="statusMsg" class="muted">جاري قراءة الحالة…</p>
+
+    <label>Environment URL (prod)</label>
+    <input id="orgUrl" placeholder="https://aqaar.crm15.dynamics.com" />
+
+    <label>Model-driven app id (اختياري)</label>
+    <input id="appId" placeholder="944e68b1-308d-4e3a-86c7-cf0452397938" />
+
+    <div class="row">
+      <button class="btn primary" type="button" id="btnSave">حفظ الإعداد</button>
+      <button class="btn" type="button" id="btnRefresh">تحديث الحالة</button>
+      <a class="btn" id="openDyn" href="https://aqaar.crm15.dynamics.com" target="_blank" rel="noopener">فتح Dynamics</a>
+    </div>
+
+    <hr style="border:0;border-top:1px solid var(--stroke);margin:18px 0" />
+
+    <p class="muted">المصادقة: بانتظار <span class="mono">pac auth create</span> على جهازك (أو الصق access token مؤقتاً). لن نختلق بيانات دخول.</p>
+    <label>Bearer access token (اختياري — لصق يدوي)</label>
+    <textarea id="token" placeholder="eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIs..."></textarea>
+    <div class="row">
+      <button class="btn primary" type="button" id="btnToken">حفظ التوكن</button>
+      <button class="btn" type="button" id="btnClear">مسح التوكن</button>
+      <button class="btn" type="button" id="btnWho" disabled>WhoAmI</button>
+      <button class="btn" type="button" id="btnSync" disabled>مزامنة → تاسكات</button>
+    </div>
+    <div id="log"></div>
+  </div>
+</div>
+<script>
+const log = (m) => { const el = document.getElementById('log'); el.textContent = (typeof m === 'string' ? m : JSON.stringify(m,null,2)); };
+async function loadStatus(){
+  const s = await fetch('/api/crm/status').then(r=>r.json());
+  const badge = document.getElementById('badge');
+  const ready = !!s.authReady;
+  badge.className = 'badge ' + (ready ? 'on' : (s.configured ? 'wait' : 'off'));
+  badge.textContent = s.authStatus || s.status || '?';
+  document.getElementById('orgLabel').textContent = s.orgUrl || '—';
+  document.getElementById('orgUrl').value = s.orgUrl || '';
+  document.getElementById('appId').value = s.appId || '';
+  document.getElementById('statusMsg').textContent = ready
+    ? ('موصول · token ' + (s.tokenHint||'') + (s.lastSyncAt ? ' · آخر مزامنة ' + s.lastSyncAt : ''))
+    : (s.lastError || 'بانتظار المصادقة — أكمل pac auth على الجهاز أو الصق توكن.');
+  document.getElementById('btnWho').disabled = !ready;
+  document.getElementById('btnSync').disabled = !ready;
+  document.getElementById('openDyn').href = (s.orgUrl || 'https://aqaar.crm15.dynamics.com') + (s.appId ? ('/main.aspx?appid=' + s.appId) : '');
+  return s;
+}
+document.getElementById('btnRefresh').onclick = () => loadStatus().then(s=>log(s)).catch(e=>log(String(e)));
+document.getElementById('btnSave').onclick = async () => {
+  const body = { orgUrl: document.getElementById('orgUrl').value.trim(), appId: document.getElementById('appId').value.trim() };
+  const s = await fetch('/api/crm/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).then(r=>r.json());
+  log(s); await loadStatus();
+};
+document.getElementById('btnToken').onclick = async () => {
+  const accessToken = document.getElementById('token').value.trim();
+  if(!accessToken){ log('empty token'); return; }
+  const s = await fetch('/api/crm/auth/token',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({accessToken})}).then(r=>r.json());
+  document.getElementById('token').value = '';
+  log({ok:s.ok!==false, authStatus:s.authStatus, hasToken:s.hasToken}); await loadStatus();
+};
+document.getElementById('btnClear').onclick = async () => {
+  const s = await fetch('/api/crm/auth/clear',{method:'POST'}).then(r=>r.json());
+  log(s); await loadStatus();
+};
+document.getElementById('btnWho').onclick = async () => {
+  const r = await fetch('/api/crm/whoami');
+  const j = await r.json();
+  log(j);
+};
+document.getElementById('btnSync').onclick = async () => {
+  const r = await fetch('/api/crm/sync',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({entities:[]})});
+  const j = await r.json();
+  log(j);
+};
+loadStatus().catch(e=>log(String(e)));
+</script>
+</body>
+</html>

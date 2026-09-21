@@ -1,0 +1,10 @@
+data/tasks.json
+data/crm-config.json
+data/audit.jsonl
+data/jobs/
+data/server.log
+data/watchdog.log
+data/crash-capture.txt
+*.log
+.env
+.env.*
