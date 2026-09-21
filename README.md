@@ -1,10 +1,14 @@
 # AQHub — Aqaar Work Board
 
+> **العربية:** اتبع [SETUP-AR.md](SETUP-AR.md) خطوة بخطوة على جهاز ويندوز جديد (نسخ ولصق أوامر PowerShell + تقدم التحميل + نوافذ GitHub/Outlook المتوقعة).
+
 Local-first Jarvis-style command board for Aqaar ops (HTML + PowerShell).  
 لوحة أوامر محلية لأعمال عقار (HTML + PowerShell).
 
+**Honest stack:** local HTML + PowerShell `HttpListener` + Outlook COM. No heavy npm/cloud runtime.  
 **Repo:** https://github.com/gwaez/AQHub  
-**Default URL:** http://127.0.0.1:8766/board.html
+**Default URL:** http://127.0.0.1:8766/board.html  
+**English setup:** [SETUP.md](SETUP.md)
 
 ## Requirements / المتطلبات
 
@@ -15,10 +19,31 @@ Local-first Jarvis-style command board for Aqaar ops (HTML + PowerShell).
 
 ## Quick start / التشغيل
 
-1. Clone this repo onto the PC  
-   `git clone https://github.com/gwaez/AQHub.git`
-2. Double-click `Start-Board-KeepAlive.bat` (preferred) or `Start-Board.bat`
-3. Open http://127.0.0.1:8766/board.html
+Beginners on a **new PC**: prefer [SETUP-AR.md](SETUP-AR.md) (or [SETUP.md](SETUP.md)).
+
+1. Open Run (`Win+R`) → type `powershell` → Enter  
+2. Install Git if needed (visible winget progress):
+
+```powershell
+winget install --id Git.Git -e --source winget --accept-package-agreements --accept-source-agreements
+```
+
+3. Clone (GitHub browser login is normal if the repo is private):
+
+```powershell
+git clone https://github.com/gwaez/AQHub.git
+cd AQHub
+```
+
+4. One-shot setup **or** double-click keepalive:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\Setup-AQHub.ps1
+```
+
+Or double-click `Start-Board-KeepAlive.bat`.
+
+5. Browser opens http://127.0.0.1:8766/board.html — allow any Outlook/Windows COM prompts if you started AQHub.
 
 First run creates `data/tasks.json` and `data/crm-config.json` from the sample files if they are missing.
 
@@ -32,6 +57,9 @@ First run creates `data/tasks.json` and `data/crm-config.json` from the sample f
 
 | File | Role |
 |------|------|
+| `SETUP-AR.md` | Arabic step-by-step setup (copy-paste) |
+| `SETUP.md` | English setup twin |
+| `Setup-AQHub.ps1` | One-shot installer with visible progress |
 | `board.html` | Kanban / list / matrix / focus board |
 | `task.html` | Per-task room (timeline + agent chat) |
 | `index.html` / `panel.html` | Control panel |
@@ -42,4 +70,4 @@ First run creates `data/tasks.json` and `data/crm-config.json` from the sample f
 
 ## Another PC / جهاز تاني
 
-Clone → run the bat → sign into Outlook on that PC → open the board URL. Live tasks are local files and are not in git.
+Clone → run `Setup-AQHub.ps1` or the bat → sign into Outlook on that PC → open the board URL. Live tasks are local files and are not in git.
