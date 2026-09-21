@@ -132,7 +132,7 @@ function Resolve-RepoRoot {
 
   # 4) Clone into Documents\AQHub
   Write-WarnLine "Repo not found locally. Cloning into: $DefaultClonePath"
-  Write-Host '    Cloning repo (if private, a browser / GitHub login window may open — approve access)...' -ForegroundColor Yellow
+  Write-Host '    Cloning repo (if private, a browser / GitHub login window may open - approve access)...' -ForegroundColor Yellow
 
   if (-not (Test-Path $DefaultCloneParent)) {
     New-Item -ItemType Directory -Path $DefaultCloneParent -Force | Out-Null
@@ -212,7 +212,7 @@ function Start-BoardKeepAlive {
   param([string]$Root)
 
   Write-Step 'Starting board (keepalive watchdog)...'
-  Write-Host '    Starting board... Outlook/Windows may show a COM security prompt later — Allow if you trust this run.' -ForegroundColor Yellow
+  Write-Host '    Starting board... Outlook/Windows may show a COM security prompt later - Allow if you trust this run.' -ForegroundColor Yellow
 
   $keepAliveBat = Join-Path $Root 'Start-Board-KeepAlive.bat'
   $watchPs1 = Join-Path $Root 'Watch-Board.ps1'
