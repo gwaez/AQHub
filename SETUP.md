@@ -145,6 +145,18 @@ http://127.0.0.1:8766/
 
 When that works, the system is ready locally.
 
+### Mail sync (Outlook already open)
+
+The board never starts Outlook and never auto-sends. Unread import is user-triggered:
+
+```powershell
+# Outlook desktop must already be running (signed in).
+curl.exe -s -D - -X POST http://127.0.0.1:8766/api/mail/sync -H "Content-Type: application/json" -d "{}"
+curl.exe -s -D - http://127.0.0.1:8766/api/v1/wizard/mail/status
+```
+
+Success looks like `HTTP 200` and JSON `{ "ok": true, "added": N, "scanned": N, "unreadTotal": N, "items": [ { "id", "title", "entryId", "fromEmail" } ] }`. Failure is JSON `{ "ok": false, "error": "...", "message": "..." }` (never an empty 500). Wizard status is `HTTP 200` with `{ "ok": true, "aqhub": true, "outlook": true|false, "adapter": "GetActiveObject" }` — it only probes the running Outlook process.
+
 ---
 
 ## Optional: AQWizard desktop companion
@@ -198,7 +210,8 @@ Windows autostart stays **off** unless you later pass `-Autostart` (after `npm r
 | `git` not recognized after install | Close and reopen PowerShell, then `git --version` |
 | `git clone` fails / asks for login | Sign in to GitHub in the popup/browser; confirm repo access |
 | Board does not open | Re-run `Start-Board-Background.bat`; close leftover board PowerShell windows if any |
-| Mail features fail | Open Outlook desktop and sign in on this PC |
+| Mail features fail | Open Outlook desktop and sign in on this PC. Then `POST /api/mail/sync` (see Mail sync below). |
+| `POST /api/mail/sync` empty 500 | Restart the board from this branch; Outlook must already be open. Errors are JSON `{ok:false,error,message}`. |
 | ExecutionPolicy warning | Use the Step 5 command with `-ExecutionPolicy Bypass` as written |
 
 ---

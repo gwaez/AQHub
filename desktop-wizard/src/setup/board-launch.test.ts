@@ -10,6 +10,7 @@ const read = (name: string) => readFileSync(join(repoRoot, name), "utf8");
 test("Watch-Board starts Start-Board hidden with -NoBrowser", () => {
   const watch = read("Watch-Board.ps1");
   assert.match(watch, /'-WindowStyle','Hidden'/);
+  assert.match(watch, /'-STA'/);
   assert.match(watch, /-WindowStyle Hidden/);
   assert.match(watch, /-NoBrowser/);
   assert.doesNotMatch(watch, /WindowStyle Minimized/);
@@ -35,6 +36,26 @@ test("Background VBS launches Watch-Board with WScript window style 0", () => {
   assert.match(vbs, /Watch-Board\.ps1/);
   assert.match(vbs, /sh\.Run cmd, 0, False/);
   assert.match(vbs, /WindowStyle Hidden/);
+});
+
+test("Eisenhower notes use a centered floating modal with chat send/close", () => {
+  const eis = read("eisenhower.html");
+  assert.match(eis, /id="noteModal"/);
+  assert.match(eis, /note-float/);
+  assert.match(eis, /id="btnOpenNotes"/);
+  assert.match(eis, /id="noteSave"/);
+  assert.match(eis, /id="noteSend"/);
+  assert.match(eis, /id="noteChat"/);
+  assert.match(eis, />حفظ</);
+  assert.match(eis, />إغلاق</);
+  assert.match(eis, /await save\(\)/);
+  assert.doesNotMatch(eis, /id="notesEditor"/);
+  assert.doesNotMatch(eis, /insertBefore\(\$\('modNotes'\), gutter\)/);
+  const task = read("task.html");
+  assert.match(task, /id="boxNoteModal"/);
+  assert.match(task, /id="btnOpenBoxNote"/);
+  assert.match(task, />حفظ</);
+  assert.match(task, />إغلاق</);
 });
 
 test("merged tree keeps filters dashboard UX and wizard roam/drag", () => {

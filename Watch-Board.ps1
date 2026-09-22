@@ -31,7 +31,7 @@ function Stop-BoardProcs {
 function Start-BoardServer {
   Write-Log 'Starting Start-Board.ps1 (hidden, no browser)'
   Start-Process -FilePath 'powershell.exe' -ArgumentList @(
-    '-NoProfile','-ExecutionPolicy','Bypass','-WindowStyle','Hidden','-File', $BoardPs1, '-NoBrowser'
+    '-NoProfile','-STA','-ExecutionPolicy','Bypass','-WindowStyle','Hidden','-File', $BoardPs1, '-NoBrowser'
   ) -WorkingDirectory $Root -WindowStyle Hidden | Out-Null
 }
 

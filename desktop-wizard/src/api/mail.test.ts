@@ -32,3 +32,12 @@ test("pickRecentMail returns newest non-ignored email task", () => {
   assert.equal(pickRecentMail([email], ["T-009"]) , null);
   assert.equal(isIgnoredMail(picked!, ["eid-1"]), true);
 });
+
+test("slim mail/sync items (id,title,entryId,fromEmail) still map", () => {
+  const slim = { id: "T-240", title: "Hello", entryId: "eid-9", fromEmail: "a@b.com" };
+  const item = taskToMailItem(slim);
+  assert.equal(item?.taskId, "T-240");
+  assert.equal(item?.title, "Hello");
+  assert.equal(item?.entryId, "eid-9");
+  assert.equal(item?.fromEmail, "a@b.com");
+});

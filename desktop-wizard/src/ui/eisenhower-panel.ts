@@ -3,6 +3,8 @@
 import {
   MATRIX_QUADS,
   QUAD_META,
+  itemTitle,
+  normalizeEisItems,
   type EisDoc,
   type EisItem,
   type EisQuad,
@@ -91,7 +93,7 @@ export class EisenhowerPanel {
   }
 
   private paint(): void {
-    const items = Array.isArray(this.doc.items) ? this.doc.items : [];
+    const items = normalizeEisItems(this.doc.items);
     const matrixCells = MATRIX_QUADS.map((quad) => cell(items, quad)).join("");
     const extraCells = (["inbox", "trash"] as EisQuad[]).map((quad) => cell(items, quad, true)).join("");
     const undo = this.undo
@@ -125,7 +127,7 @@ function cell(items: EisItem[], quad: EisQuad, extra = false): string {
 
 function card(it: EisItem, quad: EisQuad): string {
   const id = String(it.id || "");
-  const title = String(it.title || it.taskId || id || "بدون عنوان");
+  const title = itemTitle(it);
   const trashBtn =
     quad === "trash"
       ? ""
