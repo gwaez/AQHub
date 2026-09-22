@@ -30,15 +30,17 @@ body{color:var(--text);font-family:"IBM Plex Sans Arabic",system-ui,sans-serif;b
 .side{
   width:270px;flex:0 0 270px;border:1px solid var(--line);border-radius:16px;
   background:rgba(12,24,38,.92);padding:10px 10px 12px;display:flex;flex-direction:column;gap:8px;
-  max-height:calc(100vh - 148px);overflow:auto;position:sticky;top:10px
+  max-height:calc(100vh - 148px);overflow-x:hidden;overflow-y:auto;position:sticky;top:10px
 }
 .side.collapsed{display:none}
 .side .sf-h{display:flex;justify-content:space-between;align-items:center;gap:6px}
 .side .sf-h b{font-size:.82rem}
 .side .field{display:grid;gap:4px}
 .side .field span{font-size:.7rem;color:var(--muted);font-weight:500}
-.side input,.side select{width:100%}
-.side .row2{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.side input,.side select{width:100%;min-width:0}
+.side input[type=date]{min-height:34px}
+.side .row2{display:grid;grid-template-columns:1fr;gap:6px}
+.side{overflow-x:hidden;overflow-y:auto}
 .side-count{font-size:.72rem;color:var(--muted)}
 .search-wrap{position:relative;flex:1;min-width:220px}
 .search-wrap input{width:100%}
