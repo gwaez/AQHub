@@ -10,6 +10,8 @@
   --ink:#1f2937; --muted:#6b7280; --line:#dbe3ee; --teal:#0f766e;
   --do:#cfe8d5; --sched:#e8f2e0; --deleg:#ead9e3; --elim:#e8c5c8;
   --hdr:#4b5563; --hdr2:#9ca3af; --bg:#e8eef5;
+  --card-h:52px; --card-gap:8px;
+  --q-list-h:calc(4 * var(--card-h) + 3 * var(--card-gap));
 }
 *{box-sizing:border-box}
 html,body{height:100%}
@@ -69,11 +71,23 @@ input[type=range]{width:100%;accent-color:var(--teal)}
 .mods{flex:1;display:flex;min-width:0;min-height:0;gap:0}
 .workspace.stack .mods{flex-direction:column}
 .workspace.split .mods{flex-direction:row}
-.mod{background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:0 10px 30px rgba(15,23,42,.06);min-width:72px;min-height:52px;overflow:hidden;display:flex;flex-direction:column}
-.mod-h{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid #e2e8f0;flex:0 0 auto}
+.mod{background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:0 10px 30px rgba(15,23,42,.06);min-width:72px;min-height:40px;overflow:hidden;display:flex;flex-direction:column}
+.mod-h,.win-h{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid #e2e8f0;flex:0 0 auto}
 .mod-h h2{margin:0;font-size:.95rem}
 .mod-body{flex:1;min-height:0;overflow:auto;padding:10px 12px 12px}
-.mod.collapsed .mod-body{display:none}
+.mod.collapsed .mod-body,.mod.win-min .mod-body{display:none !important}
+.mod.win-min,.mod.collapsed{flex:0 0 40px !important;min-height:40px !important;max-height:40px !important;height:40px !important}
+.mod.win-max{flex:1 1 auto !important;min-height:180px}
+.win-chrome{display:inline-flex;gap:3px;flex:0 0 auto;margin-inline-start:auto}
+.win-btn{width:26px;height:22px;padding:0;border:1px solid #94a3b8;background:linear-gradient(#fff,#e5e7eb);border-radius:3px;cursor:pointer;position:relative}
+.win-btn:hover{background:linear-gradient(#fff,#dbeafe);border-color:#64748b}
+.win-btn[data-act="min"]::before{content:"";position:absolute;left:6px;right:6px;bottom:6px;height:2px;background:#111}
+.win-btn[data-act="max"]::before{content:"";position:absolute;left:6px;right:6px;top:5px;bottom:5px;border:2px solid #111}
+.win-btn[data-act="max"].is-max::before{top:7px;left:8px}
+.win-btn[data-act="max"].is-max::after{content:"";position:absolute;left:5px;right:9px;top:4px;bottom:8px;border:2px solid #111;background:#f8fafc}
+.side.win-min{flex:0 0 44px !important;width:auto !important;max-height:44px !important;min-height:44px !important;overflow:hidden;padding:6px 10px !important}
+.side.win-min > :not(.win-h){display:none !important}
+.side.win-max{flex:1 1 420px !important;width:auto !important;max-height:none}
 .gutter{flex:0 0 9px;margin:0 4px;border-radius:99px;background:#cbd5e1;cursor:row-resize;position:relative}
 .workspace.split .gutter{cursor:col-resize;margin:4px 0}
 .gutter:hover,.gutter.hot{background:var(--teal)}
@@ -87,20 +101,24 @@ input[type=range]{width:100%;accent-color:var(--teal)}
 
 .matrix-wrap{background:transparent;border:0;padding:0;box-shadow:none}
 .title-bar{text-align:center;font-weight:700;font-size:1.05rem;margin:0 0 10px;padding:8px;border:1px solid #9ca3af;background:#f3f4f6;border-radius:10px}
-.grid{display:grid;grid-template-columns:42px 1fr 1fr;grid-template-rows:36px 1fr 1fr;gap:0;border:2px solid #4b5563;min-height:380px;height:min(56vh,620px);background:#fff}
+.grid{display:grid;grid-template-columns:42px 1fr 1fr;grid-template-rows:36px minmax(var(--q-list-h),1fr) minmax(var(--q-list-h),1fr);gap:0;border:2px solid #4b5563;height:calc(36px + 2 * (62px + var(--q-list-h)));min-height:calc(36px + 2 * (62px + var(--q-list-h)));background:#fff}
 .corner{background:#e5e7eb;border:1px solid #6b7280}
 .colh,.rowh{display:flex;align-items:center;justify-content:center;font-weight:700;border:1px solid #6b7280;color:#fff}
 .colh.u{background:var(--hdr)}.colh.nu{background:var(--hdr2);color:#111}
 .rowh{writing-mode:vertical-rl;transform:rotate(180deg)}
 .rowh.i{background:var(--hdr)}.rowh.ni{background:var(--hdr2);color:#111}
-.q{position:relative;border:1px solid #6b7280;padding:8px 8px 34px;background-image:repeating-linear-gradient(180deg,transparent,transparent 27px,rgba(0,0,0,.08) 28px);min-height:160px;display:flex;flex-direction:column}
+.q{position:relative;border:1px solid #6b7280;padding:8px 8px 34px;background-image:repeating-linear-gradient(180deg,transparent,transparent 27px,rgba(0,0,0,.08) 28px);min-height:0;display:flex;flex-direction:column}
 .q.do{background-color:var(--do)}.q.sched{background-color:var(--sched)}.q.deleg{background-color:var(--deleg)}.q.elim{background-color:var(--elim)}
 .q.drag{outline:3px solid var(--teal);outline-offset:-3px}
-.q .q-head{display:flex;justify-content:space-between;align-items:center;font-size:.72rem;font-weight:800;color:#374151;margin-bottom:4px}
-.q .q-list{flex:1;overflow:auto;max-height:none;padding-bottom:4px;display:flex;flex-direction:row;flex-wrap:wrap;align-content:flex-start;align-items:flex-start;gap:8px}
+.q .q-head{display:flex;justify-content:space-between;align-items:center;font-size:.72rem;font-weight:800;color:#374151;margin-bottom:4px;flex:0 0 auto}
+.q .q-list{flex:0 0 var(--q-list-h);height:var(--q-list-h);max-height:var(--q-list-h);min-height:0;overflow-x:hidden;overflow-y:auto;padding-bottom:0;display:flex;flex-direction:column;flex-wrap:nowrap;align-content:flex-start;align-items:stretch;gap:var(--card-gap);overscroll-behavior:contain}
 .q .foot{position:absolute;left:0;right:0;bottom:0;padding:6px 10px;text-align:center;font-weight:700;font-size:.82rem;background:rgba(255,255,255,.55);border-top:1px solid rgba(0,0,0,.12)}
 
-.card{background:#fff;border:1px solid #94a3b8;border-radius:10px;padding:7px 10px;box-shadow:0 2px 0 rgba(0,0,0,.06);cursor:grab;font-size:.82rem;line-height:1.35;margin:0;position:relative;display:inline-block;width:max-content;max-width:min(280px,100%);vertical-align:top;flex:0 1 auto;user-select:none}
+.card{background:#fff;border:1px solid #94a3b8;border-radius:10px;padding:7px 10px;box-shadow:0 2px 0 rgba(0,0,0,.06);cursor:grab;font-size:.82rem;line-height:1.35;margin:0;position:relative;display:inline-block;width:max-content;max-width:min(280px,100%);vertical-align:top;flex:0 0 auto;user-select:none}
+.q .card{display:block;width:100%;max-width:none;height:var(--card-h);min-height:var(--card-h);max-height:var(--card-h);flex:0 0 var(--card-h);overflow:hidden;box-sizing:border-box;padding:6px 8px}
+.q .card .card-title{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.q .card .note-line{margin-top:3px;padding:2px 6px;font-size:.68rem;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.q .card .meta{margin-top:2px;font-size:.62rem}
 .card:active{cursor:grabbing}
 .card.selected{outline:2px solid var(--teal);box-shadow:0 0 0 3px rgba(15,118,110,.22);border-color:var(--teal)}
 .card.dragging-group{opacity:.45}
@@ -216,7 +234,8 @@ body.edit-mode #dashNameBar{display:flex}
 .cell-body .grid{min-height:180px !important;height:100% !important}
 .notes-editor input,.notes-editor textarea{width:100%;border:1px solid #99f6e4;border-radius:10px;padding:8px;font:inherit;background:#fff}
 .notes-editor textarea{min-height:90px;resize:vertical}
-.notes-item.stick{background:#fffbeb;border-color:#fde68a;box-shadow:2px 3px 0 rgba(15,23,42,.06)}
+#modMatrix .mod-body > #modNotes{margin-top:12px;min-height:160px;max-height:260px}
+.note-line{cursor:pointer}
 .cell.drop-mod{outline:2px dashed var(--teal);outline-offset:-2px;background:#f0fdfa}
 body.edit-mode .cell-h{cursor:grab}
 #paRibbon [data-add]{cursor:grab}
@@ -240,7 +259,7 @@ body.view-mode .pa-tabs,body.view-mode .hint-edit{display:none !important}
   .side{flex:none;width:auto;max-height:42vh}
   .workspace.split .mods,.workspace.stack .mods{flex-direction:column}
   .gutter{cursor:row-resize}
-  .grid{min-height:420px;height:auto}
+  .grid{min-height:calc(36px + 2 * (62px + var(--q-list-h)));height:auto}
   .sec-row{flex-direction:column}
   .col-gutter{display:none}
 }
@@ -304,8 +323,8 @@ body.view-mode .pa-tabs,body.view-mode .hint-edit{display:none !important}
     <div class="row">
       <button class="btn small on" type="button" id="btnOrientStack">عمودي</button>
       <button class="btn small" type="button" id="btnOrientSplit">أفقي</button>
-      <button class="btn small" type="button" id="btnToggleInbox">طي الوارد</button>
-      <button class="btn small" type="button" id="btnToggleMatrix">طي المصفوفة</button>
+      <button class="btn small" type="button" id="btnToggleInbox">تصغير الوارد</button>
+      <button class="btn small" type="button" id="btnToggleMatrix">تصغير المصفوفة</button>
       <button class="btn small on" type="button" id="btnToggleSide">التصفية</button>
       <button class="btn small" type="button" id="btnQuickEmail">فلتر إيميلات</button>
       <div class="quick-wrap">
@@ -341,7 +360,14 @@ body.view-mode .pa-tabs,body.view-mode .hint-edit{display:none !important}
 
 <div id="modulePool">
 <aside class="side" id="sideFilters">
-      <div class="sf-h"><b>تصفية</b><span class="match" id="matchCount">0 نتيجة</span></div>
+      <div class="sf-h win-h">
+        <b>تصفية</b>
+        <span class="match" id="matchCount">0 نتيجة</span>
+        <span class="win-chrome" data-win="side">
+          <button type="button" class="win-btn" data-win="side" data-act="min" title="تصغير" aria-label="تصغير"></button>
+          <button type="button" class="win-btn" data-win="side" data-act="max" title="تكبير" aria-label="تكبير"></button>
+        </span>
+      </div>
       <div class="mode-tabs" id="filterMode">
         <button type="button" data-mode="live" class="on">لايف</button>
         <button type="button" data-mode="per">بري</button>
@@ -428,9 +454,12 @@ body.view-mode .pa-tabs,body.view-mode .hint-edit{display:none !important}
       </div>
     </aside>
     <section class="mod" id="modInbox">
-      <div class="mod-h">
+      <div class="mod-h win-h">
         <h2>صندوق الوارد · قبل التصنيف</h2>
-        <button class="btn small ghost" type="button" id="btnCollapseInbox">طي</button>
+        <span class="win-chrome" data-win="inbox">
+          <button type="button" class="win-btn" data-win="inbox" data-act="min" title="تصغير" aria-label="تصغير"></button>
+          <button type="button" class="win-btn" data-win="inbox" data-act="max" title="تكبير" aria-label="تكبير"></button>
+        </span>
       </div>
       <div class="mod-body">
         <div class="add">
@@ -449,9 +478,12 @@ body.view-mode .pa-tabs,body.view-mode .hint-edit{display:none !important}
       </div>
     </section>
     <section class="mod" id="modMatrix">
-      <div class="mod-h">
+      <div class="mod-h win-h">
         <h2>إدارة المهام · المصفوفة</h2>
-        <button class="btn small ghost" type="button" id="btnCollapseMatrix">طي</button>
+        <span class="win-chrome" data-win="matrix">
+          <button type="button" class="win-btn" data-win="matrix" data-act="min" title="تصغير" aria-label="تصغير"></button>
+          <button type="button" class="win-btn" data-win="matrix" data-act="max" title="تكبير" aria-label="تكبير"></button>
+        </span>
       </div>
       <div class="mod-body">
         <div class="matrix-wrap">
@@ -496,7 +528,7 @@ body.view-mode .pa-tabs,body.view-mode .hint-edit{display:none !important}
             <button class="btn small" type="button" id="btnNoteModDel">مسح</button>
           </div>
         </div>
-        <p class="muted" id="notesHint">نوتس مستقلة تتحط في التخطيط: اسحب «نوتس» من الشريط على خلية، أو + نوت هنا. البند المحدد يظهر فوق لو فيه نوت كارت.</p>
+        <p class="muted" id="notesHint">+ نوت هنا للنوتس المستقلة. دبل-كليك على كارت أو قائمة يمين لتعديل نوت البند. النوت بتظهر على الكارت بس لو مكتوبة.</p>
       </div>
     </section>
 </div>
@@ -584,7 +616,7 @@ let filterMode = 'live';
 let committed = emptyFilter();
 let draft = emptyFilter();
 let perDirty = {};
-let layout = { orient:'stack', inboxPct:34, side:true, inboxOn:true, matrixOn:true };
+let layout = { orient:'stack', inboxPct:34, side:true, inboxOn:true, matrixOn:true, inboxMin:false, inboxMax:false, sideMin:false, sideMax:false, matrixMin:false, matrixMax:false };
 let dash = null;
 let savedDash = null;
 let savedLayout = null;
@@ -720,12 +752,11 @@ function cardEl(it, hostList){
     : '';
   el.innerHTML = `<div class="card-title"><span class="tag">${escapeHtml(it.source||'manual')}</span> ${escapeHtml(it.title||'')}</div>
     ${notePreview}
-    <div class="meta"><span>${LABELS[it.quad]||it.quad}</span></div>
-    <div class="card-actions"><button type="button" class="mini-note" data-open-note="${escapeHtml(it.id)}">${hasNote?'تعديل النوت':'نوت'}</button></div>`;
-  const nb = el.querySelector('[data-open-note]');
-  if (nb){
-    nb.addEventListener('pointerdown', e => { e.stopPropagation(); });
-    nb.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); openNote(it.id); });
+    <div class="meta"><span>${LABELS[it.quad]||it.quad}</span></div>`;
+  const nl = el.querySelector('.note-line');
+  if (nl){
+    nl.addEventListener('pointerdown', e => { e.stopPropagation(); });
+    nl.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); openNote(it.id); });
   }
   el.addEventListener('dragstart', e => {
     dragged = true;
@@ -1483,7 +1514,7 @@ function consumeLayoutReset(){
   } catch {}
 }
 function defaultLayout(){
-  return { orient:'stack', inboxPct:34, side:true, inboxOn:true, matrixOn:true };
+  return { orient:'stack', inboxPct:34, side:true, inboxOn:true, matrixOn:true, inboxMin:false, inboxMax:false, sideMin:false, sideMax:false, matrixMin:false, matrixMax:false };
 }
 function usesCanvasView(){
   return editMode || (customCommitted && dashHasRequired(dash));
@@ -1500,6 +1531,7 @@ function mountClassic(){
   const mb = $('modMatrix') && $('modMatrix').querySelector('.mod-body');
   if (mb && $('modDoing')) mb.appendChild($('modDoing'));
   if (mb && $('trashBox')) mb.appendChild($('trashBox'));
+  if (mb && $('modNotes')) mb.appendChild($('modNotes'));
   if ($('modInbox')) $('modInbox').style.height = '';
   if ($('modMatrix')) $('modMatrix').style.height = '';
 }
@@ -1670,33 +1702,85 @@ function resetLayout(skipConfirm){
 }
 
 function persistLayout(){
-  if (editMode) return;
   try { localStorage.setItem(LAYOUT_KEY, JSON.stringify(layout)); } catch {}
+}
+function applyWinChrome(){
+  const side = $('sideFilters');
+  const inbox = $('modInbox');
+  const matrix = $('modMatrix');
+  if (side){
+    side.classList.toggle('win-min', !!layout.sideMin);
+    side.classList.toggle('win-max', !!(layout.sideMax && !layout.sideMin));
+  }
+  if (inbox){
+    const min = !!layout.inboxMin || layout.inboxOn===false;
+    inbox.classList.toggle('win-min', min);
+    inbox.classList.toggle('collapsed', min);
+    inbox.classList.toggle('win-max', !!(layout.inboxMax && !min));
+  }
+  if (matrix){
+    const min = !!layout.matrixMin || layout.matrixOn===false;
+    matrix.classList.toggle('win-min', min);
+    matrix.classList.toggle('collapsed', min);
+    matrix.classList.toggle('win-max', !!(layout.matrixMax && !min));
+  }
+  document.querySelectorAll('.win-btn[data-act="max"]').forEach(b => {
+    const which = b.getAttribute('data-win');
+    b.classList.toggle('is-max', !!(which && layout[which+'Max'] && !layout[which+'Min']));
+  });
+}
+function setWin(which, act){
+  if (!which || !['side','inbox','matrix'].includes(which)) return;
+  const minK = which+'Min', maxK = which+'Max';
+  if (act==='min'){
+    if (layout[minK]){ layout[minK]=false; }
+    else { layout[minK]=true; layout[maxK]=false; }
+  } else if (act==='max'){
+    if (layout[minK]){ layout[minK]=false; layout[maxK]=true; }
+    else if (layout[maxK]){ layout[maxK]=false; }
+    else { layout[maxK]=true; layout[minK]=false; }
+  }
+  if (which==='inbox') layout.inboxOn = !layout.inboxMin;
+  if (which==='matrix') layout.matrixOn = !layout.matrixMin;
+  if (which==='side') layout.side = true;
+  applyLayout();
 }
 function applyLayout(){
   const ws = $('workspace');
   if (!ws || !$('modInbox') || !$('modMatrix')) return;
   $('btnOrientStack').classList.toggle('on', layout.orient!=='split');
   $('btnOrientSplit').classList.toggle('on', layout.orient==='split');
-  $('btnToggleSide').classList.toggle('on', !!layout.side);
-  if (editMode) return;
-  if (customCommitted && $('modInbox') && $('modInbox').closest('#canvas')) return;
+  $('btnToggleSide').classList.toggle('on', !!layout.side && !layout.sideMin);
+  applyWinChrome();
+  if (editMode){ persistLayout(); return; }
+  const inCanvas = !!(customCommitted && $('modInbox') && $('modInbox').closest('#canvas'));
+  if (inCanvas){ persistLayout(); return; }
   ws.classList.toggle('stack', layout.orient!=='split');
   ws.classList.toggle('split', layout.orient==='split');
-  ws.classList.toggle('side-off', !layout.side);
-  $('modInbox').classList.toggle('collapsed', !layout.inboxOn);
-  $('modMatrix').classList.toggle('collapsed', !layout.matrixOn);
-  const a = layout.inboxOn ? Math.max(18, Math.min(82, Number(layout.inboxPct)||34)) : 0;
-  const b = layout.matrixOn ? (100-a) : 0;
-  if (layout.inboxOn && layout.matrixOn){
-    $('modInbox').style.flex = a+' 1 0';
-    $('modMatrix').style.flex = b+' 1 0';
-  } else if (layout.inboxOn){
-    $('modInbox').style.flex = '1 1 auto';
-    $('modMatrix').style.flex = '0 0 42px';
-  } else if (layout.matrixOn){
-    $('modInbox').style.flex = '0 0 42px';
+  ws.classList.toggle('side-off', layout.side===false);
+  const inboxMin = !!layout.inboxMin || layout.inboxOn===false;
+  const matrixMin = !!layout.matrixMin || layout.matrixOn===false;
+  const inboxMax = !!layout.inboxMax && !inboxMin;
+  const matrixMax = !!layout.matrixMax && !matrixMin;
+  if (inboxMin && matrixMin){
+    $('modInbox').style.flex = '0 0 40px';
+    $('modMatrix').style.flex = '0 0 40px';
+  } else if (inboxMin){
+    $('modInbox').style.flex = '0 0 40px';
     $('modMatrix').style.flex = '1 1 auto';
+  } else if (matrixMin){
+    $('modInbox').style.flex = '1 1 auto';
+    $('modMatrix').style.flex = '0 0 40px';
+  } else if (inboxMax && !matrixMax){
+    $('modInbox').style.flex = '78 1 0';
+    $('modMatrix').style.flex = '22 1 0';
+  } else if (matrixMax && !inboxMax){
+    $('modInbox').style.flex = '22 1 0';
+    $('modMatrix').style.flex = '78 1 0';
+  } else {
+    const a = Math.max(18, Math.min(82, Number(layout.inboxPct)||34));
+    $('modInbox').style.flex = a+' 1 0';
+    $('modMatrix').style.flex = (100-a)+' 1 0';
   }
   persistLayout();
 }
@@ -2018,7 +2102,7 @@ function renderNotesModule(){
     if (selItem){
       selBox.hidden = false;
       selBox.innerHTML = '<b>البند المحدد: '+escapeHtml(selItem.title||'')+'</b><p>'+
-        (selItem.note ? escapeHtml(selItem.note) : 'مفيش نوت على الكارت — اضغط نوت على الكارت')+'</p>';
+        (selItem.note ? escapeHtml(selItem.note) : 'مفيش نوت على الكارت — دبل-كليك أو قائمة يمين لتعديل النوت')+'</p>';
       selBox.onclick = () => openNote(selItem.id);
     } else { selBox.hidden = true; selBox.innerHTML=''; }
   }
@@ -2048,9 +2132,11 @@ function openDashNote(id){
 function newDashNote(){
   const n = { id: nid('N'), title:'نوت جديدة', body:'', updatedAt: new Date().toISOString() };
   dashNotes.unshift(n);
-  openDashNote(n.id);
   persistDashNotes();
   renderNotesModule();
+  openDashNote(n.id);
+  const box = $('modNotes');
+  if (box) box.scrollIntoView({ block:'nearest' });
 }
 function saveDashNote(){
   if (!editingNoteId){
@@ -2086,12 +2172,13 @@ async function loadDashNotes(){
     const raw = localStorage.getItem(NOTES_KEY);
     if (raw){ const j=JSON.parse(raw); dashNotes = j.notes||j||[]; }
   } catch {}
+  if (!Array.isArray(dashNotes)) dashNotes = [];
   try {
     const r = await fetch('/api/notes');
     if (r.ok){
       const j = await r.json();
-      if (Array.isArray(j.notes)) dashNotes = j.notes;
-      else if (Array.isArray(j)) dashNotes = j;
+      const apiNotes = Array.isArray(j.notes) ? j.notes : (Array.isArray(j) ? j : null);
+      if (apiNotes && (apiNotes.length || !dashNotes.length)) dashNotes = apiNotes;
     }
   } catch {}
   renderNotesModule();
@@ -2152,6 +2239,9 @@ function loadLayout(){
     if (!raw) return;
     const j = JSON.parse(raw);
     layout = Object.assign(layout, j);
+    if (layout.side===false){ layout.sideMin = true; layout.side = true; }
+    if (layout.inboxOn===false) layout.inboxMin = true;
+    if (layout.matrixOn===false) layout.matrixMin = true;
   } catch {}
 }
 
@@ -2161,23 +2251,38 @@ async function load(){
   await loadDash();
   await loadDashNotes();
   mountShell();
+  let localItems = [];
+  try {
+    const raw = localStorage.getItem('aqaar-eisenhower');
+    if (raw) localItems = (JSON.parse(raw).items)||[];
+  } catch {}
   try {
     const r = await fetch('/api/eisenhower');
     if (!r.ok) throw new Error('HTTP '+r.status);
     const j = await r.json();
     items = Array.isArray(j.items) ? j.items : [];
+    const localById = {};
+    localItems.forEach(x => { if (x && x.id) localById[x.id]=x; });
+    items.forEach(it => {
+      const loc = localById[it.id];
+      if (loc && (loc.note||'').trim() && !(it.note||'').trim()) it.note = loc.note;
+    });
     window.__savedAt = j.updatedAt || '';
     try { localStorage.setItem('aqaar-eisenhower', JSON.stringify({items, updatedAt: window.__savedAt})); } catch {}
     setBadge('on','أونلاين · محفوظ');
   } catch {
     try {
-      const raw = localStorage.getItem('aqaar-eisenhower');
-      if (raw) {
-        const j = JSON.parse(raw);
-        items = j.items||[];
-        window.__savedAt = j.updatedAt||'';
-        setBadge('wait','أوفلاين · من الجهاز');
-      } else setBadge('off','فارغ');
+      items = localItems;
+      if (items.length) setBadge('wait','أوفلاين · من الجهاز');
+      else {
+        const raw = localStorage.getItem('aqaar-eisenhower');
+        if (raw) {
+          const j = JSON.parse(raw);
+          items = j.items||[];
+          window.__savedAt = j.updatedAt||'';
+          setBadge('wait','أوفلاين · من الجهاز');
+        } else setBadge('off','فارغ');
+      }
     } catch { setBadge('off','خطأ'); }
   }
   const mx = sliderMax();
@@ -2283,14 +2388,19 @@ $('btnClearFilters').onclick = clearAllFilters;
 
 $('btnOrientStack').onclick = () => { if (editMode) applyOrientPreset('stack'); else { layout.orient='stack'; applyLayout(); } };
 $('btnOrientSplit').onclick = () => { if (editMode) applyOrientPreset('split'); else { layout.orient='split'; applyLayout(); } };
-$('btnToggleInbox').onclick = () => { layout.inboxOn = !layout.inboxOn; if (!layout.inboxOn && !layout.matrixOn) layout.matrixOn = true; applyLayout(); };
-$('btnToggleMatrix').onclick = () => { layout.matrixOn = !layout.matrixOn; if (!layout.inboxOn && !layout.matrixOn) layout.inboxOn = true; applyLayout(); };
-$('btnCollapseInbox').onclick = () => $('btnToggleInbox').click();
-$('btnCollapseMatrix').onclick = () => $('btnToggleMatrix').click();
+$('btnToggleInbox').onclick = () => setWin('inbox','min');
+$('btnToggleMatrix').onclick = () => setWin('matrix','min');
 $('btnToggleSide').onclick = () => {
   if (editMode){ layout.side = !isTypePlaced('filters'); toggleTypeInLayout('filters'); }
-  else { layout.side = !layout.side; applyLayout(); }
+  else { setWin('side','min'); }
 };
+document.addEventListener('click', e => {
+  const b = e.target.closest('.win-btn');
+  if (!b) return;
+  e.preventDefault();
+  e.stopPropagation();
+  setWin(b.getAttribute('data-win'), b.getAttribute('data-act'));
+});
 $('btnQuickEmail').onclick = toggleEmailQuick;
 $('btnQuickDate').onclick = (e) => {
   e.stopPropagation();
