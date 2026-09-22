@@ -32,9 +32,9 @@ h1{margin:0;font-size:1.28rem;font-weight:700}
 
 .lay-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;margin-bottom:8px;flex:0 0 auto}
 .quick-wrap{position:relative}
-.quick-menu{position:absolute;top:calc(100% + 4px);right:0;z-index:40;min-width:160px;background:#fff;border:1px solid #cbd5e1;border-radius:12px;padding:4px;box-shadow:0 12px 30px rgba(15,23,42,.15)}
+.quick-menu{position:absolute;top:calc(100% + 4px);inset-inline-end:0;z-index:40;min-width:160px;background:#fff;border:1px solid #cbd5e1;border-radius:12px;padding:4px;box-shadow:0 12px 30px rgba(15,23,42,.15)}
 .quick-menu button{display:block;width:100%;text-align:right;border:0;background:transparent;padding:7px 10px;font:inherit;font-size:.78rem;font-weight:700;cursor:pointer;border-radius:8px}
-.quick-menu button:hover{background:#f0fdfa;color:var(--teal)}
+.quick-menu button:hover,.quick-menu button.on{background:#f0fdfa;color:var(--teal)}
 .btn-add-manual{border-color:var(--teal);color:var(--teal)}
 .chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center;min-height:28px}
 .chip{display:inline-flex;align-items:center;gap:6px;border:1px solid #99f6e4;background:#f0fdfa;color:#115e59;border-radius:999px;padding:3px 8px;font-size:.72rem;font-weight:700}
@@ -911,6 +911,10 @@ function updateQuickButtons(){
     $('btnQuickDate').classList.toggle('on', !!mode);
     $('btnQuickDate').textContent = mode==='today' ? 'فلتر: اليوم' : (mode==='week' ? 'فلتر: هذا الأسبوع' : 'فلتر اليوم أو الأسبوع');
   }
+  document.querySelectorAll('#dateQuickMenu [data-range]').forEach(b => {
+    const r = b.getAttribute('data-range');
+    b.classList.toggle('on', mode ? r===mode : r==='clear');
+  });
 }
 function toggleEmailQuick(){
   const on = (draft.hasEmail==='yes');
