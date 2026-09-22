@@ -253,6 +253,18 @@ body.edit-mode .dash-pane{display:flex}
 body.view-mode .pa-app{display:none}
 body.view-mode .pa-tabs,body.view-mode .hint-edit{display:none !important}
 .btn.danger-ghost{border-color:#fecdd3;color:#be123c}
+.ops-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 8px;padding:8px 10px;border:1px solid #99f6e4;border-radius:14px;background:#f0fdfa;flex:0 0 auto}
+.ops-bar b{font-size:.78rem;color:#0f766e}
+.ops-bar .ops-task{font-size:.8rem;font-weight:700;max-width:240px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ops-bar select{border:1px solid #cbd5e1;border-radius:10px;padding:6px 8px;font:inherit;font-size:.78rem;background:#fff}
+.sync-status{font-size:.75rem;color:var(--muted);max-width:min(420px,50vw);line-height:1.35}
+.sync-status.ok{color:#047857}.sync-status.err{color:#be123c}.sync-status.wait{color:#b45309}
+.ops-bar .btn.danger{border-color:#fecdd3;color:#be123c;background:#fff1f2}
+.ops-log{display:none;width:100%;max-height:90px;overflow:auto;margin:0;padding:8px 10px;border-radius:10px;background:#0f172a;color:#e2e8f0;font-size:.72rem;white-space:pre-wrap;flex:1 0 100%}
+.ops-log.on{display:block}
+.eis-toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%) translateY(16px);z-index:80;background:#0f172a;color:#e2e8f0;border-radius:12px;padding:10px 14px;font-size:.82rem;opacity:0;pointer-events:none;transition:.2s;max-width:min(520px,92vw);text-align:center;box-shadow:0 12px 40px rgba(0,0,0,.3)}
+.eis-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.eis-toast b{display:block;color:#5eead4;margin-bottom:2px}
 
 @media(max-width:980px){
   .workspace{flex-direction:column}
@@ -313,6 +325,8 @@ body.view-mode .pa-tabs,body.view-mode .hint-edit{display:none !important}
       <button class="btn danger-ghost" type="button" id="btnResetLayout">إعادة ضبط التخطيط</button>
       <button class="btn primary" type="button" id="btnSave">حفظ التاسكات</button>
       <button class="btn" type="button" id="btnImport">سحب تاسكات مفتوحة</button>
+      <button class="btn" type="button" id="btnSyncMail">مزامنة الإيميل</button>
+      <span class="sync-status" id="syncStatus">وارد غير المقروء → تاسكات · من غير إرسال</span>
       <label class="btn" style="cursor:pointer"><input type="checkbox" id="fShowTrash" style="margin-left:6px" /> إظهار التراش</label>
       <a class="btn" href="./board.html">لوحة التاسكات</a>
       <a class="btn" href="./index.html">← التحكم</a>
@@ -340,6 +354,27 @@ body.view-mode .pa-tabs,body.view-mode .hint-edit{display:none !important}
       <button class="btn small btn-add-manual" type="button" id="btnManualTask">إضافة تاسك يدوي</button>
       <div class="chips" id="filterChips"></div>
     </div>
+  </div>
+
+  <div class="ops-bar" id="opsBar">
+    <b>Bot Runner</b>
+    <span class="ops-task" id="opsTaskLabel">اختار بند مربوط بتاسك</span>
+    <select id="opsAction" aria-label="نوع الأمر">
+      <option value="draft_reply">جهّز رد</option>
+      <option value="remind">فكّرني</option>
+      <option value="follow_up">متابعة</option>
+      <option value="research">ابحث / لخّص</option>
+      <option value="custom">مخصص</option>
+    </select>
+    <select id="opsMode" aria-label="وضع التشغيل">
+      <option value="live">على الشاشة</option>
+      <option value="background">خلفية</option>
+    </select>
+    <button class="btn primary" type="button" id="btnRunBot">تشغيل البوت</button>
+    <button class="btn danger" type="button" id="btnStopBot" disabled>إيقاف</button>
+    <a class="btn ghost" id="opsRoom" href="./task.html" hidden>غرفة التاسك</a>
+    <span class="sync-status" id="jobStatus">مسودة بس — ما بيتبعتش إيميل</span>
+    <pre class="ops-log" id="opsLog"></pre>
   </div>
 
   <div class="workspace stack" id="workspace">
@@ -568,6 +603,7 @@ body.view-mode .pa-tabs,body.view-mode .hint-edit{display:none !important}
 
 <div id="tip"></div>
 <div id="ctx"></div>
+<div class="eis-toast" id="eisToast"></div>
 <div class="modal-back" id="noteModal" role="dialog" aria-modal="true" aria-labelledby="noteModalTitle">
   <div class="modal" onclick="event.stopPropagation()">
     <h3 id="noteModalTitle">كتابة نوت</h3>
@@ -582,6 +618,7 @@ body.view-mode .pa-tabs,body.view-mode .hint-edit{display:none !important}
   </div>
 </div>
 
+<script src="./js/aq-ops.js"></script>
 <script>
 const LABELS = {inbox:'وارد', do:'افعل الآن', sched:'جدولة', deleg:'تفويض', elim:'تجاهل', doing:'قيد التنفيذ', trash:'تراش'};
 const MATRIX = ['do','sched','deleg','elim'];
@@ -818,6 +855,7 @@ function paintSelection(){
   const n = selected.size;
   $('selHint').textContent = n>1 ? (n+' بند محددين — اسحبهم مع بعض') : (n===1 ? 'بند واحد محدد' : '');
   renderNotesModule();
+  paintOpsBar();
 }
 
 function fillHost(host, list){
@@ -1153,6 +1191,10 @@ function showCtx(id, x, y){
     <button type="button" data-m="task">التاسك</button>
     <button type="button" data-m="note">كتابة / تعديل النوت</button>
     <div class="sep"></div>
+    <div class="ctx-label">بوت</div>
+    <button type="button" data-m="botrun">تشغيل البوت</button>
+    <button type="button" data-m="botstop">إيقاف</button>
+    <div class="sep"></div>
     <button type="button" class="danger" data-m="trash">رمي في التراش</button>
     ${it && it.quad==='trash' ? '<button type="button" data-m="restore">إرجاع من التراش</button><button type="button" class="danger" data-m="purge">مسح نهائي</button>' : ''}
   `;
@@ -1191,6 +1233,8 @@ function handleCtx(act, id){
   else if (act==='source') openSource(it);
   else if (act==='sign') openSign(it);
   else if (act==='task') openTask(it);
+  else if (act==='botrun') { selected = new Set([itemId]); paintSelection(); runBotSelected(); }
+  else if (act==='botstop') stopBotSelected();
 }
 
 async function openSource(it){
@@ -2439,6 +2483,183 @@ $('btnNoteModSave').onclick = saveDashNote;
 $('btnNoteModCancel').onclick = () => { $('notesEditor').hidden = true; editingNoteId=null; };
 $('btnNoteModDel').onclick = delDashNote;
 
+let tasksCache = [];
+let activeJobId = null;
+let pollTimer = null;
+function eisToast(title, detail){
+  const el = $('eisToast');
+  if (!el) return;
+  el.innerHTML = '<b>'+escapeHtml(title||'')+'</b>'+escapeHtml(detail||'');
+  el.classList.add('show');
+  clearTimeout(window.__eisToastT);
+  window.__eisToastT = setTimeout(() => el.classList.remove('show'), 7000);
+}
+function setSyncUi(kind, text){
+  const el = $('syncStatus');
+  if (!el) return;
+  el.className = 'sync-status' + (kind ? (' '+kind) : '');
+  el.textContent = text || '';
+}
+function setJobUi(kind, text){
+  const el = $('jobStatus');
+  if (!el) return;
+  el.className = 'sync-status' + (kind ? (' '+kind) : '');
+  el.textContent = text || '—';
+}
+function selectedItem(){
+  if (selected.size !== 1) return null;
+  const id = [...selected][0];
+  return items.find(x => x.id === id) || null;
+}
+async function loadTasksCache(){
+  try {
+    const j = await AQOps.fetchJson('/api/tasks');
+    tasksCache = Array.isArray(j) ? j : (j.tasks || []);
+  } catch (e) {
+    tasksCache = [];
+  }
+}
+function paintOpsBar(){
+  const it = selectedItem();
+  const lab = $('opsTaskLabel');
+  const room = $('opsRoom');
+  if (!it){
+    if (lab) lab.textContent = 'اختار بند مربوط بتاسك';
+    if (room) room.hidden = true;
+    return;
+  }
+  const tid = it.taskId || '';
+  if (lab) lab.textContent = (tid ? (tid+' · ') : '') + (it.title || '');
+  if (room){
+    if (tid){ room.hidden = false; room.href = './task.html?id=' + encodeURIComponent(tid); }
+    else room.hidden = true;
+  }
+  const t = tid ? tasksCache.find(x => x.id === tid) : null;
+  if (t && t.botAction && t.botAction !== 'none' && $('opsAction')){
+    const opt = [...$('opsAction').options].some(o => o.value === t.botAction);
+    if (opt) $('opsAction').value = t.botAction;
+  }
+}
+async function syncMailEis(){
+  if ($('btnSyncMail')) $('btnSyncMail').disabled = true;
+  setSyncUi('wait', 'بقرأ الوارد غير المقروء…');
+  eisToast('مزامنة الإيميل…', 'وارد غير المقروء → تاسكات · من غير إرسال');
+  try {
+    const j = await AQOps.fetchJson('/api/mail/sync', { method:'POST', headers:{'Content-Type':'application/json'}, body:'{}' });
+    const detail = AQOps.formatSyncResult(j);
+    let extra = '';
+    try {
+      const feed = await AQOps.fetchJson('/api/eisenhower/feed', { method:'POST' });
+      if (feed && feed.added != null) extra = ' · على الصندوق ' + feed.added;
+    } catch (fe) {
+      extra = ' · التغذية: ' + (fe.message || fe);
+    }
+    await loadTasksCache();
+    await load();
+    setSyncUi('ok', detail + extra);
+    eisToast('مزامنة تمّت', detail + extra);
+  } catch (e) {
+    const msg = e.message || String(e);
+    setSyncUi('err', msg);
+    eisToast('فشل المزامنة', msg);
+  } finally {
+    if ($('btnSyncMail')) $('btnSyncMail').disabled = false;
+  }
+}
+async function patchTaskBot(taskId, action){
+  const data = await AQOps.fetchJson('/api/tasks');
+  const payload = Array.isArray(data) ? { tasks: data, updatedAt: new Date().toISOString() } : data;
+  if (!Array.isArray(payload.tasks)) payload.tasks = [];
+  const t = payload.tasks.find(x => x.id === taskId);
+  if (!t) throw new Error('task_not_found');
+  t.botAction = action;
+  t.updatedAt = new Date().toISOString();
+  payload.updatedAt = t.updatedAt;
+  await AQOps.fetchJson('/api/tasks', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+  tasksCache = payload.tasks;
+}
+function stopPoll(){ if (pollTimer){ clearInterval(pollTimer); pollTimer = null } }
+function showOpsLog(job){
+  const el = $('opsLog');
+  if (!el) return;
+  const txt = AQOps.jobLogText(job);
+  if (txt){ el.classList.add('on'); el.textContent = txt; }
+}
+async function pollBotJob(){
+  if (!activeJobId) return;
+  try {
+    const job = await AQOps.fetchJson('/api/bot/job?id=' + encodeURIComponent(activeJobId));
+    const running = AQOps.isJobRunning(job);
+    if ($('btnStopBot')) $('btnStopBot').disabled = !running;
+    setJobUi(running ? 'wait' : (job.status === 'error' ? 'err' : 'ok'), AQOps.formatJobUserText(job));
+    showOpsLog(job);
+    if (!running){
+      stopPoll();
+      if (job.status === 'done') eisToast('الأمر خلص', AQOps.formatJobUserText(job));
+      else if (job.status === 'error') eisToast('فشل الأمر', AQOps.formatJobUserText(job));
+      else if (job.status === 'stopped') eisToast('اتوقف', job.taskId || '');
+      await loadTasksCache();
+    }
+  } catch (e) {
+    setJobUi('err', e.message || String(e));
+    eisToast('فشل قراءة الأمر', e.message || String(e));
+  }
+}
+async function runBotSelected(){
+  const it = selectedItem();
+  if (!it || !it.taskId){
+    const msg = 'اختار بند مربوط بتاسك';
+    setJobUi('err', msg); eisToast('مفيش تاسك', msg); return;
+  }
+  const action = ($('opsAction') && $('opsAction').value) || 'draft_reply';
+  const mode = ($('opsMode') && $('opsMode').value) || 'live';
+  try {
+    setJobUi('wait', 'بجهّز الأمر…');
+    await patchTaskBot(it.taskId, action);
+    const j = await AQOps.fetchJson('/api/bot/run', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ taskId: it.taskId, mode: mode })
+    });
+    if (!j || !j.id) throw new Error((j && (j.message||j.error)) || 'no_job_id');
+    activeJobId = j.id;
+    if ($('btnStopBot')) $('btnStopBot').disabled = false;
+    setJobUi('wait', 'شغال… ' + it.taskId + ' · ' + action);
+    eisToast('تشغيل البوت', it.taskId + ' · ' + action + ' · مسودة من غير إرسال');
+    stopPoll();
+    pollBotJob();
+    pollTimer = setInterval(pollBotJob, 500);
+  } catch (e) {
+    setJobUi('err', e.message || String(e));
+    eisToast('فشل التشغيل', e.message || String(e));
+  }
+}
+async function stopBotSelected(){
+  if (!activeJobId){
+    try {
+      const list = await AQOps.fetchJson('/api/bot/jobs');
+      const jobs = (list && list.jobs) || [];
+      const running = jobs.find(j => AQOps.isJobRunning(j));
+      if (running) activeJobId = running.id;
+    } catch (e) {}
+  }
+  if (!activeJobId){ eisToast('مفيش أمر شغال',''); setJobUi('err','مفيش أمر شغال'); return }
+  try {
+    if ($('btnStopBot')) $('btnStopBot').disabled = true;
+    await AQOps.fetchJson('/api/bot/stop', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ id: activeJobId })
+    });
+    await pollBotJob();
+  } catch (e) {
+    setJobUi('err', e.message || String(e));
+    eisToast('فشل الإيقاف', e.message || String(e));
+    if ($('btnStopBot')) $('btnStopBot').disabled = false;
+  }
+}
+if ($('btnSyncMail')) $('btnSyncMail').onclick = () => syncMailEis();
+if ($('btnRunBot')) $('btnRunBot').onclick = () => runBotSelected();
+if ($('btnStopBot')) $('btnStopBot').onclick = () => stopBotSelected();
+
 consumeLayoutReset();
 bindDrops();
 bindCanvasUi();
@@ -2450,6 +2671,7 @@ setFilterMode(filterMode);
 if (/[?&]edit=1\b/.test(location.search)) document.body.classList.remove('view-mode');
 load().then(() => {
   if (/[?&]edit=1\b/.test(location.search)) setEditMode(true);
+  loadTasksCache().then(paintOpsBar);
 });
 </script>
 </body>

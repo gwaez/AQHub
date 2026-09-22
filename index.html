@@ -178,6 +178,16 @@
     box-shadow: var(--shadow); z-index: 50; max-width: min(520px, 92vw); text-align: center;
   }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .ops-panel { margin-top: 22px; padding: 18px 20px 16px; }
+  .ops-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 12px; }
+  .ops-row label { display: grid; gap: 4px; font-size: .72rem; color: var(--muted); font-weight: 700; }
+  .ops-row select { border: 1px solid var(--stroke); background: rgba(255,255,255,.04); color: var(--text); border-radius: 12px; padding: 8px 10px; font: inherit; min-width: 160px; }
+  .ops-status { font-size: .8rem; color: var(--muted); max-width: min(520px, 70vw); line-height: 1.4; }
+  .ops-status.ok { color: var(--ok); }
+  .ops-status.err { color: var(--danger); }
+  .ops-status.wait { color: var(--warn); }
+  .ops-log { width: 100%; max-height: 120px; overflow: auto; margin: 10px 0 0; padding: 10px 12px; border-radius: 12px; background: #070b12; border: 1px solid var(--stroke); color: #9fb6cb; font-family: "JetBrains Mono", monospace; font-size: .72rem; white-space: pre-wrap; }
+  .btn.danger { border-color: rgba(251,113,133,.4); color: var(--danger); }
 </style>
 </head>
 <body>
@@ -191,6 +201,7 @@
         </div>
       </div>
       <div class="top-actions">
+        <button class="btn" type="button" id="btnSync">مزامنة الإيميل</button>
         <button class="btn ghost" type="button" id="btnRefresh">تحديث الحالة</button>
         <a class="btn primary" href="./board.html">فتح لوحة التاسكات</a>
       </div>
@@ -228,6 +239,43 @@
 
     <div class="grid" id="systemsGrid"></div>
 
+    <section class="glass ops-panel" id="opsPanel">
+      <div class="section-head" style="margin-top:0">
+        <div>
+          <h3>مزامنة الإيميل و Bot Runner</h3>
+          <p>وارد غير المقروء → تاسكات. تشغيل البوت يجهّز مسودة بس — ما بيتبعتش إيميل.</p>
+        </div>
+      </div>
+      <div class="ops-row">
+        <span class="ops-status" id="syncStatus">اضغط مزامنة الإيميل عشان تقرأ الوارد</span>
+      </div>
+      <div class="ops-row">
+        <label>التاسك
+          <select id="opsTask"><option value="">تحميل…</option></select>
+        </label>
+        <label>الأمر
+          <select id="opsAction">
+            <option value="draft_reply">جهّز رد</option>
+            <option value="remind">فكّرني</option>
+            <option value="follow_up">متابعة</option>
+            <option value="research">ابحث / لخّص</option>
+            <option value="custom">مخصص</option>
+          </select>
+        </label>
+        <label>الوضع
+          <select id="opsMode">
+            <option value="live">على الشاشة</option>
+            <option value="background">خلفية</option>
+          </select>
+        </label>
+        <button class="btn primary" type="button" id="btnRunBot">تشغيل البوت</button>
+        <button class="btn danger" type="button" id="btnStopBot" disabled>إيقاف</button>
+        <a class="btn ghost" id="opsRoom" href="./task.html" hidden>غرفة التاسك</a>
+        <span class="ops-status" id="jobStatus">—</span>
+      </div>
+      <pre class="ops-log" id="opsLog" hidden></pre>
+    </section>
+
     <section class="glass bots">
       <div>
         <div class="section-head" style="margin-top:0">
@@ -245,10 +293,10 @@
         </div>
         <div class="bot-row">
           <div>
-            <b>Email Runner</b>
-            <small>لاحقاً: يقرأ Outlook ويملأ التاسكات يومياً</small>
+            <b>Email / Bot Runner</b>
+            <small>مزامنة وارد + تشغيل مسودة رد على تاسك مختار — من غير إرسال</small>
           </div>
-          <span class="badge wait">قريباً</span>
+          <span class="badge on">جاهز</span>
         </div>
         <div class="bot-row">
           <div>
@@ -280,6 +328,7 @@
     </footer>
   </div>
   <div class="toast" id="toast"></div>
+<script src="./js/aq-ops.js"></script>
 <script>
 const systems = [
   {
@@ -306,11 +355,11 @@ const systems = [
     id: 'outlook',
     icon: '✉',
     name: 'Outlook',
-    desc: 'يجيب قائمة الإيميلات، تختار واحد أو تشغّل الكل — قراءة وتنظيم بدون رد تلقائي.',
-    status: 'wait',
-    statusLabel: 'التالي',
-    primary: { label: 'ربط Outlook', action: 'outlook' },
-    secondary: { label: 'تفاصيل', action: 'outlook-info' }
+    desc: 'مزامنة الوارد غير المقروء → تاسكات. قراءة وتنظيم من غير إرسال تلقائي.',
+    status: 'on',
+    statusLabel: 'موصول',
+    primary: { label: 'مزامنة الإيميل', action: 'mail-sync' },
+    secondary: { label: 'الصندوق', href: './eisenhower.html' }
   },
   {
     id: 'chrome',
@@ -399,7 +448,10 @@ document.getElementById('systemsGrid').addEventListener('click', (e) => {
   const btn = e.target.closest('[data-action]');
   if(!btn || btn.disabled) return;
   const action = btn.getAttribute('data-action');
-  if(action === 'outlook'){
+  if(action === 'mail-sync'){
+    if (window.__aqOps && window.__aqOps.syncMail) window.__aqOps.syncMail();
+    else if (window.AQOps) AQOps.bindControlPanel();
+  } else if(action === 'outlook'){
     toast('Outlook هو التالي. لما تقول «يلا نربط Outlook» نبدأ خطوة الاختيار من الإيميلات.');
   } else if(action === 'outlook-info'){
     toast('الوضع الحالي: قراءة من جهازك فقط، من غير إرسال أو رد تلقائي.');
@@ -420,6 +472,7 @@ document.getElementById('btnRefresh').addEventListener('click', () => {
 });
 
 render();
+window.__aqOps = (window.AQOps && AQOps.bindControlPanel) ? AQOps.bindControlPanel() : null;
 </script>
 </body>
 </html>

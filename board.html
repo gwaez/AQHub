@@ -146,7 +146,14 @@ body{color:var(--text);font-family:"IBM Plex Sans Arabic",system-ui,sans-serif;b
 .bgchip{position:fixed;bottom:16px;left:16px;z-index:70;display:none;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;background:rgba(15,32,51,.96);border:1px solid rgba(251,191,36,.4);box-shadow:0 8px 24px rgba(0,0,0,.4);cursor:pointer;font-size:.75rem;font-weight:600;color:#fde68a}
 .bgchip.show{display:inline-flex}
 .bgchip .dot{width:8px;height:8px;border-radius:50%;background:#fbbf24;box-shadow:0 0 8px #fbbf24;animation:pulse 1.2s ease infinite}
-</style>
+.sync-status{font-size:.72rem;color:var(--muted);max-width:min(360px,42vw);line-height:1.35}
+.sync-status.ok{color:var(--ok)}.sync-status.err{color:var(--hot)}.sync-status.wait{color:var(--warn)}
+.ops-dock{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 10px;border:1px solid var(--line);border-radius:12px;background:rgba(12,24,38,.88)}
+.ops-dock .ops-k{font-size:.68rem;font-weight:800;color:#fde68a;text-transform:uppercase;letter-spacing:.04em}
+.ops-dock .ops-task{font-size:.78rem;font-weight:650;max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ops-dock select{padding:5px 8px;font-size:.75rem}
+.ops-dock .btn{padding:6px 10px;font-size:.75rem}
+.ops-log{width:100%;max-height:88px;overflow:auto;margin:0;padding:8px 10px;border-radius:10px;background:#050b12;border:1px solid var(--line);color:#9fb6cb;font-family:"JetBrains Mono",monospace;font-size:.68rem;white-space:pre-wrap}</style>
 </head>
 <body>
 <div class="app">
@@ -170,7 +177,8 @@ body{color:var(--text);font-family:"IBM Plex Sans Arabic",system-ui,sans-serif;b
     </div>
     <div class="actions">
       <button class="btn icon" id="btnNotif" type="button">🔔<span class="badge" id="notifBadge" hidden>0</span></button>
-      <button class="btn" id="btnSync" type="button">مزامنة إيميل</button>
+      <button class="btn" id="btnSync" type="button">مزامنة الإيميل</button>
+      <span class="sync-status" id="syncStatus">وارد غير المقروء → تاسكات · من غير إرسال</span>
       <a class="btn ghost" href="./index.html">Control</a>
       <button class="btn" id="btnReload" type="button">تحديث</button>
       <button class="btn primary" id="btnAdd" type="button">جديد</button>
@@ -184,6 +192,22 @@ body{color:var(--text);font-family:"IBM Plex Sans Arabic",system-ui,sans-serif;b
       <div class="suggest" id="suggest" hidden role="listbox"></div>
     </div>
     <span class="side-count" id="filterSummary"></span>
+  </div>
+  <div class="ops-dock" id="opsDock">
+    <span class="ops-k">Bot Runner</span>
+    <span class="ops-task" id="opsTaskLabel">اختار تاسك من اللوحة</span>
+    <select id="dockAction" aria-label="نوع الأمر">
+      <option value="draft_reply">جهّز رد</option>
+      <option value="remind">فكّرني</option>
+      <option value="follow_up">متابعة</option>
+      <option value="research">ابحث / لخّص</option>
+      <option value="custom">مخصص</option>
+    </select>
+    <button class="btn gold" type="button" id="btnDockRun">تشغيل</button>
+    <button class="btn danger" type="button" id="btnDockStop" disabled>إيقاف</button>
+    <span class="sync-status" id="jobStatus">—</span>
+    <a class="btn ghost" id="dockRoom" href="./task.html" hidden>غرفة التاسك</a>
+    <pre class="ops-log" id="dockLog" hidden></pre>
   </div>
   <div class="work">
     <aside class="side" id="sideFilters">
@@ -258,8 +282,8 @@ body{color:var(--text);font-family:"IBM Plex Sans Arabic",system-ui,sans-serif;b
           <button type="button" data-mode="background" id="modeBg">في الخلفية</button>
         </div>
       </div>
-      <button class="btn primary run" type="button" id="btnRunBot">نفّذ الأمر الآن</button>
-      <p class="hint" style="margin:0">الوضع الافتراضي: على الشاشة (تقدر توقف فورًا). جهّز الرد بس، ومش هيتبعت إيميل تلقائي.</p>
+      <button class="btn primary run" type="button" id="btnRunBot">تشغيل البوت</button>
+      <p class="hint" style="margin:0">تشغيل = مسودة للمراجعة. إيقاف من هنا أو من الشريط فوق. ما بيتبعتش إيميل تلقائي.</p>
     </div>
     <label class="field"><span>نوت سريعة / تعليق</span>
       <div class="comments" id="commentsBox"></div>
@@ -303,6 +327,7 @@ body{color:var(--text);font-family:"IBM Plex Sans Arabic",system-ui,sans-serif;b
 <button class="bgchip" type="button" id="bgChip" hidden><span class="dot"></span><span id="bgChipText">شغال في الخلفية</span></button>
 
 <div class="toast-wrap" id="toasts"></div>
+<script src="./js/aq-ops.js"></script>
 <script>
 const STATUSES=[{id:'backlog',label:'لاحقاً',color:'#a78bfa'},{id:'todo',label:'مطلوب',color:'#38bdf8'},{id:'doing',label:'جاري',color:'#fbbf24'},{id:'blocked',label:'معلّق',color:'#fb7185'},{id:'done',label:'تم',color:'#34d399'}];
 const PRIOS=['low','medium','high','urgent'];
@@ -313,7 +338,7 @@ let filter=localStorage.getItem('aqaar.filter')||'all';
 const SIDE_KEY='aqaar.sideFilters';
 let sideOpen=true;
 let sugItems=[],sugIndex=-1,qTimer=null,sugTimer=null;
-let editingId=null,dirty=false,dragId=null,tempComments=[];
+let editingId=null,lastSelectedId=null,dirty=false,dragId=null,tempComments=[];
 let notifications=[],unread=0;
 const $=id=>document.getElementById(id);
 const nowIso=()=>new Date().toISOString();
@@ -336,12 +361,15 @@ function normalize(t){
 }
 async function api(path,opts){
   const r=await fetch(path,opts);
-  if(!r.ok){
-    const t=await r.text();
-    let msg=t||('HTTP '+r.status);
-    try{ const j=JSON.parse(t); msg=j.message||j.error||msg; }catch(e){}
+  const t=await r.text();
+  let json=null;
+  try{ json=t?JSON.parse(t):null }catch(e){}
+  if(!r.ok || (window.AQOps && AQOps.isFailurePayload(json))){
+    const msg=(window.AQOps?AQOps.apiErrorText(r.status,t):(json&&(json.message||json.error))||t||('HTTP '+r.status));
     throw new Error(msg);
   }
+  r._json=json; r._text=t;
+  r.json=async()=> json!=null?json:(t?JSON.parse(t):null);
   return r;
 }
 async function reload(silent){
@@ -351,18 +379,60 @@ async function reload(silent){
   markDirty(false); fillDatalists(); render();
 }
 async function save(){ state.updatedAt=nowIso(); await api('/api/tasks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(state)}); await api('/api/audit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({at:state.updatedAt,actor:'User',action:'board.save'})}); markDirty(false); notify('done','اتحفظ','') }
+function setSyncStatus(kind, text){
+  const el=$('syncStatus'); if(!el) return;
+  el.className='sync-status'+(kind?(' '+kind):'');
+  el.textContent=text||'';
+}
+function setJobStatus(kind, text){
+  const el=$('jobStatus'); if(!el) return;
+  el.className='sync-status'+(kind?(' '+kind):'');
+  el.textContent=text||'—';
+}
+function currentTaskId(){ return editingId || lastSelectedId }
+function paintOpsDock(){
+  const id=currentTaskId();
+  const t=id?state.tasks.find(x=>x.id===id):null;
+  const lab=$('opsTaskLabel');
+  const room=$('dockRoom');
+  if(lab) lab.textContent=t?(t.id+' · '+(t.title||'')):'اختار تاسك من اللوحة';
+  if(room){
+    if(t){ room.hidden=false; room.href='./task.html?id='+encodeURIComponent(t.id) }
+    else room.hidden=true;
+  }
+  if(t && $('dockAction') && t.botAction && t.botAction!=='none' && t.botAction!=='move_trash'){
+    const opt=[...$('dockAction').options].some(o=>o.value===t.botAction);
+    if(opt) $('dockAction').value=t.botAction;
+  }
+  const running=!!(activeJobId && $('btnStopRun') && !$('btnStopRun').disabled);
+  if($('btnDockStop')) $('btnDockStop').disabled=!activeJobId && !running;
+}
 async function syncMail(opts){
   const silent = !!(opts && opts.silent);
-  if(!silent) toast('مزامنة الإيميل…','بقرأ الوارد غير المقروء');
+  if($('btnSync') && !silent) $('btnSync').disabled=true;
+  if(!silent){
+    setSyncStatus('wait','بقرأ الوارد غير المقروء…');
+    toast('مزامنة الإيميل…','بقرأ الوارد غير المقروء — من غير إرسال');
+  }
   try{
     const r=await api('/api/mail/sync',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
-    const j=await r.json(); await reload(true);
+    const j=await r.json();
+    if(j && j.ok===false) throw new Error((window.AQOps?AQOps.apiErrorText(0,JSON.stringify(j)):j.message||j.error||'sync_failed'));
+    await reload(true);
+    const detail=(window.AQOps?AQOps.formatSyncResult(j):((j.added||0)+' جديد'+(j.unreadTotal!=null?(' · غير مقروء '+j.unreadTotal):'')+(j.scanned!=null?(' · فحص '+j.scanned):'')));
+    setSyncStatus('ok', detail);
     if(!silent){
-      toast('مزامنة تمّت', (j.added||0)+' جديد'+(j.unreadTotal!=null?(' · غير مقروء '+j.unreadTotal):'')+(j.scanned!=null?(' · فحص '+j.scanned):''));
+      toast('مزامنة تمّت', detail);
     } else if(j.added>0){
-      notify('new', j.added+' إيميل جديد', 'اتحوّلوا لتاسكات', true);
+      notify('new', j.added+' إيميل جديد', 'اتحوّلوا لتاسكات — ما اتبعتش', true);
     }
-  }catch(e){ if(!silent) toast('فشل المزامنة', e.message||e) }
+  }catch(e){
+    const msg=e.message||String(e);
+    setSyncStatus('err', msg);
+    if(!silent) toast('فشل المزامنة', msg);
+  }finally{
+    if($('btnSync')) $('btnSync').disabled=false;
+  }
 }
 function nextId(){let m=0; for(const t of state.tasks){const x=/^T-?(\d+)$/i.exec(t.id||''); if(x) m=Math.max(m,+x[1])} return 'T-'+String(m+1).padStart(3,'0')}
 function loadSide(){
@@ -552,7 +622,7 @@ function cardHTML(t){
       <button class="prio" type="button" data-p="${esc(t.priority)}"><span class="pip"></span><span class="pip"></span><span class="pip"></span></button>
       <span class="tag src">${esc(t.source)}</span>${bot}
     </div>
-    <div class="row"><button class="mini" data-room="1">غرفة</button><button class="mini" data-open="1" ${canOpen?'':'disabled'}>مصدر</button><button class="mini ghost" data-edit="1">نوت/أمر</button></div>`;
+    <div class="row"><button class="mini" data-room="1">غرفة</button><button class="mini" data-open="1" ${canOpen?'':'disabled'}>مصدر</button><button class="mini" data-run="1">تشغيل</button><button class="mini ghost" data-edit="1">نوت/أمر</button></div>`;
 }
 function openTaskRoom(id,e){ if(e) e.stopPropagation(); location.href='task.html?id='+encodeURIComponent(id) }
 function bindCard(el,t){ el.draggable=true; el.addEventListener('dragstart',e=>{dragId=t.id;el.classList.add('dragging');e.dataTransfer.setData('text/task-id',t.id)}); el.addEventListener('dragend',()=>el.classList.remove('dragging'));
@@ -560,6 +630,8 @@ function bindCard(el,t){ el.draggable=true; el.addEventListener('dragstart',e=>{
   el.querySelectorAll('[data-room]').forEach(n=>n.onclick=e=>openTaskRoom(t.id,e));
   const openBtn=el.querySelector('[data-open]'); if(openBtn) openBtn.onclick=e=>openSource(t.id,e);
   el.querySelector('[data-edit]').onclick=e=>{e.stopPropagation();openEdit(t.id)};
+  const runBtn=el.querySelector('[data-run]');
+  if(runBtn) runBtn.onclick=e=>{e.stopPropagation(); lastSelectedId=t.id; openEdit(t.id); if($('fBotAction').value==='none') $('fBotAction').value='draft_reply'; if($('dockAction')) $('dockAction').value=$('fBotAction').value; runBotNow()};
   el.onclick=()=>openEdit(t.id);
   el.addEventListener('dblclick',e=>{e.stopPropagation();openTaskRoom(t.id,e)}) }
 function renderKanban(list){ const wrap=document.createElement('div'); wrap.className='kanban';
@@ -573,8 +645,8 @@ function renderKanban(list){ const wrap=document.createElement('div'); wrap.clas
     sec.appendChild(cards); wrap.appendChild(sec)} return wrap }
 function renderList(list){ const wrap=document.createElement('div'); wrap.className='list'; if(!list.length){wrap.innerHTML='<div class="empty">لا نتائج</div>';return wrap}
   [...list].sort((a,b)=>PRIOS.indexOf(b.priority)-PRIOS.indexOf(a.priority)).forEach(t=>{ const row=document.createElement('div'); row.className='list-row';
-    row.innerHTML=`<div class="t" data-room="1">${esc(t.title)}</div><div class="s">${esc(t.status)}</div><div class="s">${esc(t.priority)}</div><div class="s">${esc(t.source)}</div><div class="row"><button class="mini" data-room="1">غرفة</button><button class="mini" data-open="1">مصدر</button><button class="mini ghost" data-edit="1">نوت</button></div>`;
-    row.querySelectorAll('[data-room]').forEach(n=>n.onclick=e=>openTaskRoom(t.id,e)); row.querySelector('[data-open]').onclick=e=>openSource(t.id,e); row.querySelector('[data-edit]').onclick=e=>{e.stopPropagation();openEdit(t.id)}; row.onclick=()=>openEdit(t.id); wrap.appendChild(row)}); return wrap }
+    row.innerHTML=`<div class="t" data-room="1">${esc(t.title)}</div><div class="s">${esc(t.status)}</div><div class="s">${esc(t.priority)}</div><div class="s">${esc(t.source)}</div><div class="row"><button class="mini" data-room="1">غرفة</button><button class="mini" data-open="1">مصدر</button><button class="mini" data-run="1">تشغيل</button><button class="mini ghost" data-edit="1">نوت</button></div>`;
+    row.querySelectorAll('[data-room]').forEach(n=>n.onclick=e=>openTaskRoom(t.id,e)); row.querySelector('[data-open]').onclick=e=>openSource(t.id,e); row.querySelector('[data-edit]').onclick=e=>{e.stopPropagation();openEdit(t.id)}; const rb=row.querySelector('[data-run]'); if(rb) rb.onclick=e=>{e.stopPropagation(); lastSelectedId=t.id; openEdit(t.id); if($('fBotAction').value==='none') $('fBotAction').value='draft_reply'; runBotNow()}; row.onclick=()=>openEdit(t.id); wrap.appendChild(row)}); return wrap }
 function renderMatrix(list){ const wrap=document.createElement('div'); wrap.className='matrix';
   [{title:'🔥 حرج',test:t=>(t.priority==='urgent'||t.priority==='high')&&t.status!=='done'},{title:'⚡ متوسط',test:t=>t.priority==='medium'&&t.status!=='done'},{title:'🧊 منخفض',test:t=>t.priority==='low'&&t.status!=='done'},{title:'✅ تم',test:t=>t.status==='done'}].forEach(b=>{ const box=document.createElement('div'); box.className='mx'; box.innerHTML=`<h3>${b.title}</h3>`; const cards=document.createElement('div'); cards.className='cards'; const show=list.filter(b.test);
     if(!show.length) cards.innerHTML='<div class="empty">—</div>'; show.forEach(t=>{const card=document.createElement('article'); card.className='card'; card.innerHTML=cardHTML(t); bindCard(card,t); cards.appendChild(card)}); box.appendChild(cards); wrap.appendChild(box)}); return wrap }
@@ -597,8 +669,9 @@ function render(){ const pool=sidePool(); const list=pool.filter(t=>matchChip(t)
   $('btnToggleFilters').classList.toggle('on', sideOpen);
   const main=$('main'); main.innerHTML='';
   if(view==='list') main.appendChild(renderList(list)); else if(view==='matrix') main.appendChild(renderMatrix(list)); else if(view==='focus') main.appendChild(renderFocus(list)); else main.appendChild(renderKanban(list));
+  paintOpsDock();
 }
-function openEdit(id){ editingId=id; const t=id?state.tasks.find(x=>x.id===id):null; tempComments=t&&t.comments?t.comments.map(c=>({...c})): [];
+function openEdit(id){ editingId=id; if(id) lastSelectedId=id; paintOpsDock(); const t=id?state.tasks.find(x=>x.id===id):null; tempComments=t&&t.comments?t.comments.map(c=>({...c})): [];
   $('sId').textContent=t?t.id:'NEW'; $('sTitle').textContent=t?t.title:'تاسك جديد';
   $('fTitle').value=t?.title||''; $('fPriority').value=t?.priority||'medium'; $('fDue').value=(t?.due||'').toString().slice(0,10);
   $('fBotAction').value=t?.botAction||'none'; $('fBotInstruction').value=t?.botInstruction||'';
@@ -611,7 +684,7 @@ function openEdit(id){ editingId=id; const t=id?state.tasks.find(x=>x.id===id):n
 function renderQuick(active){ const box=$('quickStatus'); box.innerHTML=''; STATUSES.forEach(s=>{ const b=document.createElement('button'); b.type='button'; b.className='qchip'+(s.id===active?' on':''); b.textContent=s.label; b.onclick=()=>{ $('fStatus').value=s.id; renderQuick(s.id)}; box.appendChild(b)}) }
 function renderComments(){ const box=$('commentsBox'); if(!tempComments.length){box.innerHTML='<div class="hint">مفيش نوتس لسه</div>';return}
   box.innerHTML=tempComments.map(c=>'<div class="comment"><div class="by">'+esc(c.by||'user')+' · '+(c.at?new Date(c.at).toLocaleString('ar-EG'):'')+'</div>'+esc(c.text||'')+'</div>').join('') }
-function closeSheet(){ $('sheet').classList.remove('open'); $('backdrop').classList.remove('show'); editingId=null }
+function closeSheet(){ $('sheet').classList.remove('open'); $('backdrop').classList.remove('show'); if(editingId) lastSelectedId=editingId; editingId=null; paintOpsDock() }
 function applyEdit(){ const title=$('fTitle').value.trim(); if(!title){toast('العنوان مطلوب','');return} const stamp=nowIso();
   const payload={title,status:$('fStatus').value,priority:$('fPriority').value,source:$('fSource').value,sourceRef:$('fSourceRef').value.trim(),entryId:$('fEntryId').value.trim(),tags:$('fTags').value.split(',').map(s=>s.trim()).filter(Boolean),notes:$('fNotes').value,botAction:$('fBotAction').value,botInstruction:$('fBotInstruction').value.trim(),comments:tempComments,suggestedReply:$('fSuggested').value.trim(),due:$('fDue').value||null,assignee:$('fAssignee').value.trim(),progress:Number($('fProgress').value)||0,updatedAt:stamp};
   if(!editingId){ state.tasks.unshift({id:nextId(),...payload,checklist:[],createdAt:stamp,createdBy:'User'}); notify('new','تاسك جديد',title) }
@@ -728,16 +801,23 @@ async function onJobTerminal(job){
   $('btnCloseRun').disabled=false;
   if(st==='done' && (job.action==='draft_reply'||job.action==='prepare_reply'||(job.result&&job.result.suggestedReply))){
     await refreshSuggestedFromTask(job.taskId);
+    const msg=(window.AQOps&&AQOps.formatJobUserText(job))||'المسودة جاهزة للمراجعة — ما اتبعتش إيميل';
+    setJobStatus('ok', msg);
     notify('done','الرد جاهز للمراجعة','ما اتبعتش إيميل');
   } else if(st==='done'){
+    const msg=(window.AQOps&&AQOps.formatJobUserText(job))||'الأمر خلص';
+    setJobStatus('ok', msg);
     notify('done','الأمر خلص', job.taskId||'');
     if(editingId===job.taskId) await refreshSuggestedFromTask(job.taskId);
   } else if(st==='stopped'){
+    setJobStatus('wait','اتوقف');
     notify('hot','اتوقف', job.taskId||'');
   } else if(st==='error'){
-    const err=(job.result&&(job.result.error||job.result.message))||'error';
+    const err=(job.result&&(job.result.error||job.result.message))||job.error||'error';
+    setJobStatus('err', String(err));
     notify('hot','فشل الأمر', String(err));
   }
+  if($('btnDockStop')) $('btnDockStop').disabled=true;
   if(bgJobId===job.id && (st==='done'||st==='stopped'||st==='error')){
     showBgChip(false); bgJobId=null;
   }
@@ -754,9 +834,17 @@ async function pollJob(){
     const running=job.status==='queued'||job.status==='running';
     $('btnStopRun').disabled=!running;
     $('btnCloseRun').disabled=running;
+    if($('btnDockStop')) $('btnDockStop').disabled=!running;
+    setJobStatus(running?'wait':(job.status==='error'?'err':'ok'), (window.AQOps&&AQOps.formatJobUserText(job))||job.status);
+    const logEl=$('dockLog');
+    if(logEl){
+      const txt=(window.AQOps&&AQOps.jobLogText(job))||'';
+      if(txt){ logEl.hidden=false; logEl.textContent=txt }
+    }
     if(!running) await onJobTerminal(job);
   }catch(e){
     appendLogLines([{t:nowIso(),msg:'Poll error: '+(e.message||e)}]);
+    setJobStatus('err', e.message||String(e));
   }
 }
 
@@ -774,21 +862,27 @@ function openRunConsole(jobId, meta){
 
 async function runBotNow(){
   if(!isHttp){ toast('السيرفر مش شغال','شغّل Start-Board'); return }
-  const action=$('fBotAction').value;
-  if(!action||action==='none'){ toast('مفيش أمر','اختار نوع الأمر'); return }
-  const title=$('fTitle').value.trim();
-  if(!title){ toast('العنوان مطلوب',''); return }
-  applyEditKeepOpen();
-  if(!editingId){ toast('احفظ التاسك أولاً',''); return }
+  const action=$('fBotAction') && $('sheet').classList.contains('open') ? $('fBotAction').value : (($('dockAction')&&$('dockAction').value)||'draft_reply');
+  if(!action||action==='none'){ toast('مفيش أمر','اختار نوع الأمر'); setJobStatus('err','اختار نوع الأمر'); return }
+  if($('sheet') && $('sheet').classList.contains('open')){
+    const title=$('fTitle')?$('fTitle').value.trim():'';
+    if(!title){ toast('العنوان مطلوب',''); return }
+    applyEditKeepOpen();
+  }
+  const taskId=currentTaskId();
+  if(!taskId){ toast('اختار تاسك','من اللوحة أو من الكرت'); setJobStatus('err','اختار تاسك'); return }
+  const t=state.tasks.find(x=>x.id===taskId);
+  if(t && (!t.botAction || t.botAction==='none')){ t.botAction=action; markDirty(true) }
   const mode=runMode;
-  const taskId=editingId;
   try{
     if(dirty) await save();
-    toast(mode==='live'?'شغال على الشاشة…':'شغال في الخلفية…', action);
+    setJobStatus('wait', mode==='live'?'شغال على الشاشة…':'شغال في الخلفية…');
+    toast(mode==='live'?'شغال على الشاشة…':'شغال في الخلفية…', action+' · '+taskId);
     const r=await api('/api/bot/run',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({taskId,mode})});
     const j=await r.json();
-    if(!j.ok){ toast('فشل التشغيل', j.error||''); return }
+    if(!j.ok){ const msg=j.message||j.error||'فشل التشغيل'; toast('فشل التشغيل', msg); setJobStatus('err', msg); return }
     const jobId=j.id;
+    if($('btnDockStop')) $('btnDockStop').disabled=false;
     if(mode==='live'){
       openRunConsole(jobId,{taskId,action,mode});
     } else {
@@ -798,7 +892,7 @@ async function runBotNow(){
       stopPolling();
       pollTimer=setInterval(pollJob, 800);
     }
-  }catch(e){ toast('فشل', e.message||e) }
+  }catch(e){ toast('فشل التشغيل', e.message||e); setJobStatus('err', e.message||String(e)) }
 }
 
 function applyEditKeepOpen(){
@@ -816,17 +910,29 @@ function applyEditKeepOpen(){
 }
 
 async function stopBotNow(){
-  if(!activeJobId) return;
+  if(!activeJobId){ toast('مفيش أمر شغال',''); return }
   try{
     $('btnStopRun').disabled=true;
+    if($('btnDockStop')) $('btnDockStop').disabled=true;
     appendLogLines([{t:nowIso(),msg:'Stop requested by user…'}]);
     await api('/api/bot/stop',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:activeJobId})});
     await pollJob();
-  }catch(e){ toast('فشل الإيقاف', e.message||e); $('btnStopRun').disabled=false }
+  }catch(e){ toast('فشل الإيقاف', e.message||e); setJobStatus('err', e.message||String(e)); $('btnStopRun').disabled=false; if($('btnDockStop')) $('btnDockStop').disabled=false }
 }
 
 $('btnRunBot').onclick=()=>runBotNow();
 $('btnStopRun').onclick=()=>stopBotNow();
+if($('btnDockRun')) $('btnDockRun').onclick=()=>{
+  const act=$('dockAction')?$('dockAction').value:'draft_reply';
+  const id=currentTaskId();
+  if(!id){ toast('اختار تاسك','من اللوحة'); setJobStatus('err','اختار تاسك'); return }
+  lastSelectedId=id;
+  const t=state.tasks.find(x=>x.id===id);
+  if(t){ t.botAction=act; markDirty(true) }
+  if($('sheet') && $('sheet').classList.contains('open') && $('fBotAction')) $('fBotAction').value=act;
+  runBotNow();
+};
+if($('btnDockStop')) $('btnDockStop').onclick=()=>stopBotNow();
 $('btnCloseRun').onclick=()=>{
   showOverlay(false);
   const st=($('runStatus').textContent||'').trim();
