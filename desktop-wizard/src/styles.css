@@ -464,6 +464,9 @@ body.matrix-open {
   grid-template-columns: minmax(200px, 280px) 1fr;
   grid-template-rows: 1fr;
 }
+body.matrix-open .chrome {
+  display: none;
+}
 body.matrix-open #stage {
   grid-column: 1;
   height: 100%;
