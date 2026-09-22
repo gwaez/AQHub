@@ -83,6 +83,9 @@ function browserWindowPort(): CharacterWindowPort {
     async setMatrixLayout(open: boolean) {
       document.body.classList.toggle("matrix-open", open);
     },
+    async setSettingsLayout(open: boolean) {
+      document.body.classList.toggle("settings-open", open);
+    },
     async setAlwaysOnTop() {},
   };
 }
@@ -128,6 +131,10 @@ function tauriWindowPort(): CharacterWindowPort {
     async setMatrixLayout(open: boolean) {
       document.body.classList.toggle("matrix-open", open);
       await invoke("set_matrix_layout", { open });
+    },
+    async setSettingsLayout(open: boolean) {
+      document.body.classList.toggle("settings-open", open);
+      await invoke("set_settings_layout", { open });
     },
     async setAlwaysOnTop(on: boolean) {
       await invoke("set_always_on_top", { on });
@@ -311,6 +318,7 @@ async function main() {
       lastMailStatus = { outlook: false, aqhub: false, reason: "unavailable", lastSyncAt: settings.current.mailLastSyncAt };
     }
     settingsUi.show(settings.current, auditLines, lastMailStatus);
+    await ports.window.setSettingsLayout(true);
   }
 
   async function run(action: WizardAction) {
@@ -320,6 +328,8 @@ async function main() {
     if (result.ok && "eisDoc" in result && result.eisDoc) {
       matrix.setDoc(result.eisDoc);
       if (action.type === "OPEN_MATRIX") {
+        settingsUi.hide();
+        document.body.classList.remove("settings-open");
         idle.pause();
         matrix.show(result.eisDoc);
       }
@@ -389,9 +399,18 @@ async function main() {
   }
 
   const closeOverlays = () => {
+    const settingsWereOpen = settingsUi.visible;
     composer.hidden = true;
     ctx.hidden = true;
     settingsUi.hide();
+    if (settingsWereOpen) {
+      if (matrix.visible) {
+        document.body.classList.remove("settings-open");
+        void ports.window.setMatrixLayout(true);
+      } else {
+        void ports.window.setSettingsLayout(false);
+      }
+    }
     if (!matrix.visible) idle.resume(Date.now());
   };
 

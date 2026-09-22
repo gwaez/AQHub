@@ -42,3 +42,27 @@ test("IDLE breathe travel is clearly visible (~10–12px) and animationLevel off
   assert.match(css, /\.character\[data-look="1"\]\s*\.pupil/);
   assert.match(css, /\.character\[data-blink="1"\]\s*\.lid/);
 });
+
+test("pet hit plate is visually invisible but keeps pointer hits", () => {
+  const hit = css.match(/\.pet-hit\s*\{([^}]+)\}/);
+  const plate = css.match(/\.pet-plate\s*\{([^}]+)\}/);
+  assert.ok(hit && plate, "pet-hit / pet-plate rules missing");
+  assert.match(hit[1], /background:\s*transparent/);
+  assert.match(hit[1], /pointer-events:\s*auto/);
+  assert.match(plate[1], /background:\s*transparent/);
+  assert.match(plate[1], /pointer-events:\s*auto/);
+  assert.match(plate[1], /opacity:\s*0/);
+  assert.doesNotMatch(css, /rgba\(\s*8\s*,\s*16\s*,\s*28\s*,\s*0\.0[45]\s*\)/);
+});
+
+test("settings open enlarges the companion window then restores on close", () => {
+  const rust = readFileSync(join(src, "..", "src-tauri", "src", "window_ctl.rs"), "utf8");
+  assert.match(rust, /pub fn set_settings_layout/);
+  assert.match(rust, /720\.0/);
+  assert.match(rust, /680\.0/);
+  assert.match(main, /invoke\("set_settings_layout"/);
+  assert.match(main, /setSettingsLayout\(true\)/);
+  assert.match(main, /setSettingsLayout\(false\)/);
+  assert.match(css, /body\.settings-open\s+\.settings-panel:not\(\[hidden\]\)/);
+  assert.match(css, /body\.settings-open\s+\.settings-panel:not\(\[hidden\]\)\s*\{[\s\S]*max-height:\s*none/);
+});

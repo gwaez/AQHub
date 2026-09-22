@@ -102,6 +102,7 @@ function mockPorts() {
       setMatrixLayout: async (open) => {
         store.matrixOpen = open;
       },
+      setSettingsLayout: async () => {},
       setAlwaysOnTop: async () => {},
     },
   };

@@ -28,6 +28,7 @@ export interface CharacterWindowPort {
   setPosition(x: number, y: number): Promise<void>;
   getPlacement(): Promise<WindowPlacement>;
   setMatrixLayout(open: boolean): Promise<void>;
+  setSettingsLayout(open: boolean): Promise<void>;
   setAlwaysOnTop(on: boolean): Promise<void>;
 }
 
