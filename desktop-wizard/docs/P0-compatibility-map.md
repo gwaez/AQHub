@@ -61,13 +61,42 @@ Statuses in Arabic UI: لاحقاً / مطلوب / جاري / معلّق / تم.
 
 Keep AQHub core routes stable. Add a **thin optional module** `wizard/Wizard-Bridge.ps1` dotted from `Start-Board.ps1`. The module owns **only** `data/wizard-settings.json`. It does not import Outlook COM, CRM tokens, or task files.
 
-### P1 (implemented)
+### P1+P2 (implemented)
 
 | Method | Path | Body / result | Why new (not adapter) |
 |--------|------|----------------|------------------------|
-| GET | `/api/v1/wizard/health` | `{ ok, aqhub: true, version }` | No existing health route. Safe probe for the companion. |
-| GET | `/api/v1/wizard/settings` | Settings JSON (see below) | Character UX state is not a board task. |
-| PUT | `/api/v1/wizard/settings` | Same schema; merge known keys | Live writes of position/scale/display name. |
+| GET | `/api/v1/wizard/health` | `{ ok, aqhub: true, version }` | No existing health route. |
+| GET | `/api/v1/wizard/settings` | Settings JSON including `animationLevel`, `idleSleepMs`, `reminders[]` | Character UX + local reminder list. |
+| PUT | `/api/v1/wizard/settings` | Same schema; merge known keys | Live writes. Reminders are **not** tasks.json. |
+
+### P4 adapters (implemented in the companion, reuse AQHub)
+
+| Method | Path | Wizard use |
+|--------|------|------------|
+| GET then POST | `/api/tasks` | Quick Task: GET document → prepend one task → POST full board. Never empty the array. |
+| POST | `/api/task/box-note` | Quick Note after a task id exists. |
+| POST | `/api/audit` | Best-effort wizard action audit stub. |
+
+### Planned later
+
+| Path | Role | vs adapter |
+|------|------|------------|
+| `GET /api/v1/wizard/permissions` | Capability flags (mail, CRM, UIA) | New. Do not overload CRM config. |
+| Watch board | **Adapter** poll `GET /api/tasks` + `GET /api/eisenhower` | |
+| Open mail/CRM | **Adapter** `POST /api/open`, never COM in Tauri | |
+| Approve send | **Never from Wizard idle/automation** | Permission stub denies `APPROVE_SEND`. |
+
+### Architecture seam
+
+```
+UI (character / tray / Arabic copy / bubbles / composer)
+  → WizardAction
+    → Action Engine (validate → permission stub → HTTP → audit)
+      → AQHub HTTP client
+        → result
+          → WizardStateMachine (IDLE…HIDDEN + stub WAND/NOTE/MATRIX/TRASH)
+            → Animation engine + BubbleEngine (no file I/O)
+```
 
 Settings schema (`data/wizard-settings.json`, gitignored):
 
@@ -79,6 +108,9 @@ Settings schema (`data/wizard-settings.json`, gitignored):
   "displayName": "Old Wizard",
   "window": { "x": null, "y": null, "scale": 1 },
   "visible": true,
+  "animationLevel": "normal",
+  "idleSleepMs": 90000,
+  "reminders": [],
   "updatedAt": "ISO-8601"
 }
 ```
@@ -87,28 +119,14 @@ Settings schema (`data/wizard-settings.json`, gitignored):
 - `displayName` **is** user-renamable (Arabic UI copy).
 - P1 TypeScript settings module calls GET/PUT when the bridge is up; Rust may read/write this **same** file as fallback. Never `tasks.json`.
 
-### Planned later (do not implement in this run)
+### Still later (not this slice)
 
 | Path | Role | vs adapter |
 |------|------|------------|
 | `GET /api/v1/wizard/permissions` | Capability flags (mail, CRM, UIA) | New. Do not overload CRM config. |
-| `POST /api/v1/wizard/action` | Optional server-side action log | New or `POST /api/audit` adapter. |
-| Task create | **Adapter** `GET+POST /api/tasks` | No duplicate store. |
-| Watch board | **Adapter** poll `GET /api/tasks` + `GET /api/eisenhower` | No new feed unless rate/etag needed. |
+| Watch board | **Adapter** poll `GET /api/tasks` + `GET /api/eisenhower` | |
 | Open mail/CRM | **Adapter** `POST /api/open`, never COM in Tauri | |
-| Approve send | **Adapter** only after explicit UI | Never auto-send. |
-
-### Architecture seam (P1 wired, mostly stubbed)
-
-```
-UI (character / tray / Arabic copy)
-  → WizardAction
-    → Action Engine
-      → AQHub HTTP client  (/api/v1/wizard/* and later existing /api/*)
-        → result
-          → WizardStateMachine (IDLE | HIDDEN | WATCHING)
-            → Animation engine (no business logic, no file I/O)
-```
+| Approve send | **Never from Wizard idle/automation** | Permission stub denies `APPROVE_SEND`. |
 
 Out of scope modules (folder stubs only): Magic Wand / UIA, Follow My Work, full Eisenhower panel, AI, voice, NSIS installer, email bubbles, full permission UI.
 
@@ -138,7 +156,7 @@ Out of scope modules (folder stubs only): Magic Wand / UIA, Follow My Work, full
 **Full-file POST `/api/tasks`**
 
 - Board save replaces the entire JSON document. Lost-update if Wizard and `board.html` save concurrently.
-- Mitigation later: short GET-merge-POST, maybe `updatedAt` check; do not invent a second task store.
+- P2+P4: Wizard does a short GET-merge-POST (prepend one task, keep the rest). Lost-update is still possible if `board.html` saves concurrently; do not invent a second task store.
 
 **Listener shape**
 
