@@ -201,7 +201,10 @@ body.edit-mode #dashNameBar{display:flex}
 .cell-body .grid{min-height:180px !important;height:100% !important}
 .notes-editor input,.notes-editor textarea{width:100%;border:1px solid #99f6e4;border-radius:10px;padding:8px;font:inherit;background:#fff}
 .notes-editor textarea{min-height:90px;resize:vertical}
-.notes-sel{border-color:#0d9488;background:#f0fdfa}
+.notes-item.stick{background:#fffbeb;border-color:#fde68a;box-shadow:2px 3px 0 rgba(15,23,42,.06)}
+.cell.drop-mod{outline:2px dashed var(--teal);outline-offset:-2px;background:#f0fdfa}
+body.edit-mode .cell-h{cursor:grab}
+#paRibbon [data-add]{cursor:grab}
 .links-mod a{display:block;padding:8px 10px;border:1px solid var(--line);border-radius:10px;margin-bottom:6px;text-decoration:none;color:var(--ink);font-weight:700}
 .links-mod a:hover{border-color:var(--teal);color:var(--teal)}
 .tl-row{display:flex;gap:8px;padding:7px 0;border-bottom:1px dashed #e2e8f0;font-size:.78rem}
@@ -455,7 +458,7 @@ body.edit-mode .lay-bar .hint-edit{display:inline}
             <button class="btn small" type="button" id="btnNoteModDel">مسح</button>
           </div>
         </div>
-        <p class="muted" id="notesHint">نوتس مستقلة تتحط في التخطيط. كمان تقدر تفتح نوت أي كارت من زر «نوت».</p>
+        <p class="muted" id="notesHint">نوتس مستقلة تتحط في التخطيط: اسحب «نوتس» من الشريط على خلية، أو + نوت هنا. البند المحدد يظهر فوق لو فيه نوت كارت.</p>
       </div>
     </section>
 </div>
@@ -1390,7 +1393,7 @@ function paintCanvas(){
       cellEl.style.flex = (Number(cell.width)||33)+' 1 0';
       const lab = cell.type ? (TYPE_LABEL[cell.type]||cell.type) : 'فاضي';
       const clr = (editMode && cell.type) ? '<button class="btn small" type="button" data-cell-clear="'+cell.id+'">إزالة</button>' : '';
-      cellEl.innerHTML = '<div class="cell-h"><span>'+escapeHtml(lab)+'</span><span>'+clr+'</span></div>'+
+      cellEl.innerHTML = '<div class="cell-h"'+(editMode && cell.type?' draggable="true"':'')+'><span>'+escapeHtml(lab)+'</span><span>'+clr+'</span></div>'+
         '<div class="cell-body"></div>'+
         (editMode?'<div class="cell-res" data-cell-res="'+sec.id+'"></div>':'');
       mountCell(cell, cellEl.querySelector('.cell-body'));
@@ -1448,19 +1451,26 @@ function firstEmptyOrSelected(){
   sec.cells.push(cell);
   return cell;
 }
-function placeType(type){
+function placeType(type, destCell){
   if (!type) return;
   const extra = {};
-  if (type==='iframe'){
+  if (type==='iframe' && !(destCell && destCell.url)){
     const url = prompt('رابط الـ Web / IFrame', 'https://');
     if (url===null) return;
     extra.url = String(url||'').trim();
   }
-  if (UNIQUE[type]) clearType(type);
-  const cell = firstEmptyOrSelected();
-  cell.type = type;
-  Object.assign(cell, extra);
-  selectedCellId = cell.id;
+  const dest = destCell || firstEmptyOrSelected();
+  if (UNIQUE[type]){
+    let old = null;
+    walkCells(c => { if (c.type===type && c!==dest) old=c; });
+    if (old){
+      old.type = dest.type || null;
+      old.url = dest.url || '';
+    }
+  }
+  dest.type = type;
+  Object.assign(dest, extra);
+  selectedCellId = dest.id;
   persistDash();
   paintCanvas();
   render();
@@ -1630,6 +1640,62 @@ function bindCanvasUi(){
   canvas.addEventListener('pointercancel', end);
 }
 
+function bindModuleDrag(){
+  const ribbon = $('paRibbon');
+  ribbon.querySelectorAll('[data-add]').forEach(b => { b.draggable = true; });
+  ribbon.addEventListener('dragstart', e => {
+    const b = e.target.closest('[data-add]');
+    if (!b) return;
+    e.dataTransfer.setData('text/plain', 'mod:'+b.getAttribute('data-add'));
+    e.dataTransfer.effectAllowed = 'copyMove';
+  });
+  const canvas = $('canvas');
+  canvas.addEventListener('dragstart', e => {
+    if (!editMode) return;
+    const head = e.target.closest('.cell-h');
+    if (!head) return;
+    const cellEl = head.closest('.cell');
+    const cell = cellEl && findCell(cellEl.dataset.cellId);
+    if (!cell || !cell.type) return;
+    e.dataTransfer.setData('text/plain', 'cell:'+cell.id);
+    e.dataTransfer.effectAllowed = 'move';
+  });
+  canvas.addEventListener('dragover', e => {
+    if (!editMode) return;
+    const cellEl = e.target.closest('.cell');
+    if (!cellEl) return;
+    e.preventDefault();
+    document.querySelectorAll('.cell.drop-mod').forEach(n => { if (n!==cellEl) n.classList.remove('drop-mod'); });
+    cellEl.classList.add('drop-mod');
+  });
+  canvas.addEventListener('drop', e => {
+    if (!editMode) return;
+    const cellEl = e.target.closest('.cell');
+    if (!cellEl) return;
+    const raw = e.dataTransfer.getData('text/plain')||'';
+    if (!raw.startsWith('mod:') && !raw.startsWith('cell:')) return;
+    e.preventDefault();
+    e.stopPropagation();
+    document.querySelectorAll('.cell.drop-mod').forEach(n => n.classList.remove('drop-mod'));
+    const dest = findCell(cellEl.dataset.cellId);
+    if (!dest) return;
+    if (raw.startsWith('mod:')){
+      placeType(raw.slice(4), dest);
+      return;
+    }
+    const src = findCell(raw.slice(5));
+    if (!src || src===dest) return;
+    const tmp = { type: dest.type, url: dest.url };
+    dest.type = src.type; dest.url = src.url;
+    src.type = tmp.type; src.url = tmp.url;
+    selectedCellId = dest.id;
+    persistDash(); paintCanvas(); render();
+  });
+  canvas.addEventListener('dragend', () => {
+    document.querySelectorAll('.cell.drop-mod').forEach(n => n.classList.remove('drop-mod'));
+  });
+}
+
 function renderNotesModule(){
   const list = $('notesList');
   if (!list) return;
@@ -1648,7 +1714,7 @@ function renderNotesModule(){
     list.innerHTML = '<p class="muted">مفيش نوتس لسه — + نوت أو اكتب على الكروت</p>';
   } else {
     const standalone = dashNotes.map(n =>
-      '<div class="notes-item" data-nid="'+escapeHtml(n.id)+'"><b>'+escapeHtml(n.title||'بدون عنوان')+'</b>'+
+      '<div class="notes-item stick" data-nid="'+escapeHtml(n.id)+'"><b>'+escapeHtml(n.title||'بدون عنوان')+'</b>'+
       '<p>'+escapeHtml(String(n.body||'').slice(0,180))+'</p></div>'
     ).join('');
     const fromCards = items.filter(i => (i.note||'').trim()).map(i =>
@@ -1745,18 +1811,22 @@ function applyProps(){
 function bindDrops(){
   const root = $('workspace');
   root.addEventListener('dragover', e => {
+    const rawHint = (e.dataTransfer && e.dataTransfer.types) || [];
     const zone = e.target.closest('[data-quad]');
     if (!zone) return;
+    if (e.target.closest('.cell-h')) return;
     e.preventDefault();
     document.querySelectorAll('.drag').forEach(n => { if (n!==zone) n.classList.remove('drag'); });
     zone.classList.add('drag');
   });
   root.addEventListener('drop', e => {
+    const raw = e.dataTransfer.getData('text/plain')||'';
+    if (raw.startsWith('mod:') || raw.startsWith('cell:')) return;
     const zone = e.target.closest('[data-quad]');
     if (!zone) return;
     e.preventDefault();
     document.querySelectorAll('.drag').forEach(n => n.classList.remove('drag'));
-    const ids = (e.dataTransfer.getData('text/plain')||'').split(',').map(s => s.trim()).filter(Boolean);
+    const ids = raw.split(',').map(s => s.trim()).filter(Boolean);
     const quad = zone.getAttribute('data-quad');
     if (ids.length && quad) moveItems(ids, quad);
   });
@@ -1931,6 +2001,7 @@ $('btnNoteModDel').onclick = delDashNote;
 
 bindDrops();
 bindCanvasUi();
+bindModuleDrag();
 loadFilters();
 loadLayout();
 setFilterMode(filterMode);
