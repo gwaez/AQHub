@@ -4,6 +4,13 @@ export type EisQuad = "inbox" | "do" | "sched" | "deleg" | "elim" | "doing" | "t
 
 export type MoveFlavour = "DO" | "SCHEDULE" | "DELEGATE" | "ELIMINATE" | "TRASH" | "INBOX" | "DOING";
 
+export type EisNoteMsg = {
+  id?: string;
+  text?: string;
+  at?: string;
+  from?: string;
+};
+
 export interface EisItem {
   id?: string;
   taskId?: string;
@@ -12,6 +19,7 @@ export interface EisItem {
   quad?: string;
   done?: boolean;
   note?: string;
+  noteTimeline?: EisNoteMsg[];
   updatedAt?: string;
   createdAt?: string;
   [key: string]: unknown;
@@ -151,4 +159,70 @@ export function moveEisItem(doc: EisDoc, id: string, quad: EisQuad): {
     prevQuad,
     item: items[idx],
   };
+}
+
+export function normalizeNoteTimeline(raw: unknown): EisNoteMsg[] {
+  if (raw == null) return [];
+  if (typeof raw === "string") {
+    const t = raw.trim();
+    if (!t) return [];
+    if (t.startsWith("[") || t.startsWith("{")) {
+      try {
+        return normalizeNoteTimeline(JSON.parse(t) as unknown);
+      } catch {
+        return [{ text: t, from: "user" }];
+      }
+    }
+    return [{ text: t, from: "user" }];
+  }
+  if (Array.isArray(raw)) {
+    if (
+      raw.length === 1 &&
+      raw[0] &&
+      typeof raw[0] === "object" &&
+      !Array.isArray(raw[0]) &&
+      !("text" in (raw[0] as object)) &&
+      "value" in (raw[0] as object)
+    ) {
+      return normalizeNoteTimeline((raw[0] as { value: unknown }).value);
+    }
+    const out: EisNoteMsg[] = [];
+    for (const m of raw) {
+      if (!m) continue;
+      if (typeof m === "string") {
+        const t = m.trim();
+        if (t) out.push({ text: t, from: "user" });
+        continue;
+      }
+      if (typeof m !== "object") continue;
+      const rec = m as EisNoteMsg & { value?: unknown; body?: string; note?: string; actor?: string };
+      if (!rec.text && "value" in rec) {
+        out.push(...normalizeNoteTimeline(rec.value));
+        continue;
+      }
+      const text = String(rec.text || rec.body || rec.note || "").trim();
+      if (!text) continue;
+      out.push({
+        id: rec.id,
+        text,
+        at: rec.at,
+        from: rec.from || rec.actor || "user",
+      });
+    }
+    return out;
+  }
+  if (typeof raw === "object" && raw && "value" in (raw as object)) {
+    return normalizeNoteTimeline((raw as { value: unknown }).value);
+  }
+  return [];
+}
+
+export function latestNoteText(it: EisItem | null | undefined): string {
+  if (!it) return "";
+  const tl = normalizeNoteTimeline(it.noteTimeline);
+  for (let i = tl.length - 1; i >= 0; i--) {
+    const t = String(tl[i].text || "").trim();
+    if (t) return t;
+  }
+  return String(it.note || "").trim();
 }

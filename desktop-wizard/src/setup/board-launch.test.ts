@@ -38,12 +38,14 @@ test("Background VBS launches Watch-Board with WScript window style 0", () => {
   assert.match(vbs, /WindowStyle Hidden/);
 });
 
-test("Eisenhower notes use a centered floating modal with save/close", () => {
+test("Eisenhower notes use a centered floating modal with chat send/close", () => {
   const eis = read("eisenhower.html");
   assert.match(eis, /id="noteModal"/);
   assert.match(eis, /note-float/);
   assert.match(eis, /id="btnOpenNotes"/);
   assert.match(eis, /id="noteSave"/);
+  assert.match(eis, /id="noteSend"/);
+  assert.match(eis, /id="noteChat"/);
   assert.match(eis, />حفظ</);
   assert.match(eis, />إغلاق</);
   assert.match(eis, /await save\(\)/);

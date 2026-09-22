@@ -35,6 +35,9 @@ test("Eis-Json.ps1 encodes items as a JSON array of objects", () => {
   assert.match(helper, /function Read-EisDoc/);
   assert.match(helper, /System\.Collections\.ArrayList/);
   assert.match(helper, /'"items":' \+ \$itemsJson/);
+  assert.match(helper, /function ConvertTo-EisNoteTimelineJson/);
+  assert.match(helper, /function ConvertTo-EisItemJson/);
+  assert.match(helper, /'"noteTimeline":'/);
   assert.doesNotMatch(helper, /ConvertTo-Json -Depth 10 -Compress/);
 });
 
@@ -51,10 +54,34 @@ test("Start-Board Eisenhower GET/POST/feed use Save-EisDoc not ConvertTo-Json wr
   assert.match(src, /Read-EisDoc \$eisenhowerPath/);
   assert.match(src, /Get-EisNormalizedItems/);
   assert.match(src, /if \(\$real\.Count -eq 0\)/);
+  assert.match(src, /if \(\$src -eq 'crm'\) \{ continue \}/);
+  assert.match(src, /boxNote/);
+  assert.match(src, /noteTimeline/);
   assert.doesNotMatch(src, /WriteAllText\(\$eisenhowerPath, \(\$payload \| ConvertTo-Json/);
   assert.doesNotMatch(src, /\$outObj \| ConvertTo-Json -Depth 10/);
   assert.doesNotMatch(src, /\$outJson = \(\$incoming \| ConvertTo-Json/);
   assert.doesNotMatch(src, /\$arr = New-Object object\[\] \$items\.Count/);
+});
+
+test("eisenhower.html live filters apply without Apply and notes are a chat timeline", () => {
+  const eis = read("eisenhower.html");
+  assert.match(eis, /id="filterModeTabs"/);
+  assert.doesNotMatch(eis, /id="filterMode"(?!Tabs)/);
+  assert.match(eis, /function isLiveMode/);
+  assert.match(eis, /function bindFilterUi/);
+  assert.match(eis, /function onFilterChange/);
+  assert.match(eis, /if \(isLiveMode\(\)\)/);
+  assert.match(eis, /committed = clone\(draft\)/);
+  assert.match(eis, /id="noteChat"/);
+  assert.match(eis, /id="noteCompose"/);
+  assert.match(eis, /id="noteSend"/);
+  assert.match(eis, /function sendNoteChat/);
+  assert.match(eis, /function appendItemNote/);
+  assert.match(eis, /function ensureNoteTimeline/);
+  assert.match(eis, /noteTimeline/);
+  assert.match(eis, /latestNoteText/);
+  assert.doesNotMatch(eis, /\/api\/task\/approve-send/);
+  assert.doesNotMatch(eis, /\/api\/task\/chat/);
 });
 
 test("eisenhower.html never renders title undefined", () => {

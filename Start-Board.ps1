@@ -2608,6 +2608,19 @@ function ConvertTo-EisItemFromTask($t, [string]$quad = 'inbox') {
     $sourceUrl = $crmUrl
   }
   $now = (Get-Date).ToUniversalTime().ToString('o')
+  $seed = [string]$(if ($t.boxNote) { $t.boxNote } elseif ($t.notes) { $t.notes } else { '' })
+  $seed = $seed.Trim()
+  $tl = New-EisArrayList
+  if ($seed) {
+    $from = 'task'
+    if ($src -eq 'email') { $from = 'email' }
+    [void]$tl.Add([pscustomobject]@{
+      id = ('N-' + [guid]::NewGuid().ToString('n').Substring(0,10))
+      text = $seed
+      at = $now
+      from = $from
+    })
+  }
   return [pscustomobject]@{
     id = ('E-' + [guid]::NewGuid().ToString('n').Substring(0,12))
     taskId = [string]$t.id
@@ -2615,7 +2628,8 @@ function ConvertTo-EisItemFromTask($t, [string]$quad = 'inbox') {
     source = $src
     quad = $quad
     done = $false
-    note = ''
+    note = $seed
+    noteTimeline = @($tl)
     entryId = $entry
     sourceRef = $sref
     fromEmail = [string]$t.fromEmail
@@ -2666,6 +2680,34 @@ function Merge-EisItemWithTask($item, $t) {
       Set-Prop $item 'sourceUrl' $u
     }
   }
+  $curNote = ''
+  if ($isHash) { $curNote = [string]$item['note'] } else { try { $curNote = [string]$item.note } catch { $curNote = '' } }
+  if (-not $curNote -or -not $curNote.Trim()) {
+    $seed = [string]$(if ($t.boxNote) { $t.boxNote } elseif ($t.notes) { $t.notes } else { '' })
+    $seed = $seed.Trim()
+    if ($seed) {
+      Set-Prop $item 'note' $seed
+      $curTl = $null
+      if ($isHash) { $curTl = $item['noteTimeline'] } else { try { $curTl = $item.noteTimeline } catch { $curTl = $null } }
+      $hasTl = $false
+      foreach ($one in @($curTl)) {
+        $txt = [string](Get-EisProp $one 'text')
+        if ($txt) { $hasTl = $true; break }
+      }
+      if (-not $hasTl) {
+        $from = 'task'
+        if ($src -eq 'email') { $from = 'email' }
+        $tl = New-EisArrayList
+        [void]$tl.Add([pscustomobject]@{
+          id = ('N-' + [guid]::NewGuid().ToString('n').Substring(0,10))
+          text = $seed
+          at = (Get-Date).ToUniversalTime().ToString('o')
+          from = $from
+        })
+        Set-Prop $item 'noteTimeline' @($tl)
+      }
+    }
+  }
   return $item
 }
 
@@ -2712,6 +2754,8 @@ function Invoke-EisAutoFeed([bool]$force = $false) {
     if ($st -match 'done|closed|complet|archive') { continue }
     $tid = [string]$t.id
     if (-not $tid) { continue }
+    $src = ([string]$t.source).ToLowerInvariant()
+    if ($src -eq 'crm') { continue }
     if ($existingTask.ContainsKey($tid) -or $trashedTask.ContainsKey($tid)) { continue }
     $row = ConvertTo-EisItemFromTask $t 'inbox'
     if ($row) {

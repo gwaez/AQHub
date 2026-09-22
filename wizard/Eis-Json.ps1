@@ -175,6 +175,7 @@ function ConvertTo-EisItemHashtable {
     if ($name -eq 'value' -and -not (Get-EisProp $Item 'id')) {
       if (($val -is [string]) -or (Test-EisList $val)) { continue }
     }
+    if ($name -eq 'noteTimeline') { continue }
     if ($null -eq $val) { continue }
     if (Test-EisList $val) { continue }
     $h[$name] = $val
@@ -188,6 +189,68 @@ function ConvertTo-EisItemHashtable {
     else { $h['title'] = '' }
   }
   return $h
+}
+
+function ConvertTo-EisNoteTimelineJson {
+  param($Val)
+  $msgs = New-EisArrayList
+  $raw = $Val
+  $bag = Get-EisValueBag $Val
+  if ($null -ne $bag) { $raw = $bag }
+  foreach ($m in @($raw)) {
+    if ($null -eq $m) { continue }
+    if ($m -is [string]) {
+      $st = ([string]$m).Trim()
+      if (-not $st) { continue }
+      $h = [ordered]@{ id = ''; text = $st; at = ''; from = 'user' }
+      [void]$msgs.Add(($h | ConvertTo-Json -Compress -Depth 4))
+      continue
+    }
+    $inner = Get-EisValueBag $m
+    if ($null -ne $inner -and -not (Get-EisProp $m 'text')) {
+      foreach ($one in @($inner)) {
+        $oneJson = ConvertTo-EisNoteTimelineJson $one
+        if ($oneJson -and $oneJson -ne '[]') {
+          $trim = $oneJson.Trim()
+          if ($trim.StartsWith('[') -and $trim.EndsWith(']') -and $trim.Length -gt 2) {
+            [void]$msgs.Add($trim.Substring(1, $trim.Length - 2))
+          }
+        }
+      }
+      continue
+    }
+    $text = [string](Get-EisProp $m 'text')
+    if (-not $text) { $text = [string](Get-EisProp $m 'body') }
+    if (-not $text) { $text = [string](Get-EisProp $m 'note') }
+    $text = $text.Trim()
+    if (-not $text) { continue }
+    $h = [ordered]@{
+      id = [string](Get-EisProp $m 'id')
+      text = $text
+      at = [string](Get-EisProp $m 'at')
+    }
+    $from = [string](Get-EisProp $m 'from')
+    if (-not $from) { $from = [string](Get-EisProp $m 'actor') }
+    if ($from) { $h['from'] = $from }
+    [void]$msgs.Add(($h | ConvertTo-Json -Compress -Depth 4))
+  }
+  return ('[' + (@($msgs) -join ',') + ']')
+}
+
+function ConvertTo-EisItemJson {
+  param($Item)
+  $h = ConvertTo-EisItemHashtable $Item
+  if ($null -eq $h) { return $null }
+  $chunks = New-EisArrayList
+  foreach ($k in @($h.Keys)) {
+    if (-not $k) { continue }
+    [void]$chunks.Add(('"' + $k + '":' + (ConvertTo-EisJsonScalar $h[$k])))
+  }
+  $tl = Get-EisProp $Item 'noteTimeline'
+  if ($null -ne $tl) {
+    [void]$chunks.Add('"noteTimeline":' + (ConvertTo-EisNoteTimelineJson $tl))
+  }
+  return ('{' + (@($chunks) -join ',') + '}')
 }
 
 function ConvertTo-EisJsonScalar {
@@ -212,9 +275,9 @@ function ConvertTo-EisJson {
   $items = @(Get-EisNormalizedItems $Payload)
   $parts = New-EisArrayList
   foreach ($it in $items) {
-    $h = ConvertTo-EisItemHashtable $it
-    if ($null -eq $h) { continue }
-    [void]$parts.Add(($h | ConvertTo-Json -Compress -Depth 8))
+    $itemJson = ConvertTo-EisItemJson $it
+    if ($null -eq $itemJson) { continue }
+    [void]$parts.Add($itemJson)
   }
   $itemsJson = '[' + (@($parts) -join ',') + ']'
   $chunks = New-EisArrayList

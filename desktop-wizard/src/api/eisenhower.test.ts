@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { flavourBubble, flavourForQuad, isEisQuad, itemTitle, moveEisItem, normalizeEisItems, type EisDoc } from "./eisenhower.ts";
+import { flavourBubble, flavourForQuad, isEisQuad, itemTitle, latestNoteText, moveEisItem, normalizeEisItems, normalizeNoteTimeline, type EisDoc } from "./eisenhower.ts";
 
 const doc: EisDoc = {
   items: [
@@ -54,6 +54,15 @@ test("itemTitle never shows undefined", () => {
   assert.equal(itemTitle({ id: "E-1" }), "بدون عنوان");
   assert.equal(itemTitle({ id: "E-1", title: undefined }), "بدون عنوان");
   assert.equal(itemTitle({ id: "E-1", title: "null" }), "بدون عنوان");
+});
+
+test("normalizeNoteTimeline unwraps value bags and latestNoteText is last message", () => {
+  const wrapped = [{ value: [{ id: "N-1", text: "first", at: "2026-01-01", from: "email" }, { text: "second", from: "user" }] }];
+  const tl = normalizeNoteTimeline(wrapped);
+  assert.equal(tl.length, 2);
+  assert.equal(tl[0].text, "first");
+  assert.equal(latestNoteText({ id: "E-1", note: "old", noteTimeline: tl }), "second");
+  assert.equal(latestNoteText({ id: "E-1", note: "only preview" }), "only preview");
 });
 
 test("moveEisItem unwraps a wrapped items list first", () => {

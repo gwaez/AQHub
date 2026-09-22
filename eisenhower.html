@@ -168,6 +168,22 @@ input[type=range]{width:100%;accent-color:var(--teal)}
 .modal textarea{width:100%;min-height:200px;border:2px solid #99f6e4;border-radius:14px;padding:14px;font:inherit;font-size:1rem;resize:vertical;background:#f8fffd;outline:none}
 .modal textarea:focus{border-color:#0d9488;box-shadow:0 0 0 3px rgba(13,148,136,.18)}
 .modal .actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:14px}
+.note-float-editor.chat-mode #noteText,
+.note-float-editor.chat-mode #noteDashActions{display:none !important}
+.note-float-editor:not(.chat-mode) #noteChatPane{display:none !important}
+.note-chat-pane{flex:1;min-height:0;display:flex;flex-direction:column}
+.note-chat{flex:1;min-height:220px;overflow:auto;padding:12px 10px;background:#ece5dd;border-radius:14px;display:flex;flex-direction:column;gap:8px}
+.chat-empty{margin:auto;color:#667781;font-size:.82rem;font-weight:700;text-align:center}
+.chat-row{display:flex}
+.chat-row.me{justify-content:flex-end}
+.chat-row.them{justify-content:flex-start}
+.chat-bubble{max-width:78%;padding:8px 10px;border-radius:14px;box-shadow:0 1px 1px rgba(0,0,0,.08);font-size:.88rem;line-height:1.45;white-space:pre-wrap;word-break:break-word}
+.chat-row.me .chat-bubble{background:#dcf8c6;border-end-start-radius:4px}
+.chat-row.them .chat-bubble{background:#fff;border-end-end-radius:4px}
+.chat-meta{font-size:.65rem;font-weight:800;color:#667781;margin-bottom:3px}
+.note-composer{display:flex;gap:8px;align-items:flex-end;margin-top:10px;background:#f0f2f5;border-radius:14px;padding:8px}
+.note-composer textarea{flex:1;min-height:44px;max-height:120px;border:0;border-radius:12px;padding:10px 12px;font:inherit;resize:none;background:#fff}
+.side.mode-live .per-apply,.side.mode-live .batch-bar{display:none !important}
 @media(max-width:720px){
   .note-float-body{flex-direction:column}
   .note-float-list{flex:0 0 120px;max-width:none;border-inline-end:0;border-bottom:1px solid #e2e8f0}
@@ -381,7 +397,7 @@ body.view-mode .pa-tabs,body.view-mode .hint-edit{display:none !important}
           <button type="button" class="win-btn" data-win="side" data-act="max" title="تكبير" aria-label="تكبير"></button>
         </span>
       </div>
-      <div class="mode-tabs" id="filterMode">
+      <div class="mode-tabs" id="filterModeTabs">
         <button type="button" data-mode="live" class="on">لايف</button>
         <button type="button" data-mode="per">بري</button>
         <button type="button" data-mode="batch">باتش</button>
@@ -533,7 +549,7 @@ body.view-mode .pa-tabs,body.view-mode .hint-edit{display:none !important}
       <div class="mod-body">
         <div class="notes-item notes-sel" id="notesSelected" hidden></div>
         <div id="notesList"></div>
-        <p class="muted" id="notesHint">اضغط نوت عشان تفتح الشاشة في النص. اكتب واحفظ. الكارت بيبين النوت بس لو فيها نص.</p>
+        <p class="muted" id="notesHint">اضغط نوت عشان تفتح الشات في النص. كل نوت بتضيف رسالة. الكارت بيبين آخر نوت بس.</p>
       </div>
     </section>
 </div>
@@ -588,8 +604,15 @@ body.view-mode .pa-tabs,body.view-mode .hint-edit{display:none !important}
         <p class="note-title" id="noteSub"></p>
         <p class="note-help" id="noteHelp">اكتب النوت وبعدين احفظ. إغلاق من غير حفظ مش بيغيّر حاجة.</p>
         <input id="noteTitleInput" placeholder="عنوان النوت…" hidden />
+        <div id="noteChatPane" class="note-chat-pane" hidden>
+          <div id="noteChat" class="note-chat" aria-live="polite"></div>
+          <form id="noteComposer" class="note-composer">
+            <textarea id="noteCompose" rows="2" placeholder="اكتب نوت… Enter للإرسال"></textarea>
+            <button class="btn primary" type="submit" id="noteSend">إرسال</button>
+          </form>
+        </div>
         <textarea id="noteText" placeholder="اكتب النوت هنا… مثال: محتاج شيك ضمان · ردّ على العميل بكرة"></textarea>
-        <div class="actions">
+        <div class="actions" id="noteDashActions">
           <button class="btn" type="button" id="noteCancel">إغلاق</button>
           <button class="btn" type="button" id="noteClear">مسح</button>
           <button class="btn primary" type="button" id="noteSave">حفظ</button>
@@ -710,6 +733,75 @@ function normalizeEisItems(raw){
   return [];
 }
 
+function unwrapNoteTimeline(raw){
+  if (raw == null) return [];
+  if (typeof raw === 'string'){
+    const t = raw.trim();
+    if (!t) return [];
+    if (t.charAt(0)==='[' || t.charAt(0)==='{'){
+      try { return unwrapNoteTimeline(JSON.parse(t)); } catch { return []; }
+    }
+    return [{ id: uid(), text: t, at: new Date().toISOString(), from: 'user' }];
+  }
+  if (Array.isArray(raw)){
+    if (raw.length===1 && raw[0] && typeof raw[0]==='object' && !raw[0].text && Object.prototype.hasOwnProperty.call(raw[0],'value')){
+      return unwrapNoteTimeline(raw[0].value);
+    }
+    const out = [];
+    raw.forEach(m => {
+      if (!m) return;
+      if (typeof m === 'string'){
+        const t = m.trim();
+        if (t) out.push({ id: uid(), text: t, at: new Date().toISOString(), from: 'user' });
+        return;
+      }
+      if (typeof m !== 'object') return;
+      if (!m.text && Object.prototype.hasOwnProperty.call(m, 'value')){
+        unwrapNoteTimeline(m.value).forEach(x => out.push(x));
+        return;
+      }
+      const text = String(m.text||m.body||m.note||'').trim();
+      if (!text) return;
+      out.push({
+        id: m.id || uid(),
+        text,
+        at: m.at || m.createdAt || new Date().toISOString(),
+        from: m.from || m.actor || 'user'
+      });
+    });
+    return out;
+  }
+  if (typeof raw === 'object' && Object.prototype.hasOwnProperty.call(raw, 'value')) return unwrapNoteTimeline(raw.value);
+  return [];
+}
+function latestNoteText(it){
+  if (!it) return '';
+  const tl = unwrapNoteTimeline(it.noteTimeline);
+  for (let i=tl.length-1;i>=0;i--){
+    const t = String(tl[i].text||'').trim();
+    if (t) return t;
+  }
+  return String(it.note||'').trim();
+}
+function ensureNoteTimeline(it){
+  if (!it) return [];
+  let tl = unwrapNoteTimeline(it.noteTimeline);
+  const note = String(it.note||'').trim();
+  if (!tl.length && note){
+    const from = String(it.source||'').toLowerCase()==='email' ? 'email' : 'legacy';
+    tl = [{ id: uid(), text: note, at: it.updatedAt || it.createdAt || new Date().toISOString(), from }];
+  }
+  it.noteTimeline = tl;
+  it.note = latestNoteText(it);
+  return tl;
+}
+function seedNoteFromTask(t){
+  const text = String((t && (t.boxNote || t.notes)) || '').trim();
+  if (!text) return { note:'', noteTimeline:[] };
+  const from = String((t && t.source) || '').toLowerCase()==='email' ? 'email' : 'task';
+  return { note: text, noteTimeline: [{ id: uid(), text, at: new Date().toISOString(), from }] };
+}
+
 function dayKey(v){
   if (!v) return '';
   const s = String(v);
@@ -754,8 +846,8 @@ function matches(it, f){
     const hay = ((it.fromEmail||'')+' '+(it.sourceRef||'')).toLowerCase();
     if (!f.emails.some(em => hay.includes(String(em).toLowerCase()))) return false;
   }
-  if (f.hasNote==='yes' && !(it.note||'').trim()) return false;
-  if (f.hasNote==='no' && (it.note||'').trim()) return false;
+  if (f.hasNote==='yes' && !latestNoteText(it)) return false;
+  if (f.hasNote==='no' && latestNoteText(it)) return false;
   if (f.hasTask==='yes' && !it.taskId) return false;
   if (f.hasTask==='no' && it.taskId) return false;
   if (f.hasEmail==='yes' && !hasEmail(it)) return false;
@@ -773,7 +865,8 @@ function matches(it, f){
   if (aMax!=null && !isNaN(aMax) && aMax < sliderMax() && age > aMax) return false;
   const q = (f.q||'').trim().toLowerCase();
   if (q){
-    const hay = [it.title,it.note,it.source,it.taskId,it.sourceRef,it.fromEmail,it.mailQuery].join(' ').toLowerCase();
+    const tlText = unwrapNoteTimeline(it.noteTimeline).map(m => m.text).join(' ');
+    const hay = [itemTitle(it), latestNoteText(it), tlText, it.source, it.taskId, it.sourceRef, it.fromEmail, it.mailQuery].join(' ').toLowerCase();
     if (!hay.includes(q)) return false;
   }
   return true;
@@ -786,8 +879,9 @@ function sortList(list, f){
   else arr.sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
   return arr;
 }
-function activeFilter(){ return committed; }
-function previewFilter(){ return (filterMode==='live') ? draft : (filterMode==='batch' ? draft : committed); }
+function isLiveMode(){ return String(filterMode||'live').toLowerCase()==='live'; }
+function activeFilter(){ return isLiveMode() ? draft : committed; }
+function previewFilter(){ return (isLiveMode() || String(filterMode).toLowerCase()==='batch') ? draft : committed; }
 
 function listForQuad(quad, f){
   return sortList(items.filter(it => (it.quad||'inbox')===quad && matches(it, f)), f);
@@ -801,18 +895,19 @@ function summaryOf(it){
     it.taskId ? ('تاسك: '+escapeHtml(it.taskId)) : 'تاسك: —',
     it.sourceUrl || it.entryId || it.crmUrl || it.teamsUrl ? 'فيه مصدر خارجي' : 'من غير مصدر خارجي',
     it.signUrl ? ('توقيع: '+escapeHtml(String(it.signUrl).slice(0,80))) : (it.signPlatform ? ('منصة توقيع: '+escapeHtml(it.signPlatform)) : 'توقيع: —'),
-    it.note ? ('نوت: '+escapeHtml(String(it.note).slice(0,160))) : 'نوت: —'
+    it.note ? ('نوت: '+escapeHtml(latestNoteText(it).slice(0,160))) : 'نوت: —'
   ].join('<br/>');
 }
 
 function cardEl(it, hostList){
   const el = document.createElement('div');
-  const hasNote = !!(it.note||'').trim();
+  const preview = latestNoteText(it);
+  const hasNote = !!preview;
   el.className = 'card'+(it.done?' done':'')+(hasNote?' has-note':'')+(selected.has(it.id)?' selected':'');
   el.draggable = true;
   el.dataset.id = it.id;
   const notePreview = hasNote
-    ? `<div class="note-line">${escapeHtml(String(it.note).slice(0,220))}${String(it.note).length>220?'…':''}</div>`
+    ? `<div class="note-line">${escapeHtml(preview.slice(0,220))}${preview.length>220?'…':''}</div>`
     : '';
   el.innerHTML = `<div class="card-title"><span class="tag">${escapeHtml(it.source||'manual')}</span> ${escapeHtml(itemTitle(it))}</div>
     ${notePreview}
@@ -967,23 +1062,25 @@ function removeChip(k){
 }
 
 function readDraft(){
-  draft.q = $('fQ').value||'';
-  draft.sources = [...document.querySelectorAll('#sourceList input:checked')].map(i => i.value);
-  draft.emails = [...document.querySelectorAll('#emailList input:checked')].map(i => i.value);
-  draft.quads = [...document.querySelectorAll('#quadList input:checked')].map(i => i.value);
-  draft.hasNote = $('fHasNote').value;
-  draft.hasTask = $('fHasTask').value;
-  draft.hasEmail = $('fHasEmail').value;
-  draft.dateField = $('fDateField').value||'created';
-  draft.dateFrom = $('fDateFrom').value;
-  draft.dateTo = $('fDateTo').value;
-  let a = Number($('fAgeMin').value||0), b = Number($('fAgeMax').value||0);
-  if (a>b){ const t=a; a=b; b=t; }
-  draft.ageMin = a;
-  draft.ageMax = (b >= sliderMax()) ? null : b;
-  draft.sort = $('fSort').value||'new';
-  $('ageMinLab').textContent = String(a);
-  $('ageMaxLab').textContent = String(b);
+  try {
+    if ($('fQ')) draft.q = $('fQ').value||'';
+    draft.sources = [...document.querySelectorAll('#sourceList input:checked')].map(i => i.value);
+    draft.emails = [...document.querySelectorAll('#emailList input:checked')].map(i => i.value);
+    draft.quads = [...document.querySelectorAll('#quadList input:checked')].map(i => i.value);
+    if ($('fHasNote')) draft.hasNote = $('fHasNote').value;
+    if ($('fHasTask')) draft.hasTask = $('fHasTask').value;
+    if ($('fHasEmail')) draft.hasEmail = $('fHasEmail').value;
+    if ($('fDateField')) draft.dateField = $('fDateField').value||'created';
+    if ($('fDateFrom')) draft.dateFrom = $('fDateFrom').value;
+    if ($('fDateTo')) draft.dateTo = $('fDateTo').value;
+    let a = Number(($('fAgeMin') && $('fAgeMin').value)||0), b = Number(($('fAgeMax') && $('fAgeMax').value)||0);
+    if (a>b){ const t=a; a=b; b=t; }
+    draft.ageMin = a;
+    draft.ageMax = (b >= sliderMax()) ? null : b;
+    if ($('fSort')) draft.sort = $('fSort').value||'new';
+    if ($('ageMinLab')) $('ageMinLab').textContent = String(a);
+    if ($('ageMaxLab')) $('ageMaxLab').textContent = String(b);
+  } catch(err){ console.warn('readDraft', err); }
 }
 function writeFilterUi(){
   $('fQ').value = draft.q||'';
@@ -1093,14 +1190,15 @@ function focusManualAdd(){
 }
 
 function persistFilters(){
-  try { localStorage.setItem(FILTER_KEY, JSON.stringify({ mode:filterMode, committed, draft })); } catch {}
+  try { localStorage.setItem(FILTER_KEY, JSON.stringify({ mode:String(filterMode||'live'), committed, draft })); } catch {}
 }
 function loadFilters(){
   try {
     const raw = localStorage.getItem(FILTER_KEY);
     if (!raw) return;
     const j = JSON.parse(raw);
-    if (j.mode) filterMode = j.mode;
+    const m = String(j.mode||'').toLowerCase();
+    if (m==='live' || m==='per' || m==='batch') filterMode = m;
     if (j.committed) committed = Object.assign(emptyFilter(), j.committed);
     if (j.draft) draft = Object.assign(emptyFilter(), j.draft);
     else draft = clone(committed);
@@ -1108,37 +1206,46 @@ function loadFilters(){
 }
 
 function setFilterMode(m){
+  m = String(m||'live').toLowerCase();
+  if (m!=='live' && m!=='per' && m!=='batch') m = 'live';
   filterMode = m;
-  if (m==='live'){ committed = clone(draft); perDirty = {}; }
-  document.querySelectorAll('#filterMode button').forEach(b => b.classList.toggle('on', b.dataset.mode===m));
-  $('sideFilters').classList.toggle('mode-per', m==='per');
-  $('sideFilters').classList.toggle('mode-batch', m==='batch');
-  $('modeHint').textContent = MODE_HINT[m]||'';
+  if (m==='live'){
+    committed = clone(draft);
+    perDirty = {};
+  }
+  const tabs = $('filterModeTabs') || $('filterMode');
+  if (tabs) tabs.querySelectorAll('button[data-mode]').forEach(b => b.classList.toggle('on', b.dataset.mode===m));
+  const side = $('sideFilters');
+  if (side){
+    side.classList.toggle('mode-live', m==='live');
+    side.classList.toggle('mode-per', m==='per');
+    side.classList.toggle('mode-batch', m==='batch');
+  }
+  if ($('modeHint')) $('modeHint').textContent = MODE_HINT[m]||'';
   persistFilters();
-  if (m==='live') render();
-  else { renderChips(); markPerDirtyUi(); const prev = items.filter(it => matches(it, draft)).length; $('btnApplyBatch').textContent='تطبيق ('+prev+')'; }
+  render();
 }
 function markPerDirtyUi(){
   document.querySelectorAll('.fg[data-group]').forEach(sec => {
     const g = sec.getAttribute('data-group');
-    sec.classList.toggle('dirty', filterMode==='per' && !!perDirty[g]);
+    sec.classList.toggle('dirty', String(filterMode)==='per' && !!perDirty[g]);
   });
 }
 function onFilterChange(group){
   readDraft();
   committed.sort = draft.sort;
-  if (filterMode==='live'){
+  if (isLiveMode()){
     committed = clone(draft);
     persistFilters();
     render();
     return;
   }
-  if (filterMode==='per' && group){ perDirty[group]=true; }
+  if (String(filterMode)==='per' && group){ perDirty[group]=true; }
   persistFilters();
   markPerDirtyUi();
   const prev = items.filter(it => matches(it, draft)).length;
-  $('btnApplyBatch').textContent = 'تطبيق ('+prev+')';
-  if (group==='search' && filterMode==='per') { /* wait for أظهر */ }
+  if ($('btnApplyBatch')) $('btnApplyBatch').textContent = 'تطبيق ('+prev+')';
+  renderChips();
 }
 function applyGroup(group){
   const keys = GROUP_KEYS[group]||[];
@@ -1328,6 +1435,11 @@ function showNoteModal(){
   renderNoteFloatList();
   setTimeout(() => {
     try {
+      if (noteKind === 'item'){
+        const c = $('noteCompose');
+        if (c){ c.focus(); }
+        return;
+      }
       const focusEl = (!$('noteTitleInput').hidden && !($('noteTitleInput').value||'').trim()) ? $('noteTitleInput') : $('noteText');
       focusEl.focus();
       if (focusEl === $('noteText')) focusEl.setSelectionRange((focusEl.value||'').length, (focusEl.value||'').length);
@@ -1354,19 +1466,24 @@ function paintNoteEditor(){
   const titleIn = $('noteTitleInput');
   const clearBtn = $('noteClear');
   const saveBtn = $('noteSave');
+  const editor = document.querySelector('.note-float-editor');
+  const chatPane = $('noteChatPane');
   if (noteKind === 'item' && noteId){
     const it = items.find(x => x.id === noteId);
     if (!it){ closeNote(); return; }
-    $('noteModalTitle').textContent = (it.note||'').trim() ? 'تعديل النوت' : 'كتابة نوت';
+    ensureNoteTimeline(it);
+    $('noteModalTitle').textContent = 'شات النوت';
     $('noteSub').textContent = itemTitle(it);
-    $('noteHelp').textContent = 'اكتب هنا اللي يخليك تفتكر البند. بعد الحفظ هتظهر على الكارت بس لو فيها نص.';
+    $('noteHelp').textContent = 'زي واتساب: كل نوت بتضيف رسالة. الكارت بيبين آخر نوت بس.';
     titleIn.hidden = true;
-    $('noteText').value = it.note || '';
-    clearBtn.hidden = false;
-    clearBtn.textContent = 'مسح';
-    saveBtn.disabled = false;
+    if (editor) editor.classList.add('chat-mode');
+    if (chatPane) chatPane.hidden = false;
+    renderNoteChat(it);
+    if ($('noteCompose')) $('noteCompose').value = '';
     return;
   }
+  if (editor) editor.classList.remove('chat-mode');
+  if (chatPane) chatPane.hidden = true;
   if (noteKind === 'dash' && editingNoteId){
     const n = currentDashNote() || { title:'', body:'' };
     $('noteModalTitle').textContent = (n.body||n.title) ? 'تعديل النوت' : 'نوت جديدة';
@@ -1388,6 +1505,28 @@ function paintNoteEditor(){
   clearBtn.hidden = true;
   saveBtn.disabled = true;
 }
+function chatFromLabel(from){
+  const f = String(from||'user').toLowerCase();
+  if (f==='email') return 'إيميل';
+  if (f==='task') return 'تاسك';
+  if (f==='legacy') return 'نوت قديمة';
+  return 'أنت';
+}
+function renderNoteChat(it){
+  const box = $('noteChat');
+  if (!box) return;
+  const tl = ensureNoteTimeline(it);
+  if (!tl.length){
+    box.innerHTML = '<div class="chat-empty">مفيش رسائل لسه — اكتب تحت زي واتساب</div>';
+    return;
+  }
+  box.innerHTML = tl.map(m => {
+    const mine = !m.from || m.from==='user' || m.from==='legacy';
+    const when = escapeHtml(String(m.at||'').replace('T',' ').slice(0,16));
+    return '<div class="chat-row '+(mine?'me':'them')+'"><div class="chat-bubble"><div class="chat-meta">'+escapeHtml(chatFromLabel(m.from))+' · '+when+'</div><div class="chat-text">'+escapeHtml(m.text)+'</div></div></div>';
+  }).join('');
+  box.scrollTop = box.scrollHeight;
+}
 function renderNoteFloatList(){
   const box = $('noteFloatList');
   if (!box) return;
@@ -1398,11 +1537,11 @@ function renderNoteFloatList(){
     parts.push('<div class="notes-item'+(on?' on':'')+'" data-nid="'+escapeHtml(n.id)+'"><b>'+escapeHtml(n.title||'بدون عنوان')+'</b>'+
       '<p>'+escapeHtml(String(n.body||'').slice(0,80) || 'فاضية')+'</p></div>');
   });
-  items.filter(i => (i.note||'').trim() || (noteKind==='item' && i.id===noteId)).forEach(i => {
+  items.filter(i => latestNoteText(i) || (noteKind==='item' && i.id===noteId)).forEach(i => {
     const on = noteKind==='item' && noteId===i.id;
-    const has = !!(i.note||'').trim();
-    parts.push('<div class="notes-item'+(on?' on':'')+'" data-eid="'+escapeHtml(i.id)+'"><b>كارت: '+escapeHtml(i.title||'')+'</b>'+
-      '<p>'+(has ? escapeHtml(String(i.note).slice(0,80)) : 'مفيش نوت لسه')+'</p></div>');
+    const has = latestNoteText(i);
+    parts.push('<div class="notes-item'+(on?' on':'')+'" data-eid="'+escapeHtml(i.id)+'"><b>كارت: '+escapeHtml(itemTitle(i))+'</b>'+
+      '<p>'+(has ? escapeHtml(has.slice(0,80)) : 'مفيش نوت لسه')+'</p></div>');
   });
   box.innerHTML = parts.length ? parts.join('') : '<p class="muted">مفيش نوتس — + نوت</p>';
   box.querySelectorAll('[data-nid]').forEach(el => el.onclick = () => openDashNote(el.getAttribute('data-nid')));
@@ -1429,9 +1568,49 @@ function openNote(id){
 }
 async function saveNote(){
   if (noteKind === 'dash'){ await saveDashNote(); return; }
+  if (noteKind === 'item'){ await sendNoteChat(); return; }
+}
+function clearNote(){
+  if (noteKind === 'dash'){ delDashNote(); return; }
   const it = items.find(x => x.id === noteId);
-  if (!it) return closeNote();
-  it.note = String($('noteText').value||'').trim();
+  if (!it) return;
+  if (!confirm('تمسح كل رسائل الشات للبند ده؟')) return;
+  it.noteTimeline = [];
+  it.note = '';
+  it.updatedAt = new Date().toISOString();
+  if (it.taskId){
+    fetch('/api/task/box-note', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ taskId: it.taskId, note: '' })
+    }).catch(()=>{});
+  }
+  markDirty();
+  render();
+  paintNoteEditor();
+  renderNoteFloatList();
+}
+async function sendNoteChat(e){
+  if (e) e.preventDefault();
+  if (noteKind !== 'item') return;
+  const it = items.find(x => x.id === noteId);
+  if (!it) return;
+  const ta = $('noteCompose');
+  const text = String(ta && ta.value || '').trim();
+  if (!text) return;
+  if (ta) ta.value = '';
+  await appendItemNote(it, text, 'user');
+}
+async function appendItemNote(it, text, from){
+  const msg = String(text||'').trim();
+  if (!it || !msg) return;
+  ensureNoteTimeline(it);
+  it.noteTimeline.push({
+    id: uid(),
+    text: msg,
+    at: new Date().toISOString(),
+    from: from || 'user'
+  });
+  it.note = msg;
   it.updatedAt = new Date().toISOString();
   if (it.taskId){
     try {
@@ -1445,13 +1624,12 @@ async function saveNote(){
   await save();
   render();
   renderNotesModule();
-  closeNote();
-}
-function clearNote(){
-  if (noteKind === 'dash'){ delDashNote(); return; }
-  if (!$('noteText')) return;
-  $('noteText').value = '';
-  saveNote();
+  if (isNoteModalOpen() && noteKind==='item' && noteId===it.id){
+    renderNoteChat(it);
+    renderNoteFloatList();
+    const c = $('noteCompose');
+    if (c) c.focus();
+  }
 }
 
 
@@ -1571,7 +1749,7 @@ function refreshGenerated(){
     if (!vis.length){ box.innerHTML = '<p class="muted">مفيش بنود ظاهرة</p>'; return; }
     box.innerHTML = vis.slice(0,80).map(it =>
       '<div class="notes-item" data-jump="'+escapeHtml(it.id)+'"><b>'+escapeHtml(itemTitle(it))+'</b>'+
-      '<p>'+escapeHtml(LABELS[it.quad]||it.quad)+(it.note?(' · '+String(it.note).slice(0,80)):'')+'</p></div>'
+      '<p>'+escapeHtml(LABELS[it.quad]||it.quad)+(latestNoteText(it)?(' · '+latestNoteText(it).slice(0,80)):'')+'</p></div>'
     ).join('');
     box.querySelectorAll('[data-jump]').forEach(n => n.onclick = () => {
       const id = n.getAttribute('data-jump');
@@ -1585,7 +1763,7 @@ function refreshGenerated(){
     box.innerHTML = vis.slice(0,40).map(it =>
       '<div class="tl-row"><span class="when">'+escapeHtml(String(it.updatedAt||it.createdAt||'').slice(0,16).replace('T',' '))+'</span>'+
       '<span><b>'+escapeHtml(itemTitle(it))+'</b> · '+(LABELS[it.quad]||it.quad)+
-      (it.note?('<div class="muted">'+escapeHtml(String(it.note).slice(0,100))+'</div>'):'')+'</span></div>'
+      (it.note?('<div class="muted">'+escapeHtml(latestNoteText(it).slice(0,100))+'</div>'):'')+'</span></div>'
     ).join('') || '<p class="muted">فاضي</p>';
   });
 }
@@ -1701,6 +1879,7 @@ function mountShell(){
   document.body.classList.toggle('custom-view', !editMode && customCommitted && dashHasRequired(dash));
   if (usesCanvasView()) paintCanvas();
   else { mountClassic(); applyLayout(); }
+  bindFilterUi();
 }
 function refreshPalette(){
   document.querySelectorAll('#paRibbon [data-add]').forEach(b => {
@@ -2263,21 +2442,21 @@ function renderNotesModule(){
   if (selBox){
     if (selItem){
       selBox.hidden = false;
-      selBox.innerHTML = '<b>البند المحدد: '+escapeHtml(selItem.title||'')+'</b><p>'+
-        ((selItem.note||'').trim() ? escapeHtml(selItem.note) : 'مفيش نوت على الكارت — اضغط نوت أو دبل-كليك')+'</p>';
+      selBox.innerHTML = '<b>البند المحدد: '+escapeHtml(itemTitle(selItem))+'</b><p>'+
+        (latestNoteText(selItem) ? escapeHtml(latestNoteText(selItem)) : 'مفيش نوت على الكارت — اضغط نوت أو دبل-كليك')+'</p>';
       selBox.onclick = () => openNote(selItem.id);
     } else { selBox.hidden = true; selBox.innerHTML=''; }
   }
-  if (!dashNotes.length && !items.some(i => (i.note||'').trim())){
+  if (!dashNotes.length && !items.some(i => latestNoteText(i))){
     list.innerHTML = '<p class="muted">مفيش نوتس لسه — اضغط نوت أو + نوت</p>';
   } else {
     const standalone = dashNotes.map(n =>
       '<div class="notes-item stick" data-nid="'+escapeHtml(n.id)+'"><b>'+escapeHtml(n.title||'بدون عنوان')+'</b>'+
       '<p>'+escapeHtml(String(n.body||'').slice(0,180))+'</p></div>'
     ).join('');
-    const fromCards = items.filter(i => (i.note||'').trim()).map(i =>
-      '<div class="notes-item" data-eid="'+escapeHtml(i.id)+'"><b>كارت: '+escapeHtml(i.title||'')+'</b>'+
-      '<p>'+escapeHtml(String(i.note).slice(0,180))+'</p></div>'
+    const fromCards = items.filter(i => latestNoteText(i)).map(i =>
+      '<div class="notes-item" data-eid="'+escapeHtml(i.id)+'"><b>كارت: '+escapeHtml(itemTitle(i))+'</b>'+
+      '<p>'+escapeHtml(latestNoteText(i).slice(0,180))+'</p></div>'
     ).join('');
     list.innerHTML = (standalone||'') + (fromCards||'');
     list.querySelectorAll('[data-nid]').forEach(el => el.onclick = () => openDashNote(el.getAttribute('data-nid')));
@@ -2438,7 +2617,12 @@ async function load(){
     localItems.forEach(x => { if (x && x.id) localById[x.id]=x; });
     items.forEach(it => {
       const loc = localById[it.id];
-      if (loc && (loc.note||'').trim() && !(it.note||'').trim()) it.note = loc.note;
+      if (loc){
+        if ((loc.note||'').trim() && !(it.note||'').trim()) it.note = loc.note;
+        const locTl = unwrapNoteTimeline(loc.noteTimeline);
+        if (locTl.length && !unwrapNoteTimeline(it.noteTimeline).length) it.noteTimeline = locTl;
+      }
+      ensureNoteTimeline(it);
     });
     window.__savedAt = j.updatedAt || '';
     try { localStorage.setItem('aqaar-eisenhower', JSON.stringify({items, updatedAt: window.__savedAt})); } catch {}
@@ -2458,6 +2642,7 @@ async function load(){
       }
     } catch { setBadge('off','خطأ'); }
   }
+  items.forEach(ensureNoteTimeline);
   const mx = sliderMax();
   if (committed.ageMax==null || committed.ageMax==='') committed.ageMax = null;
   if (draft.ageMax==null || draft.ageMax==='') draft.ageMax = null;
@@ -2484,7 +2669,7 @@ function addNew(){
   if (!title) return;
   items.unshift({
     id: uid(), title, source: $('newSource').value||'manual',
-    quad:'inbox', done:false, note:'',
+    quad:'inbox', done:false, note:'', noteTimeline:[],
     createdAt: new Date().toISOString(), updatedAt: new Date().toISOString()
   });
   $('newTitle').value=''; markDirty(); fillChoiceLists(); render();
@@ -2501,10 +2686,12 @@ async function importOpenTasks(){
       if (st.includes('done')||st.includes('closed')||st.includes('مكتمل')) return;
       const title = t.title||t.subject||t.id;
       if (!title) return;
+      if (String(t.source||'').toLowerCase()==='crm') return;
       if (items.some(i => (t.id && i.taskId===t.id) || i.title===String(title))) return;
+      const seeded = seedNoteFromTask(t);
       items.unshift({
-        id: uid(), taskId: t.id||'', title: String(title), source:'task',
-        quad:'inbox', done:false, note: String(t.boxNote||t.notes||''),
+        id: uid(), taskId: t.id||'', title: String(title), source: t.source||'task',
+        quad:'inbox', done:false, note: seeded.note, noteTimeline: seeded.noteTimeline,
         createdAt: new Date().toISOString(), updatedAt: new Date().toISOString()
       });
       n++;
@@ -2538,6 +2725,14 @@ $('noteText').addEventListener('keydown', e => {
 $('noteTitleInput').addEventListener('keydown', e => {
   if (e.key==='Enter'){ e.preventDefault(); $('noteText').focus(); }
 });
+if ($('noteComposer')){
+  $('noteComposer').addEventListener('submit', sendNoteChat);
+}
+if ($('noteCompose')){
+  $('noteCompose').addEventListener('keydown', e => {
+    if (e.key==='Enter' && !e.shiftKey){ e.preventDefault(); sendNoteChat(e); }
+  });
+}
 document.addEventListener('click', e => { if (!$('ctx').contains(e.target)) hideCtx(); });
 document.addEventListener('click', e => {
   if (e.target.closest('.card') || e.target.closest('#ctx') || e.target.closest('.side') || e.target.closest('#noteModal')) return;
@@ -2556,20 +2751,44 @@ document.addEventListener('keydown', e => {
     e.preventDefault(); redoDash();
   }
 });
+function bindFilterUi(){
+  const side = $('sideFilters');
+  if (!side || side.dataset.eisFilterBound === '1') return;
+  side.dataset.eisFilterBound = '1';
+  const onEvt = (e) => {
+    const t = e.target;
+    if (!t) return;
+    const id = t.id || '';
+    if (id === 'fSourceQ' || id === 'fEmailQ'){
+      if (e.type === 'input') fillChoiceLists();
+      return;
+    }
+    if (id === 'fQ' || id === 'fSort'){ onFilterChange('search'); return; }
+    if (id === 'fHasNote' || id === 'fHasTask' || id === 'fHasEmail'){ onFilterChange('flags'); return; }
+    if (id === 'fDateField' || id === 'fDateFrom' || id === 'fDateTo'){ onFilterChange('date'); return; }
+    if (id === 'fAgeMin' || id === 'fAgeMax'){ onFilterChange('age'); return; }
+    const groupSec = t.closest && t.closest('[data-group]');
+    if ((t.type === 'checkbox' || t.tagName === 'INPUT') && groupSec){
+      const g = groupSec.getAttribute('data-group');
+      if (g && g !== 'search') onFilterChange(g);
+    }
+  };
+  side.addEventListener('input', onEvt);
+  side.addEventListener('change', onEvt);
+  side.addEventListener('click', (e) => {
+    const modeBtn = e.target.closest && e.target.closest('#filterModeTabs [data-mode], #filterMode [data-mode]');
+    if (modeBtn && modeBtn.dataset.mode){ e.preventDefault(); setFilterMode(modeBtn.dataset.mode); return; }
+    const apply = e.target.closest && e.target.closest('.per-apply');
+    if (apply){ e.preventDefault(); readDraft(); applyGroup(apply.getAttribute('data-group')); return; }
+    if (e.target.closest && e.target.closest('#btnApplyBatch')){ e.preventDefault(); readDraft(); applyAll(); return; }
+    if (e.target.closest && e.target.closest('#btnCancelBatch')){ e.preventDefault(); draft = clone(committed); writeFilterUi(); render(); return; }
+    if (e.target.closest && e.target.closest('#btnClearFilters')){ e.preventDefault(); clearAllFilters(); }
+  });
+}
+
 window.addEventListener('beforeunload', () => { if (dirty) save(); });
 
-document.querySelectorAll('#filterMode button').forEach(b => b.onclick = () => setFilterMode(b.dataset.mode));
-['fQ'].forEach(id => $(id).addEventListener('input', () => onFilterChange('search')));
-$('fSourceQ').addEventListener('input', () => { fillChoiceLists(); });
-$('fEmailQ').addEventListener('input', () => { fillChoiceLists(); });
-['fHasNote','fHasTask','fHasEmail'].forEach(id => $(id).onchange = () => onFilterChange('flags'));
-['fDateField','fDateFrom','fDateTo'].forEach(id => $(id).onchange = () => onFilterChange('date'));
-['fAgeMin','fAgeMax'].forEach(id => $(id).oninput = () => onFilterChange('age'));
-$('fSort').onchange = () => onFilterChange('search');
-document.querySelectorAll('.per-apply').forEach(b => b.onclick = () => { readDraft(); applyGroup(b.getAttribute('data-group')); });
-$('btnApplyBatch').onclick = () => { readDraft(); applyAll(); };
-$('btnCancelBatch').onclick = () => { draft = clone(committed); writeFilterUi(); render(); };
-$('btnClearFilters').onclick = clearAllFilters;
+bindFilterUi();
 
 $('btnOrientStack').onclick = () => { if (editMode) applyOrientPreset('stack'); else { layout.orient='stack'; applyLayout(); } };
 $('btnOrientSplit').onclick = () => { if (editMode) applyOrientPreset('split'); else { layout.orient='split'; applyLayout(); } };
