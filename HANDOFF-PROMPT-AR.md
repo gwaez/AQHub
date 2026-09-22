@@ -29,6 +29,14 @@
 | `eisenhower.html` | صندوق أيزنهاور (وارد / مصفوفة / تراش / نوت / يمين) |
 | `crm-ops.html` + `crm-*.html` | غرفة عمليات المبيعات/الوحدات/الناس |
 | `data/signing-platforms.json` | digiapi (SPA/عقود) + digisign (إلغاء/ريفند/داخلي) |
+| `desktop-wizard/` | AQWizard (Tauri 2) — رفيق ويندوز؛ **لا** يكتب `tasks.json` مباشرة |
+| `wizard/Wizard-Bridge.ps1` | جسر رفيع: `GET /api/v1/wizard/health` و `GET/PUT /api/v1/wizard/settings` |
+
+## AQWizard (P1)
+- فرع العمل: `feat/aqhub-wizard-companion`. التشغيل بجانب اللوحة: `desktop-wizard/README.md`.
+- الاسم الظاهر قابل للتغيير؛ المعرّف التقني `AQWizard` / حزمة `old-wizard`.
+- Magic Wand / UIA / فقاعات الإيميل / أيزنهاور الكامل: مراحل لاحقة.
+
 
 ## قواعد أعمال مهمة (CRM / أهلية)
 - مشروع موجان / Mawjan على Dynamics: `https://aqaar.crm15.dynamics.com`

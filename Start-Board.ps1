@@ -2602,6 +2602,12 @@ function Get-CrmPeopleList {
 
 
 
+# Optional AQWizard companion bridge (health + wizard-settings.json only).
+$wizardBridgePath = Join-Path (Join-Path $Root 'wizard') 'Wizard-Bridge.ps1'
+if (Test-Path $wizardBridgePath) {
+  . $wizardBridgePath
+}
+
 while ($listener.IsListening) {
   $ctx = $listener.GetContext()
   $req = $ctx.Request
@@ -2611,10 +2617,16 @@ while ($listener.IsListening) {
     if ($path -eq '/') { $path = '/board.html' }
     if ($req.HttpMethod -eq 'OPTIONS') {
       $res.AddHeader('Access-Control-Allow-Origin','*')
-      $res.AddHeader('Access-Control-Allow-Methods','GET,POST,OPTIONS')
+      $res.AddHeader('Access-Control-Allow-Methods','GET,POST,PUT,OPTIONS')
       $res.AddHeader('Access-Control-Allow-Headers','Content-Type')
       Write-Text $res 204 'text/plain' ''
       continue
+    }
+    if ($path.StartsWith('/api/v1/wizard/')) {
+      if (Get-Command Invoke-WizardBridge -ErrorAction SilentlyContinue) {
+        $handled = Invoke-WizardBridge -Req $req -Res $res -Path $path -DataDir $dataDir
+        if ($handled) { continue }
+      }
     }
     if ($path -eq '/api/tasks' -and $req.HttpMethod -eq 'GET') { Write-FileResp $res $tasksPath; continue }
     if ($path -eq '/api/tasks' -and $req.HttpMethod -eq 'POST') {
