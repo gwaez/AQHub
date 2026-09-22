@@ -1,5 +1,6 @@
 import { parseAuditLog, type AuditLine, AUDIT_VIEW_LIMIT } from "./audit.ts";
 import { mergeTaskIntoDoc, nextTaskId, newWizardTask, type BoardDoc, type BoardTask } from "./tasks.ts";
+import { normalizeEisItems, rejectInboxCrm } from "./eisenhower.ts";
 import {
   defaultPermissionMap,
   normalizePermissionMap,
@@ -245,14 +246,14 @@ export function createAqHubClient(baseUrl = DEFAULT_AQHUB_URL): AqHubApi {
     },
     async getEisDoc() {
       const body = await json("/api/eisenhower");
-      const items = Array.isArray(body.items) ? body.items : [];
+      const items = rejectInboxCrm(normalizeEisItems(body.items));
       return { ...body, items };
     },
     async putEisDoc(doc) {
       await json("/api/eisenhower", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ items: doc.items || [], updatedAt: doc.updatedAt || new Date().toISOString() }),
+        body: JSON.stringify({ items: rejectInboxCrm(normalizeEisItems(doc.items)), updatedAt: doc.updatedAt || new Date().toISOString() }),
       });
     },
     async getMailStatus() {

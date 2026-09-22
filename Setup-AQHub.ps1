@@ -241,7 +241,7 @@ function Start-BoardKeepAlive {
 
   if (Test-Path $startPs1) {
     Start-Process -FilePath 'powershell.exe' -ArgumentList @(
-      '-NoProfile', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden', '-File', $startPs1, '-NoBrowser'
+      '-NoProfile', '-STA', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden', '-File', $startPs1, '-NoBrowser'
     ) -WorkingDirectory $Root -WindowStyle Hidden | Out-Null
     Write-Ok 'Launched Start-Board.ps1 hidden'
     return

@@ -31,6 +31,7 @@
 | `data/signing-platforms.json` | digiapi (SPA/عقود) + digisign (إلغاء/ريفند/داخلي) |
 | `desktop-wizard/` | AQWizard (Tauri 2) — رفيق ويندوز؛ **لا** يكتب `tasks.json` مباشرة |
 | `wizard/Wizard-Bridge.ps1` | جسر رفيع: health + settings + permissions + mail status |
+| `wizard/Mail-Sync.ps1` | مزامنة وارد غير مقروء → تاسكات + مسودات suggestedReply (بدون إرسال، بدون تشغيل Outlook) |
 | `Setup-AQWizard.ps1` | فحص Node/Rust/WebView2/MSVC + npm install؛ autostart اختياري |
 
 ## AQWizard (P12 setup foundations; P0–P11 done except P7/P8)
