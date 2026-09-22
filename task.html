@@ -407,7 +407,15 @@ async function loadTask(){
   if(!taskId){ $('err').hidden=false; $('err').textContent='ناقص ?id='; return }
   if(!isHttp){ $('err').hidden=false; $('err').textContent='شغّل السيرفر وافتح عبر http://127.0.0.1:8766/task.html?id=...'; return }
   try{
-    const j=await api('/api/task?id='+encodeURIComponent(taskId));
+    let j=null;
+    try { j=await api('/api/task?id='+encodeURIComponent(taskId)); }
+    catch(_){ j=null; }
+    if(!j || !(j.task||j).id){
+      const data=await (await fetch('/api/tasks')).json();
+      const t=(data.tasks||data||[]).find(x=>x && x.id===taskId);
+      if(!t) throw new Error('not found');
+      j={ task:t };
+    }
     task=j.task||j;
     if(!task||!task.id) throw new Error('not found');
     $('err').hidden=true; dirtyTitle=false; $('btnSaveTitle').disabled=true;

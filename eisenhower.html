@@ -197,6 +197,8 @@ body.edit-mode #dashNameBar{display:flex}
 .cell-body .doing,.cell-body .trash-box{height:100%;overflow:auto}
 .cell-body .doing .lane,.cell-body .trash-box .lane{max-height:none;flex:1}
 .notes-editor{display:grid;gap:6px;margin-top:8px;padding-top:8px;border-top:1px dashed #99f6e4}
+.notes-editor[hidden],#notesSelected[hidden]{display:none !important}
+.cell-body .grid{min-height:180px !important;height:100% !important}
 .notes-editor input,.notes-editor textarea{width:100%;border:1px solid #99f6e4;border-radius:10px;padding:8px;font:inherit;background:#fff}
 .notes-editor textarea{min-height:90px;resize:vertical}
 .notes-sel{border-color:#0d9488;background:#f0fdfa}
@@ -1214,7 +1216,7 @@ function defaultDash(){
     tabs:[{
       id:'tab-1', title:'Tab',
       sections:[
-        { id:'sec-1', title:'Section', height:520, cells:[
+        { id:'sec-1', title:'Section', height:400, cells:[
           { id:'c-f', type:'filters', width:22 },
           { id:'c-i', type:'inbox', width:28 },
           { id:'c-m', type:'matrix', width:50 }
@@ -1513,12 +1515,12 @@ function applyOrientPreset(orient){
   const tab = currentTab();
   if (orient==='split'){
     tab.sections = [
-      { id:nid('s'), title:'Section', height:520, cells:[
+      { id:nid('s'), title:'Section', height:400, cells:[
         { id:nid('c'), type: layout.side!==false ? 'filters' : null, width:22 },
         { id:nid('c'), type:'inbox', width:28 },
         { id:nid('c'), type:'matrix', width:50 }
       ]},
-      { id:nid('s'), title:'Section', height:220, cells:[
+      { id:nid('s'), title:'Section', height:240, cells:[
         { id:nid('c'), type:'doing', width:68 },
         { id:nid('c'), type:'notes', width:32 }
       ]}
