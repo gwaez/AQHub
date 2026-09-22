@@ -24,3 +24,9 @@ test("wizard menu Eisenhower opens AQHub in the browser, not the in-app matrix",
   const engine = read("src/engines/action-engine.ts");
   assert.match(engine, /case "OPEN_MATRIX"/);
 });
+
+test("tray Open AQHub uses open_aqhub, not the removed open_in_browser", () => {
+  const tray = read("src-tauri/src/tray.rs");
+  assert.match(tray, /aqhub::open_aqhub\(app\.clone\(\)\)/);
+  assert.doesNotMatch(tray, /open_in_browser/);
+});

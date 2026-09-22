@@ -39,7 +39,7 @@ pub fn install(app: &AppHandle) -> tauri::Result<()> {
                 emit_action(app, "HIDE");
             }
             "open" => {
-                let _ = aqhub::open_in_browser(app);
+                let _ = aqhub::open_aqhub(app.clone());
             }
             "exit" => {
                 app.exit(0);
