@@ -144,6 +144,7 @@ async function main() {
   const paint = () => {
     ui = localeCopy(settings.current.language);
     applyDocumentLocale(settings.current.language);
+    settingsUi.setCopy(ui);
     applyAnimation(character, machine.hint, look, settings.current.animationLevel);
     nameBtn.textContent = settings.current.displayName;
     techId.textContent = `${settings.current.technicalId} · ${settings.current.characterId}`;
