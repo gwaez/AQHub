@@ -346,7 +346,7 @@ export class SettingsPanel {
           <p class="hint">${esc(c.emailHint)}</p>
           <p>${esc(c.emailStatus)}: <span data-email-status class="${this.mailStatus?.outlook ? "hub up" : "hub down"}">${esc(this.mailStatus?.outlook ? c.emailConnected : c.emailUnavailable)}</span></p>
           <p class="hint" data-email-reason>${esc(this.mailStatus?.reason || "")}</p>
-          <p>${esc(c.emailLastSync)}: <span data-email-sync>${esc(settings.mailLastSyncAt || this.mailStatus?.lastSyncAt || "—")}</span></p>
+          <p>${esc(c.emailLastSync)}: <span data-email-sync dir="ltr">${esc(settings.mailLastSyncAt || this.mailStatus?.lastSyncAt || "—")}</span></p>
           <div class="composer-actions">
             <button type="button" data-settings="mail-sync">${esc(c.emailSyncNow)}</button>
             <button type="button" data-settings="mail-perms">${esc(c.emailPerms)}</button>
