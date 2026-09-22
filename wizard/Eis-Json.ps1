@@ -4,7 +4,8 @@
 # This module always writes items as a JSON array of item objects.
 
 function New-EisArrayList {
-  return (New-Object System.Collections.ArrayList)
+  # WinPS 5.1 enumerates IEnumerable on return; an empty ArrayList becomes $null.
+  return , (New-Object System.Collections.ArrayList)
 }
 
 function Get-EisProp {
@@ -45,8 +46,7 @@ function Test-EisRealItem {
   $id = [string](Get-EisProp $Item 'id')
   if ($id) { return $true }
   $taskId = [string](Get-EisProp $Item 'taskId')
-  $title = [string](Get-EisProp $Item 'title')
-  if ($taskId -and $title) { return $true }
+  if ($taskId) { return $true }
   return $false
 }
 

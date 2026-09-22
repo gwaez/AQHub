@@ -98,7 +98,8 @@ function Get-ActiveComObject {
 function New-MailArrayList {
   # WinPS 5.1: generic List[T] via New-Object throws "Argument types do not match"
   # because the type argument is parsed as a constructor argument.
-  return (New-Object System.Collections.ArrayList)
+  # Empty ArrayList must be returned as a scalar or 5.1 enumerates it to $null.
+  return , (New-Object System.Collections.ArrayList)
 }
 
 function ConvertTo-MailSyncResponseJson {

@@ -38,6 +38,9 @@ test("Eis-Json.ps1 encodes items as a JSON array of objects", () => {
   assert.match(helper, /function Save-EisDoc/);
   assert.match(helper, /function Read-EisDoc/);
   assert.match(helper, /System\.Collections\.ArrayList/);
+  assert.match(helper, /return\s*,\s*\(New-Object System\.Collections\.ArrayList\)/);
+  assert.match(helper, /if \(\$taskId\) \{ return \$true \}/);
+  assert.doesNotMatch(helper, /if \(\$taskId -and \$title\) \{ return \$true \}/);
   assert.match(helper, /'"items":' \+ \$itemsJson/);
   assert.match(helper, /function ConvertTo-EisNoteTimelineJson/);
   assert.match(helper, /'"noteTimeline":'/);
