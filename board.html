@@ -24,8 +24,37 @@ body{color:var(--text);font-family:"IBM Plex Sans Arabic",system-ui,sans-serif;b
 .btn.ghost{color:var(--muted);background:transparent}.btn:disabled{opacity:.4;cursor:not-allowed}
 .icon{position:relative;width:34px;height:34px;padding:0;display:grid;place-items:center}
 .badge{position:absolute;top:-4px;left:-4px;min-width:15px;height:15px;border-radius:999px;background:var(--hot);color:#fff;font-size:.62rem;display:grid;place-items:center}
-.toolbar input[type=search]{min-width:180px;flex:1}
-.main{flex:1}
+.toolbar input[type=search]{min-width:180px;width:100%}
+.work{flex:1;display:flex;gap:10px;align-items:stretch;min-height:0}
+.main{flex:1;min-width:0}
+.side{
+  width:270px;flex:0 0 270px;border:1px solid var(--line);border-radius:16px;
+  background:rgba(12,24,38,.92);padding:10px 10px 12px;display:flex;flex-direction:column;gap:8px;
+  max-height:calc(100vh - 148px);overflow:auto;position:sticky;top:10px
+}
+.side.collapsed{display:none}
+.side .sf-h{display:flex;justify-content:space-between;align-items:center;gap:6px}
+.side .sf-h b{font-size:.82rem}
+.side .field{display:grid;gap:4px}
+.side .field span{font-size:.7rem;color:var(--muted);font-weight:500}
+.side input,.side select{width:100%}
+.side .row2{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.side-count{font-size:.72rem;color:var(--muted)}
+.search-wrap{position:relative;flex:1;min-width:220px}
+.search-wrap input{width:100%}
+.suggest{position:absolute;top:calc(100% + 4px);inset-inline:0;z-index:30;
+  background:rgba(12,24,38,.98);border:1px solid rgba(34,211,238,.28);border-radius:12px;
+  max-height:260px;overflow:auto;box-shadow:0 12px 32px rgba(0,0,0,.4)}
+.suggest button{display:flex;width:100%;text-align:inherit;border:0;background:transparent;
+  color:var(--text);padding:8px 10px;font:inherit;font-size:.78rem;cursor:pointer;gap:8px;align-items:center}
+.suggest button:hover,.suggest button.on{background:rgba(34,211,238,.12)}
+.suggest .k{font-size:.62rem;color:var(--cyan);border:1px solid var(--line);border-radius:999px;padding:1px 6px;flex:0 0 auto}
+.suggest .v{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#btnToggleFilters.on{border-color:rgba(34,211,238,.45);color:var(--cyan)}
+@media(max-width:900px){
+  .work{flex-direction:column}
+  .side{width:auto;flex:none;max-height:none;position:static}
+}
 .kanban{display:grid;grid-template-columns:repeat(5,minmax(180px,1fr));gap:8px;align-items:start}
 @media(max-width:1100px){.kanban{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:700px){.kanban{grid-template-columns:1fr}}
@@ -147,11 +176,55 @@ body{color:var(--text);font-family:"IBM Plex Sans Arabic",system-ui,sans-serif;b
     </div>
   </header>
   <div class="toolbar">
-    <input id="q" type="search" placeholder="بحث..." />
-    <select id="filterSource"><option value="">المصدر</option><option>email</option><option>teams</option><option>crm</option><option>whatsapp</option><option>manual</option><option>other</option></select>
-    <select id="filterPriority"><option value="">الأهمية</option><option>urgent</option><option>high</option><option>medium</option><option>low</option></select>
+    <button class="btn" id="btnToggleFilters" type="button" title="لوحة التصفية">تصفية</button>
+    <div class="search-wrap">
+      <input id="q" type="search" placeholder="بحث مباشر — عنوان، شخص، إيميل، وسم..." autocomplete="off" />
+      <div class="suggest" id="suggest" hidden role="listbox"></div>
+    </div>
+    <span class="side-count" id="filterSummary"></span>
   </div>
-  <div class="main" id="main"></div>
+  <div class="work">
+    <aside class="side" id="sideFilters">
+      <div class="sf-h">
+        <b>تصفية من الجنب</b>
+        <button class="btn ghost" type="button" id="btnClearFilters">مسح</button>
+      </div>
+      <label class="field"><span>التاريخ</span>
+        <select id="filterDateField">
+          <option value="either">الاستحقاق أو تاريخ التاسك</option>
+          <option value="due">الاستحقاق فقط</option>
+          <option value="created">تاريخ التاسك فقط</option>
+        </select>
+      </label>
+      <div class="row2">
+        <label class="field"><span>من</span><input id="filterDateFrom" type="date" /></label>
+        <label class="field"><span>إلى</span><input id="filterDateTo" type="date" /></label>
+      </div>
+      <label class="field"><span>الإيميل</span>
+        <input id="filterEmail" list="emailOpts" placeholder="من / مرجع / إيميل" autocomplete="off" />
+        <datalist id="emailOpts"></datalist>
+      </label>
+      <label class="field"><span>الشخص / المسؤول</span>
+        <input id="filterPerson" list="personOpts" placeholder="مسؤول أو منشئ" autocomplete="off" />
+        <datalist id="personOpts"></datalist>
+      </label>
+      <label class="field"><span>الأهمية</span>
+        <select id="filterPriority"><option value="">الكل</option><option>urgent</option><option>high</option><option>medium</option><option>low</option></select>
+      </label>
+      <label class="field"><span>فيها نوت؟</span>
+        <select id="filterHasNote">
+          <option value="">الكل</option>
+          <option value="yes">فيها نوت (boxNote / notes)</option>
+          <option value="no">من غير نوت</option>
+        </select>
+      </label>
+      <label class="field"><span>النوع / المصدر</span>
+        <select id="filterSource"><option value="">الكل</option><option>email</option><option>teams</option><option>crm</option><option>whatsapp</option><option>manual</option><option>other</option></select>
+      </label>
+      <p class="hint" style="margin:0">الفلاتر تتحفظ محليًا. الشيبس فوق تفضل متزامنة مع العدّ.</p>
+    </aside>
+    <div class="main" id="main"></div>
+  </div>
 </div>
 <div class="backdrop" id="backdrop"></div>
 <section class="sheet" id="sheet" aria-hidden="true">
@@ -235,6 +308,9 @@ const isHttp=location.protocol.startsWith('http');
 let state={version:1,title:'Aqaar Command',tasks:[]};
 let view=localStorage.getItem('aqaar.view')||'kanban';
 let filter=localStorage.getItem('aqaar.filter')||'all';
+const SIDE_KEY='aqaar.sideFilters';
+let sideOpen=true;
+let sugItems=[],sugIndex=-1,qTimer=null,sugTimer=null;
 let editingId=null,dirty=false,dragId=null,tempComments=[];
 let notifications=[],unread=0;
 const $=id=>document.getElementById(id);
@@ -254,14 +330,14 @@ function renderNotifs(){ const b=$('notifBadge'); if(unread>0){b.hidden=false;b.
   list.innerHTML=notifications.map(n=>'<div class="note"><div class="t">'+esc(n.title)+'</div><div class="d">'+esc(n.detail||'')+'</div></div>').join('') }
 function normalize(t){
   const status=['backlog','todo','doing','blocked','done'].includes(t.status)?t.status:(t.status==='in_progress'?'doing':'todo');
-  return {id:t.id,title:t.title||'',status,priority:t.priority||'medium',source:t.source||'manual',sourceRef:t.sourceRef||t.source_ref||'',entryId:t.entryId||t.entryID||'',tags:t.tags||[],notes:t.notes||'',botAction:t.botAction||'none',botInstruction:t.botInstruction||'',comments:Array.isArray(t.comments)?t.comments:[],suggestedReply:t.suggestedReply||'',due:t.due||null,assignee:t.assignee||'',checklist:Array.isArray(t.checklist)?t.checklist:[],progress:typeof t.progress==='number'?t.progress:0,createdAt:t.createdAt||null,updatedAt:t.updatedAt||null,createdBy:t.createdBy||'',chat:Array.isArray(t.chat)?t.chat:[],timeline:Array.isArray(t.timeline)?t.timeline:[],pendingSend:t.pendingSend||null,pendingTrash:!!t.pendingTrash,mailClass:t.mailClass||null};
+  return {id:t.id,title:t.title||'',status,priority:t.priority||'medium',source:t.source||'manual',sourceRef:t.sourceRef||t.source_ref||'',entryId:t.entryId||t.entryID||'',tags:t.tags||[],notes:t.notes||'',boxNote:t.boxNote||'',botAction:t.botAction||'none',botInstruction:t.botInstruction||'',comments:Array.isArray(t.comments)?t.comments:[],suggestedReply:t.suggestedReply||'',due:t.due||null,assignee:t.assignee||'',checklist:Array.isArray(t.checklist)?t.checklist:[],progress:typeof t.progress==='number'?t.progress:0,createdAt:t.createdAt||null,updatedAt:t.updatedAt||null,createdBy:t.createdBy||'',fromEmail:t.fromEmail||'',crmUrl:t.crmUrl||'',sourceUrl:t.sourceUrl||'',chat:Array.isArray(t.chat)?t.chat:[],timeline:Array.isArray(t.timeline)?t.timeline:[],pendingSend:t.pendingSend||null,pendingTrash:!!t.pendingTrash,mailClass:t.mailClass||null};
 }
 async function api(path,opts){const r=await fetch(path,opts); if(!r.ok) throw new Error(await r.text()||('HTTP '+r.status)); return r}
 async function reload(silent){
   if(!isHttp) return; const prev=new Map(state.tasks.map(t=>[t.id,{...t}]));
   const res=await api('/api/tasks'); state=await res.json(); if(!Array.isArray(state.tasks)) state.tasks=[]; state.tasks=state.tasks.map(normalize);
   if(prev.size){ for(const t of state.tasks){ const old=prev.get(t.id); if(!old) notify('new','تاسك جديد',t.title,silent); else if(old.status!==t.status) notify(t.status==='done'?'done':'move',t.status==='done'?'خلصت ✅':'اتنقلت',t.title,silent)} }
-  markDirty(false); render();
+  markDirty(false); fillDatalists(); render();
 }
 async function save(){ state.updatedAt=nowIso(); await api('/api/tasks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(state)}); await api('/api/audit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({at:state.updatedAt,actor:'User',action:'board.save'})}); markDirty(false); notify('done','اتحفظ','') }
 async function syncMail(opts){
@@ -278,19 +354,178 @@ async function syncMail(opts){
   }catch(e){ if(!silent) toast('فشل المزامنة', e.message||e) }
 }
 function nextId(){let m=0; for(const t of state.tasks){const x=/^T-?(\d+)$/i.exec(t.id||''); if(x) m=Math.max(m,+x[1])} return 'T-'+String(m+1).padStart(3,'0')}
-function filtered(){
-  const q=$('q').value.trim().toLowerCase(), src=$('filterSource').value, pr=$('filterPriority').value;
-  return state.tasks.filter(t=>{
-    if(filter==='doing'&&t.status!=='doing') return false;
-    if(filter==='hot'&&!((t.priority==='high'||t.priority==='urgent')&&t.status!=='done')) return false;
-    if(filter==='done'&&t.status!=='done') return false;
-    if(filter==='bot'&&!(t.botAction&&t.botAction!=='none')) return false;
-    if(filter==='late'&&!(t.mailClass==='late'||(t.tags||[]).includes('mail-late'))) return false;
-    if(filter==='rejected'&&!(t.mailClass==='rejected'||(t.tags||[]).includes('mail-rejected'))) return false;
-    if(filter==='needs_reply'&&!(t.mailClass==='needs_reply'||(t.tags||[]).includes('mail-needs-reply'))) return false;
-    if(src&&t.source!==src) return false; if(pr&&t.priority!==pr) return false; if(!q) return true;
-    return [t.title,t.source,t.sourceRef,t.notes,t.botInstruction,t.assignee,...(t.tags||[])].join(' ').toLowerCase().includes(q);
+function loadSide(){
+  try{ return JSON.parse(localStorage.getItem(SIDE_KEY)||'{}')||{} }catch(e){ return {} }
+}
+function saveSide(){
+  const o={
+    dateField:$('filterDateField').value,
+    dateFrom:$('filterDateFrom').value,
+    dateTo:$('filterDateTo').value,
+    email:$('filterEmail').value,
+    person:$('filterPerson').value,
+    source:$('filterSource').value,
+    priority:$('filterPriority').value,
+    hasNote:$('filterHasNote').value,
+    open:sideOpen
+  };
+  localStorage.setItem(SIDE_KEY, JSON.stringify(o));
+}
+function applySideUi(o){
+  if(!o) o={};
+  if(o.dateField) $('filterDateField').value=o.dateField;
+  if(o.dateFrom) $('filterDateFrom').value=o.dateFrom;
+  if(o.dateTo) $('filterDateTo').value=o.dateTo;
+  if(o.email) $('filterEmail').value=o.email;
+  if(o.person) $('filterPerson').value=o.person;
+  if(o.source) $('filterSource').value=o.source;
+  if(o.priority) $('filterPriority').value=o.priority;
+  if(o.hasNote) $('filterHasNote').value=o.hasNote;
+  sideOpen=(o.open!==false);
+  setSideOpen(sideOpen,false);
+}
+function setSideOpen(open,persist){
+  sideOpen=!!open;
+  $('sideFilters').classList.toggle('collapsed', !sideOpen);
+  $('btnToggleFilters').classList.toggle('on', sideOpen);
+  if(persist!==false) saveSide();
+}
+function dayKey(v){
+  if(!v) return '';
+  const s=String(v);
+  if(/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0,10);
+  const d=new Date(s);
+  if(isNaN(d.getTime())) return '';
+  const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), day=String(d.getDate()).padStart(2,'0');
+  return y+'-'+m+'-'+day;
+}
+function inDateRange(t){
+  const from=$('filterDateFrom').value, to=$('filterDateTo').value;
+  if(!from && !to) return true;
+  const field=$('filterDateField').value||'either';
+  const due=dayKey(t.due), created=dayKey(t.createdAt);
+  const cands=field==='due'?[due]:field==='created'?[created]:[due,created];
+  return cands.some(d=>{
+    if(!d) return false;
+    if(from && d<from) return false;
+    if(to && d>to) return false;
+    return true;
   });
+}
+function hasNote(t){
+  if(String(t.boxNote||'').trim()) return true;
+  if(String(t.notes||'').trim()) return true;
+  if(Array.isArray(t.comments)&&t.comments.some(c=>String(c.text||'').trim())) return true;
+  return false;
+}
+function emailHay(t){
+  return [t.fromEmail,t.sourceRef,t.source==='email'?t.title:'',t.entryId].join(' ').toLowerCase();
+}
+function personHay(t){
+  return [t.assignee,t.createdBy].join(' ').toLowerCase();
+}
+function searchHay(t){
+  const notes=(t.comments||[]).map(c=>c.text||'').join(' ');
+  return [t.title,t.source,t.sourceRef,t.notes,t.boxNote,t.botInstruction,t.assignee,t.createdBy,t.fromEmail,notes,...(t.tags||[])].join(' ').toLowerCase();
+}
+function matchSide(t){
+  const src=$('filterSource').value, pr=$('filterPriority').value;
+  const email=$('filterEmail').value.trim().toLowerCase();
+  const person=$('filterPerson').value.trim().toLowerCase();
+  const note=$('filterHasNote').value;
+  if(src&&t.source!==src) return false;
+  if(pr&&t.priority!==pr) return false;
+  if(email&&!emailHay(t).includes(email)) return false;
+  if(person&&!personHay(t).includes(person)) return false;
+  if(note==='yes'&&!hasNote(t)) return false;
+  if(note==='no'&&hasNote(t)) return false;
+  if(!inDateRange(t)) return false;
+  return true;
+}
+function matchChip(t){
+  if(filter==='doing'&&t.status!=='doing') return false;
+  if(filter==='hot'&&!((t.priority==='high'||t.priority==='urgent')&&t.status!=='done')) return false;
+  if(filter==='done'&&t.status!=='done') return false;
+  if(filter==='bot'&&!(t.botAction&&t.botAction!=='none')) return false;
+  if(filter==='late'&&!(t.mailClass==='late'||(t.tags||[]).includes('mail-late'))) return false;
+  if(filter==='rejected'&&!(t.mailClass==='rejected'||(t.tags||[]).includes('mail-rejected'))) return false;
+  if(filter==='needs_reply'&&!(t.mailClass==='needs_reply'||(t.tags||[]).includes('mail-needs-reply'))) return false;
+  return true;
+}
+function matchSearch(t){
+  const q=$('q').value.trim().toLowerCase();
+  if(!q) return true;
+  return searchHay(t).includes(q);
+}
+function sidePool(){ return state.tasks.filter(matchSide) }
+function filtered(){ return sidePool().filter(t=>matchChip(t)&&matchSearch(t)) }
+function sideActive(){
+  return !!(
+    $('filterDateFrom').value||$('filterDateTo').value||
+    $('filterEmail').value.trim()||$('filterPerson').value.trim()||
+    $('filterSource').value||$('filterPriority').value||$('filterHasNote').value
+  );
+}
+function fillDatalists(){
+  const emails=new Set(), people=new Set(), sources=new Set(['email','teams','crm','whatsapp','manual','other']);
+  const cur=$('filterSource').value;
+  for(const t of state.tasks){
+    if(t.fromEmail) emails.add(t.fromEmail);
+    const m=String(t.sourceRef||'').match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
+    if(m) emails.add(m[0]);
+    if(t.assignee) people.add(t.assignee);
+    if(t.createdBy) people.add(t.createdBy);
+    if(t.source) sources.add(t.source);
+  }
+  if(cur) sources.add(cur);
+  $('emailOpts').innerHTML=[...emails].slice(0,40).map(v=>'<option value="'+esc(v)+'">').join('');
+  $('personOpts').innerHTML=[...people].slice(0,40).map(v=>'<option value="'+esc(v)+'">').join('');
+  $('filterSource').innerHTML='<option value="">الكل</option>'+[...sources].map(s=>'<option'+(s===cur?' selected':'')+'>'+esc(s)+'</option>').join('');
+}
+function collectSuggestions(q){
+  const qn=q.trim().toLowerCase();
+  if(qn.length<1) return [];
+  const seen=new Set(), out=[];
+  function add(kind,value,hint){
+    const v=String(value||'').trim();
+    if(!v) return;
+    const key=kind+'|'+v.toLowerCase();
+    if(seen.has(key)) return;
+    if(!v.toLowerCase().includes(qn)) return;
+    seen.add(key);
+    out.push({kind,value:v,hint});
+  }
+  for(const t of state.tasks){
+    add('title', t.title, 'عنوان');
+    add('person', t.assignee, 'مسؤول');
+    add('person', t.createdBy, 'منشئ');
+    add('email', t.fromEmail, 'إيميل');
+    add('ref', t.sourceRef, 'مرجع');
+    (t.tags||[]).forEach(tag=>add('tag', tag, 'وسم'));
+  }
+  return out.slice(0,10);
+}
+function hideSuggest(){ $('suggest').hidden=true; sugItems=[]; sugIndex=-1 }
+function renderSuggest(){
+  const box=$('suggest');
+  if(!sugItems.length){ hideSuggest(); return }
+  box.hidden=false;
+  box.innerHTML=sugItems.map((s,i)=>'<button type="button" role="option" data-i="'+i+'" class="'+(i===sugIndex?'on':'')+'"><span class="k">'+esc(s.hint)+'</span><span class="v">'+esc(s.value)+'</span></button>').join('');
+  box.querySelectorAll('button').forEach(b=>{
+    b.onmousedown=e=>{ e.preventDefault(); applySuggestion(sugItems[+b.dataset.i]) };
+  });
+}
+function applySuggestion(s){
+  if(!s) return;
+  if(s.kind==='person'){ $('filterPerson').value=s.value; $('q').value='' }
+  else if(s.kind==='email'){ $('filterEmail').value=s.value; $('q').value='' }
+  else { $('q').value=s.value }
+  hideSuggest(); saveSide(); render();
+}
+function updateSuggest(){
+  sugItems=collectSuggestions($('q').value);
+  sugIndex=sugItems.length?0:-1;
+  renderSuggest();
 }
 function setView(v){view=v;localStorage.setItem('aqaar.view',v);document.querySelectorAll('#viewSwitch .chipbtn').forEach(b=>b.classList.toggle('on',b.dataset.view===v));render()}
 function setFilter(f){filter=f;localStorage.setItem('aqaar.filter',f);document.querySelectorAll('#statFilters .chipbtn').forEach(b=>b.classList.toggle('on',b.dataset.filter===f));render()}
@@ -335,16 +570,20 @@ function renderMatrix(list){ const wrap=document.createElement('div'); wrap.clas
 function renderFocus(list){ const wrap=document.createElement('div'); wrap.className='focus'; const hot=list.filter(t=>t.status!=='done'&&(t.priority==='urgent'||t.priority==='high'||t.status==='doing'||(t.botAction&&t.botAction!=='none')));
   wrap.innerHTML=`<div class="focus-hero"><h2>وضع التركيز</h2><p>${hot.length} تاسك يحتاج انتباه (حرج / جاري / أوامر بوت)</p></div>`; const box=document.createElement('div'); box.className='cards'; const use=hot.length?hot:list.filter(t=>t.status!=='done').slice(0,6);
   if(!use.length) box.innerHTML='<div class="empty">فاضي</div>'; use.forEach(t=>{const card=document.createElement('article'); card.className='card'; card.innerHTML=cardHTML(t); bindCard(card,t); box.appendChild(card)}); wrap.appendChild(box); return wrap }
-function render(){ const list=filtered();
-  $('statTotal').textContent=state.tasks.length; $('statDoing').textContent=state.tasks.filter(t=>t.status==='doing').length;
-  $('statHot').textContent=state.tasks.filter(t=>(t.priority==='high'||t.priority==='urgent')&&t.status!=='done').length;
-  $('statDone').textContent=state.tasks.filter(t=>t.status==='done').length;
-  $('statBot').textContent=state.tasks.filter(t=>t.botAction&&t.botAction!=='none').length;
-  if($('statLate')) $('statLate').textContent=state.tasks.filter(t=>t.mailClass==='late'||(t.tags||[]).includes('mail-late')).length;
-  if($('statRejected')) $('statRejected').textContent=state.tasks.filter(t=>t.mailClass==='rejected'||(t.tags||[]).includes('mail-rejected')).length;
-  if($('statNeedsReply')) $('statNeedsReply').textContent=state.tasks.filter(t=>t.mailClass==='needs_reply'||(t.tags||[]).includes('mail-needs-reply')).length;
+function render(){ const pool=sidePool(); const list=pool.filter(t=>matchChip(t)&&matchSearch(t));
+  $('statTotal').textContent=pool.length;
+  $('statDoing').textContent=pool.filter(t=>t.status==='doing').length;
+  $('statHot').textContent=pool.filter(t=>(t.priority==='high'||t.priority==='urgent')&&t.status!=='done').length;
+  $('statDone').textContent=pool.filter(t=>t.status==='done').length;
+  $('statBot').textContent=pool.filter(t=>t.botAction&&t.botAction!=='none').length;
+  if($('statLate')) $('statLate').textContent=pool.filter(t=>t.mailClass==='late'||(t.tags||[]).includes('mail-late')).length;
+  if($('statRejected')) $('statRejected').textContent=pool.filter(t=>t.mailClass==='rejected'||(t.tags||[]).includes('mail-rejected')).length;
+  if($('statNeedsReply')) $('statNeedsReply').textContent=pool.filter(t=>t.mailClass==='needs_reply'||(t.tags||[]).includes('mail-needs-reply')).length;
   document.querySelectorAll('#viewSwitch .chipbtn').forEach(b=>b.classList.toggle('on',b.dataset.view===view));
   document.querySelectorAll('#statFilters .chipbtn').forEach(b=>b.classList.toggle('on',b.dataset.filter===filter));
+  const n=list.length, tot=state.tasks.length;
+  $('filterSummary').textContent = (n===tot && !sideActive() && !$('q').value.trim()) ? (tot+' تاسك') : (n+' ظاهر من '+tot);
+  $('btnToggleFilters').classList.toggle('on', sideOpen);
   const main=$('main'); main.innerHTML='';
   if(view==='list') main.appendChild(renderList(list)); else if(view==='matrix') main.appendChild(renderMatrix(list)); else if(view==='focus') main.appendChild(renderFocus(list)); else main.appendChild(renderKanban(list));
 }
@@ -365,7 +604,7 @@ function closeSheet(){ $('sheet').classList.remove('open'); $('backdrop').classL
 function applyEdit(){ const title=$('fTitle').value.trim(); if(!title){toast('العنوان مطلوب','');return} const stamp=nowIso();
   const payload={title,status:$('fStatus').value,priority:$('fPriority').value,source:$('fSource').value,sourceRef:$('fSourceRef').value.trim(),entryId:$('fEntryId').value.trim(),tags:$('fTags').value.split(',').map(s=>s.trim()).filter(Boolean),notes:$('fNotes').value,botAction:$('fBotAction').value,botInstruction:$('fBotInstruction').value.trim(),comments:tempComments,suggestedReply:$('fSuggested').value.trim(),due:$('fDue').value||null,assignee:$('fAssignee').value.trim(),progress:Number($('fProgress').value)||0,updatedAt:stamp};
   if(!editingId){ state.tasks.unshift({id:nextId(),...payload,checklist:[],createdAt:stamp,createdBy:'User'}); notify('new','تاسك جديد',title) }
-  else { const t=state.tasks.find(x=>x.id===editingId); if(!t) return; const keep={chat:t.chat,timeline:t.timeline,pendingSend:t.pendingSend,pendingTrash:t.pendingTrash}; Object.assign(t,payload,keep); notify('move','اتحدّث',title) }
+  else { const t=state.tasks.find(x=>x.id===editingId); if(!t) return; const keep={chat:t.chat,timeline:t.timeline,pendingSend:t.pendingSend,pendingTrash:t.pendingTrash,boxNote:t.boxNote,fromEmail:t.fromEmail,crmUrl:t.crmUrl,sourceUrl:t.sourceUrl}; Object.assign(t,payload,keep); notify('move','اتحدّث',title) }
   markDirty(true); closeSheet(); render();
 }
 function deleteEdit(){ if(!editingId||!confirm('حذف؟')) return; const t=state.tasks.find(x=>x.id===editingId); state.tasks=state.tasks.filter(x=>x.id!==editingId); notify('hot','اتحذف',t?t.title:editingId); markDirty(true); closeSheet(); render() }
@@ -381,7 +620,33 @@ $('btnApply').onclick=applyEdit; $('btnDelete').onclick=deleteEdit;
 $('btnOpenSrc').onclick=()=>{ if(editingId) openSource(editingId); };
 $('btnOpenRoom').onclick=()=>{ if(editingId) openTaskRoom(editingId); else toast('افتح تاسك موجود',''); };
 $('btnAddComment').onclick=()=>{ const text=$('fComment').value.trim(); if(!text) return; tempComments.push({text,by:'user',at:nowIso()}); $('fComment').value=''; renderComments() };
-$('q').oninput=render; $('filterSource').onchange=render; $('filterPriority').onchange=render;
+function onSideChange(){ saveSide(); render() }
+['filterSource','filterPriority','filterDateField','filterDateFrom','filterDateTo','filterHasNote'].forEach(id=>{
+  const el=$(id); if(!el) return; el.onchange=onSideChange;
+});
+$('filterEmail').oninput=()=>{ clearTimeout(qTimer); qTimer=setTimeout(onSideChange,90) };
+$('filterPerson').oninput=()=>{ clearTimeout(qTimer); qTimer=setTimeout(onSideChange,90) };
+$('q').oninput=()=>{
+  clearTimeout(sugTimer);
+  render();
+  sugTimer=setTimeout(updateSuggest,80);
+};
+$('q').onkeydown=e=>{
+  if($('suggest').hidden||!sugItems.length) return;
+  if(e.key==='ArrowDown'){ e.preventDefault(); sugIndex=Math.min(sugItems.length-1,sugIndex+1); renderSuggest() }
+  else if(e.key==='ArrowUp'){ e.preventDefault(); sugIndex=Math.max(0,sugIndex-1); renderSuggest() }
+  else if(e.key==='Enter' && sugIndex>=0){ e.preventDefault(); applySuggestion(sugItems[sugIndex]) }
+  else if(e.key==='Escape'){ hideSuggest() }
+};
+$('q').onblur=()=>setTimeout(hideSuggest,120);
+$('q').onfocus=()=>{ if($('q').value.trim()) updateSuggest() };
+$('btnToggleFilters').onclick=()=>setSideOpen(!sideOpen,true);
+$('btnClearFilters').onclick=()=>{
+  $('filterDateField').value='either'; $('filterDateFrom').value=''; $('filterDateTo').value='';
+  $('filterEmail').value=''; $('filterPerson').value=''; $('filterSource').value='';
+  $('filterPriority').value=''; $('filterHasNote').value=''; $('q').value='';
+  hideSuggest(); saveSide(); render();
+};
 $('fTitle').oninput=()=>$('sTitle').textContent=$('fTitle').value||'تاسك جديد';
 $('btnNotif').onclick=()=>{ $('notifPanel').classList.toggle('show'); if($('notifPanel').classList.contains('show')){unread=0;renderNotifs()} };
 $('btnClearNotif').onclick=()=>{notifications=[];unread=0;renderNotifs()};
@@ -564,6 +829,8 @@ $('bgChip').onclick=()=>{ if(bgJobId){ openRunConsole(bgJobId,{taskId:editingId|
 
 
 setView(view); setFilter(filter);
+applySideUi(loadSide());
+render();
 reload(true).then(()=>syncMail({silent:true}).catch(()=>{})).catch(e=>toast('فشل التحميل',e.message||e));
 setInterval(()=>{ if(isHttp&&!dirty){ reload(true).catch(()=>{}); syncMail({silent:true}).catch(()=>{}) } }, 180000);
 </script>

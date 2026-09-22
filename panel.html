@@ -317,8 +317,8 @@ const systems = [
     icon: '▦',
     name: 'صندوق أيزنهاور',
     desc: 'عاجل/هام — ارمي الإيميلات والتاسكات أول اليوم وخد منها وأنت بتنفّذ.',
-    status: 'wait',
-    statusLabel: 'جديد',
+    status: 'on',
+    statusLabel: 'موصول',
     primary: { label: 'افتح الصندوق', href: './eisenhower.html' },
     secondary: { label: 'لوحة التاسكات', href: './board.html' }
   },
@@ -416,7 +416,7 @@ document.getElementById('systemsGrid').addEventListener('click', (e) => {
 
 document.getElementById('btnRefresh').addEventListener('click', () => {
   render();
-  toast('اتحدّثت الحالة — لسه مفيش ربط جديد غير لوحة التاسكات.');
+  toast('اتحدّثت الحالة — اللوحة وصندوق أيزنهاور موصولين.');
 });
 
 render();

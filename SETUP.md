@@ -18,7 +18,7 @@ There is **no** heavy Node.js stack, no cloud server, and no invented OAuth flow
 | Git missing | `winget` downloads Git with visible progress |
 | Mail features | Outlook desktop must already be installed and signed in |
 | First run | Windows/Outlook may show COM security prompts — allow if you started AQHub |
-| After start | Browser opens `http://127.0.0.1:8766/board.html` |
+| After start | Server listens on `http://127.0.0.1:8766/` (homepage). The task board is **not** auto-opened |
 
 **Mail safety:** email **never auto-sends**. Drafts stay local until you manually approve send.
 
@@ -130,11 +130,13 @@ Or from PowerShell:
 
 ## Step 6 — Board in the browser + Outlook prompts
 
-1. After a few seconds the browser opens:
+1. After a few seconds the server is up. Open the control home yourself (the board is not auto-opened):
 
 ```text
-http://127.0.0.1:8766/board.html
+http://127.0.0.1:8766/
 ```
+
+   Optional: `powershell -File .\Start-Board.ps1 -OpenBrowser` opens the homepage once.
 
 2. If Windows or Outlook asks for permission to access mail — **Allow** if you started AQHub yourself.
 3. If the browser did not open, paste the URL manually.
@@ -193,6 +195,6 @@ cd AQHub
 powershell -ExecutionPolicy Bypass -File .\Setup-AQHub.ps1
 ```
 
-Then wait for: `http://127.0.0.1:8766/board.html`
+Then open: `http://127.0.0.1:8766/` (control home; the task board is not auto-opened)
 
 Arabic guide: [SETUP-AR.md](SETUP-AR.md)

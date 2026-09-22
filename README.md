@@ -7,7 +7,8 @@ Local-first Jarvis-style command board for Aqaar ops (HTML + PowerShell).
 
 **Honest stack:** local HTML + PowerShell `HttpListener` + Outlook COM. No heavy npm/cloud runtime.  
 **Repo:** https://github.com/gwaez/AQHub  
-**Default URL:** http://127.0.0.1:8766/board.html  
+**Default URL:** http://127.0.0.1:8766/ (control home `index.html`)  
+**Task board:** http://127.0.0.1:8766/board.html — not auto-opened on start.
 **English setup:** [SETUP.md](SETUP.md)
 
 ## Requirements / المتطلبات
@@ -43,7 +44,7 @@ powershell -ExecutionPolicy Bypass -File .\Setup-AQHub.ps1
 
 Or double-click `Start-Board-KeepAlive.bat`.
 
-5. Browser opens http://127.0.0.1:8766/board.html — allow any Outlook/Windows COM prompts if you started AQHub.
+5. Server listens on http://127.0.0.1:8766/ (control home). Starting KeepAlive / Watch-Board / Start-Board does **not** auto-open `board.html`. Open the homepage yourself, or pass `-OpenBrowser` to `Start-Board.ps1` to open `/` once. Allow any Outlook/Windows COM prompts if you started AQHub.
 
 First run creates `data/tasks.json` and `data/crm-config.json` from the sample files if they are missing.
 

@@ -1,4 +1,9 @@
 # Aqaar Command Board server (ASCII-only script)
+# Does not auto-open a browser. Pass -OpenBrowser or set AQHUB_OPEN_BROWSER=1
+# to open the control homepage once (index.html / /), never the task board.
+param(
+  [switch]$OpenBrowser
+)
 $ErrorActionPreference = 'Stop'
 $Root = Split-Path -Parent $MyInvocation.MyCommand.Path
 if (-not $Root) { $Root = (Get-Location).Path }
@@ -50,8 +55,21 @@ try { $listener.Start() } catch {
   Write-Host "Could not bind port $Port"
   throw
 }
-Write-Host "Aqaar Command: http://127.0.0.1:$Port/board.html"
-Start-Process "http://127.0.0.1:$Port/board.html"
+$homeUrl = "http://127.0.0.1:$Port/"
+$boardUrl = "http://127.0.0.1:$Port/board.html"
+Write-Host "Aqaar Control home: $homeUrl"
+Write-Host "Task board:         $boardUrl"
+$envOpen = [string]$env:AQHUB_OPEN_BROWSER
+$wantOpen = [bool]$OpenBrowser
+if (-not $wantOpen -and $envOpen) {
+  if ($envOpen.Trim().ToLowerInvariant() -in @('1','true','yes')) { $wantOpen = $true }
+}
+if ($wantOpen) {
+  Write-Host "Opening homepage in browser (-OpenBrowser / AQHUB_OPEN_BROWSER)."
+  try { Start-Process $homeUrl } catch { Write-Host "Could not open browser. Open $homeUrl manually." }
+} else {
+  Write-Host "Browser not opened. Pass -OpenBrowser or set AQHUB_OPEN_BROWSER=1 to open the homepage once."
+}
 
 function Get-Mime($path) {
   switch ([IO.Path]::GetExtension($path).ToLowerInvariant()) {
@@ -2614,7 +2632,7 @@ while ($listener.IsListening) {
   $res = $ctx.Response
   try {
     $path = [Uri]::UnescapeDataString($req.Url.AbsolutePath)
-    if ($path -eq '/') { $path = '/board.html' }
+    if ($path -eq '/' -or $path -eq '') { $path = '/index.html' }
     if ($req.HttpMethod -eq 'OPTIONS') {
       $res.AddHeader('Access-Control-Allow-Origin','*')
       $res.AddHeader('Access-Control-Allow-Methods','GET,POST,PUT,OPTIONS')
