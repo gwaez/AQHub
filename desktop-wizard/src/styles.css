@@ -59,6 +59,8 @@ body.browser-preview {
   cursor: pointer;
   --look-x: 0px;
   --look-y: 0px;
+  --char-scale: 1;
+  transform: scale(var(--char-scale));
 }
 
 .character svg {
@@ -121,37 +123,41 @@ body.browser-preview {
 .character[data-state="SUCCESS"] .hat-band {
   stroke: #34d399;
 }
-.character[data-state="ERROR"] .wizard-body {
+.character[data-state="ERROR"] {
   animation: shake 0.4s ease-in-out;
 }
 .character[data-state="ERROR"] .wand-core {
   fill: #fb7185;
 }
-.character[data-state="DRAGGING"] .wizard-body {
-  transform: translateY(-10px);
+.character[data-state="DRAGGING"] {
+  transform: translateY(-10px) scale(var(--char-scale));
 }
 
-.character[data-motion="breathe"] .wizard-body {
+.character[data-motion="breathe"] {
   animation: breathe 3.2s ease-in-out infinite;
 }
-.character[data-motion="glance"] .wizard-body {
+.character[data-motion="glance"] {
   animation: glance 3.2s ease-in-out infinite;
 }
-.character[data-motion="ponder"] .wizard-body {
+.character[data-motion="ponder"] {
   animation: ponder 2.4s ease-in-out infinite;
 }
-.character[data-motion="sleep"] .wizard-body {
+.character[data-motion="sleep"] {
   animation: slump 4s ease-in-out infinite;
 }
-.character[data-motion="lift"] .wizard-body {
-  transform: translateY(-8px);
+.character[data-motion="lift"] {
+  transform: translateY(-8px) scale(var(--char-scale));
 }
 .character[data-motion="still"],
 .character[data-motion="fade-out"] {
   animation: none;
+  transform: scale(var(--char-scale));
 }
 
-body[data-anim="off"] .character .wizard-body,
+body[data-anim="off"] .character {
+  animation: none !important;
+  transform: scale(var(--char-scale)) !important;
+}
 body[data-anim="off"] .character .lid,
 body[data-anim="off"] .character .wand-core,
 body[data-anim="reduced"] .character .lid {
@@ -171,10 +177,10 @@ body[data-anim="reduced"] .character .lid {
 @keyframes breathe {
   0%,
   100% {
-    transform: translateY(0) scale(1);
+    transform: translateY(0) scale(var(--char-scale));
   }
   50% {
-    transform: translateY(-5px) scale(1.015);
+    transform: translateY(-11px) scale(var(--char-scale));
   }
 }
 @keyframes blink {
@@ -191,22 +197,22 @@ body[data-anim="reduced"] .character .lid {
 @keyframes glance {
   0%,
   100% {
-    transform: rotate(0deg);
+    transform: rotate(0deg) scale(var(--char-scale));
   }
   40% {
-    transform: rotate(-5deg);
+    transform: rotate(-5deg) scale(var(--char-scale));
   }
   70% {
-    transform: rotate(4deg);
+    transform: rotate(4deg) scale(var(--char-scale));
   }
 }
 @keyframes ponder {
   0%,
   100% {
-    transform: rotate(0deg);
+    transform: rotate(0deg) scale(var(--char-scale));
   }
   50% {
-    transform: rotate(-7deg) translateY(-3px);
+    transform: rotate(-7deg) translateY(-3px) scale(var(--char-scale));
   }
 }
 @keyframes talk {
@@ -251,22 +257,22 @@ body[data-anim="reduced"] .character .lid {
 @keyframes shake {
   0%,
   100% {
-    transform: translateX(0);
+    transform: translateX(0) scale(var(--char-scale));
   }
   25% {
-    transform: translateX(-5px);
+    transform: translateX(-5px) scale(var(--char-scale));
   }
   75% {
-    transform: translateX(5px);
+    transform: translateX(5px) scale(var(--char-scale));
   }
 }
 @keyframes slump {
   0%,
   100% {
-    transform: rotate(6deg) translateY(4px);
+    transform: rotate(6deg) translateY(4px) scale(var(--char-scale));
   }
   50% {
-    transform: rotate(8deg) translateY(6px);
+    transform: rotate(8deg) translateY(6px) scale(var(--char-scale));
   }
 }
 

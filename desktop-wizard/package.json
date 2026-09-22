@@ -9,7 +9,7 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "test": "node --experimental-strip-types --test src/state/wizard-state-machine.test.ts src/actions/wizard-action.test.ts src/engines/idle-director.test.ts src/engines/bubble-engine.test.ts src/api/tasks.test.ts src/api/eisenhower.test.ts src/ui/permissions.test.ts src/settings/wizard-settings.test.ts src/api/audit.test.ts src/api/mail.test.ts src/settings/first-run.test.ts src/setup/setup-script.test.ts",
+    "test": "node --experimental-strip-types --test src/state/wizard-state-machine.test.ts src/actions/wizard-action.test.ts src/engines/idle-director.test.ts src/engines/bubble-engine.test.ts src/api/tasks.test.ts src/api/eisenhower.test.ts src/ui/permissions.test.ts src/settings/wizard-settings.test.ts src/api/audit.test.ts src/api/mail.test.ts src/settings/first-run.test.ts src/setup/setup-script.test.ts src/ui/character-motion.test.ts",
     "tauri": "tauri",
     "copy-characters": "node scripts/copy-characters.mjs"
   },

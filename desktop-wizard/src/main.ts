@@ -155,7 +155,7 @@ async function main() {
     techId.textContent = `${settings.current.technicalId} · ${settings.current.characterId}`;
     const s = Math.round((settings.current.window.scale || 1) * 100);
     scale.value = String(s);
-    character.style.transform = `scale(${settings.current.window.scale || 1})`;
+    character.style.setProperty("--char-scale", String(settings.current.window.scale || 1));
     character.style.opacity = String((Number(character.style.opacity) || 1) * settings.current.opacity);
     bubble.style.transform = `scale(${settings.current.bubbleScale})`;
     bubble.style.fontSize = `${settings.current.bubbleFontSize}px`;

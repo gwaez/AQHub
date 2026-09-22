@@ -17,7 +17,7 @@ AQHub يبقى محليًا: PowerShell `HttpListener` على `http://127.0.0.1:
 - `WizardStateMachine` مع enter/update/exit:
   IDLE, WATCHING, THINKING, SPEAKING, ALERT, WORKING, SUCCESS, ERROR, DRAGGING, SLEEPING, HIDDEN, **MATRIX**, **TRASH**  
   (WAND / NOTE: stub يسجّل الحالة)
-- Idle: تنفس + رمش؛ النظر للمؤشر → WATCHING؛ خمول طويل → SLEEPING عند الحافة (مؤقت قابل للإيقاف)
+- Idle: تنفس + رمش؛ النظر للمؤشر → WATCHING؛ خمول طويل → SLEEPING عند الحافة (مؤقت قابل للإيقاف). حركة الجسم على عنصر HTML `.character` عبر `--char-scale` (WebView2 لا يعتمد على `transform` داخل `g.wizard-body`)
 - مستوى الحركة في الإعدادات: `normal` / `reduced` / `off` (افتراضي normal)
 - فقاعات: كلام / فكر / تنبيه — تخطيط RTL + أزرار تأكيد عند Ask + أزرار بريد (فتح / تاسك / ذكّرني / مسودة / تجاهل)
 - زر يمين: تاسك جديد، ملاحظة، **أيزنهاور**، فتح AQHub، اسأل الساحر (معطّل)، إعدادات، إخفاء، خروج
