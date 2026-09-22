@@ -95,6 +95,12 @@ function Get-ActiveComObject {
   return $null
 }
 
+function New-MailArrayList {
+  # WinPS 5.1: generic List[T] via New-Object throws "Argument types do not match"
+  # because the type argument is parsed as a constructor argument.
+  return (New-Object System.Collections.ArrayList)
+}
+
 function ConvertTo-MailSyncResponseJson {
   param($Result)
   $ok = $true
@@ -114,7 +120,7 @@ function ConvertTo-MailSyncResponseJson {
     try { if ($null -ne $Result.unreadTotal) { $unread = [int]$Result.unreadTotal } } catch {}
     return ('{"ok":false,"error":' + $errJ + ',"message":' + $msgJ + ',"added":' + $added + ',"scanned":' + $scanned + ',"unreadTotal":' + $unread + ',"items":[]}')
   }
-  $parts = New-Object System.Collections.Generic.List[string]
+  $parts = New-MailArrayList
   foreach ($it in @($Result.items)) {
     if ($null -eq $it) { continue }
     $one = [ordered]@{
@@ -125,7 +131,7 @@ function ConvertTo-MailSyncResponseJson {
     }
     [void]$parts.Add(($one | ConvertTo-Json -Compress -Depth 3))
   }
-  $itemsJson = '[' + ($parts -join ',') + ']'
+  $itemsJson = '[' + (@($parts) -join ',') + ']'
   $added = 0
   $scanned = 0
   $unread = -1
@@ -144,8 +150,12 @@ function Invoke-InSta {
   if ($null -eq $ScriptBlock) { return $null }
   $apt = [Threading.Thread]::CurrentThread.GetApartmentState()
   if ($apt -eq [Threading.ApartmentState]::STA) {
-    if ($Parameters -and $Parameters.Count -gt 0) { return & $ScriptBlock @Parameters }
-    return & $ScriptBlock
+    try {
+      if ($Parameters -and $Parameters.Count -gt 0) { return & $ScriptBlock @Parameters }
+      return & $ScriptBlock
+    } catch {
+      return (New-MailSyncError -ErrorId 'outlook_com' -Message ([string]$_.Exception.Message) -Status 500)
+    }
   }
 
   $iss = $null
@@ -258,77 +268,86 @@ function ConvertTo-MailDto {
 
 function Read-OutlookUnreadMailDtos {
   param([int]$MaxScan = 120)
-  if ($MaxScan -lt 1) { $MaxScan = 1 }
-  if ($MaxScan -gt 200) { $MaxScan = 200 }
-  $app = $null
-  try { $app = Get-ActiveComObject 'Outlook.Application' } catch { $app = $null }
-  if (-not $app) {
-    return (New-MailSyncError -ErrorId 'outlook_not_running' -Message 'Outlook desktop is not running. Open Outlook and retry.' -Status 503)
-  }
-  $ns = $null
-  $inbox = $null
-  $items = $null
-  try { $ns = $app.GetNamespace('MAPI') } catch {
-    return (New-MailSyncError -ErrorId 'outlook_mapi' -Message ('MAPI namespace failed: ' + $_.Exception.Message) -Status 500)
-  }
-  try { $inbox = $ns.GetDefaultFolder(6) } catch {
-    return (New-MailSyncError -ErrorId 'outlook_inbox' -Message ('Inbox folder failed: ' + $_.Exception.Message) -Status 500)
-  }
-  try { $items = $inbox.Items } catch {
-    return (New-MailSyncError -ErrorId 'outlook_items' -Message ('Inbox items failed: ' + $_.Exception.Message) -Status 500)
-  }
-  $restricted = $null
-  try { $restricted = $items.Restrict('[UnRead] = true') } catch {
-    return (New-MailSyncError -ErrorId 'outlook_restrict_failed' -Message ('Unread Restrict failed (often MTA/COM). ' + $_.Exception.Message) -Status 500)
-  }
-  if ($null -eq $restricted) {
-    return (New-MailSyncError -ErrorId 'outlook_restrict_failed' -Message 'Unread Restrict returned no collection.' -Status 500)
-  }
-  try { $restricted.Sort('[ReceivedTime]', $true) } catch {}
-  $unreadTotal = -1
-  try { $unreadTotal = [int]$restricted.Count } catch { $unreadTotal = -1 }
-  $list = New-Object System.Collections.Generic.List[object]
-  $scanned = 0
-  $useNav = $false
-  $it = $null
+  $step = 'start'
   try {
-    $it = $restricted.GetFirst()
-    $useNav = $true
-  } catch {
-    $useNav = $false
-    $it = $null
-  }
-  if ($useNav) {
-    while ($null -ne $it -and $scanned -lt $MaxScan) {
+    if ($MaxScan -lt 1) { $MaxScan = 1 }
+    if ($MaxScan -gt 200) { $MaxScan = 200 }
+    $step = 'getactive'
+    $app = $null
+    try { $app = Get-ActiveComObject 'Outlook.Application' } catch { $app = $null }
+    if (-not $app) {
+      return (New-MailSyncError -ErrorId 'outlook_not_running' -Message 'Outlook desktop is not running. Open Outlook and retry.' -Status 503)
+    }
+    $ns = $null
+    $inbox = $null
+    $items = $null
+    $step = 'mapi'
+    try { $ns = $app.GetNamespace([string]'MAPI') } catch {
+      try { $ns = $app.Session } catch {
+        return (New-MailSyncError -ErrorId 'outlook_mapi' -Message ('MAPI namespace failed: ' + $_.Exception.Message) -Status 500)
+      }
+    }
+    $step = 'inbox'
+    $folderInbox = [int]6
+    try { $inbox = $ns.GetDefaultFolder($folderInbox) } catch {
+      return (New-MailSyncError -ErrorId 'outlook_inbox' -Message ('Inbox folder failed: ' + $_.Exception.Message) -Status 500)
+    }
+    $step = 'items'
+    try { $items = $inbox.Items } catch {
+      return (New-MailSyncError -ErrorId 'outlook_items' -Message ('Inbox items failed: ' + $_.Exception.Message) -Status 500)
+    }
+    $step = 'restrict'
+    $restricted = $null
+    $gotRestrict = $false
+    $filter = [string]'[UnRead] = true'
+    try {
+      $restricted = $items.Restrict($filter)
+      $gotRestrict = $true
+    } catch {
+      return (New-MailSyncError -ErrorId 'outlook_restrict_failed' -Message ('Unread Restrict failed: ' + $_.Exception.Message) -Status 500)
+    }
+    if (-not $gotRestrict) {
+      return (New-MailSyncError -ErrorId 'outlook_restrict_failed' -Message 'Unread Restrict returned no collection.' -Status 500)
+    }
+    $step = 'sort'
+    try {
+      $desc = [System.Boolean]$true
+      [void]$restricted.Sort([string]'[ReceivedTime]', $desc)
+    } catch {
+      try { [void]$restricted.Sort([string]'[ReceivedTime]') } catch {}
+    }
+    $step = 'count'
+    $unreadTotal = -1
+    try { $unreadTotal = [int]$restricted.Count } catch { $unreadTotal = -1 }
+    $step = 'list'
+    $list = New-MailArrayList
+    $scanned = 0
+    $step = 'enum'
+    foreach ($it in $restricted) {
+      if ($scanned -ge $MaxScan) { break }
       $scanned++
       try {
         $dto = ConvertTo-MailDto $it
         if ($dto) { [void]$list.Add($dto) }
       } catch {}
-      try { $it = $restricted.GetNext() } catch { break }
     }
-  } else {
-    $n = 0
-    try { $n = [int]$restricted.Count } catch { $n = 0 }
-    if ($n -gt $MaxScan) { $n = $MaxScan }
-    for ($i = 1; $i -le $n; $i++) {
-      $scanned++
-      try {
-        $one = $restricted.Item($i)
-        $dto = ConvertTo-MailDto $one
-        if ($dto) { [void]$list.Add($dto) }
-      } catch {}
+    $step = 'done'
+    $mails = @()
+    try { if ($list.Count -gt 0) { $mails = @($list.ToArray()) } } catch { $mails = @($list) }
+    return [ordered]@{
+      ok = $true
+      error = ''
+      message = ''
+      unreadTotal = $unreadTotal
+      scanned = $scanned
+      mails = $mails
+      apartment = [string][Threading.Thread]::CurrentThread.GetApartmentState()
+      adapter = 'GetActiveObject'
     }
-  }
-  return [ordered]@{
-    ok = $true
-    error = ''
-    message = ''
-    unreadTotal = $unreadTotal
-    scanned = $scanned
-    mails = @($list)
-    apartment = [string][Threading.Thread]::CurrentThread.GetApartmentState()
-    adapter = 'GetActiveObject'
+  } catch {
+    $msg = [string]$_.Exception.Message
+    if (-not $msg) { $msg = 'outlook_com' }
+    return (New-MailSyncError -ErrorId 'outlook_com' -Message ($step + ': ' + $msg) -Status 500)
   }
 }
 
@@ -408,8 +427,8 @@ function Merge-UnreadMailIntoTasks {
     if ($t.entryID) { $existing[[string]$t.entryID] = $true }
   }
   $maxId = Get-NextTaskIdNumber -Tasks @($Data.tasks)
-  $added = New-Object System.Collections.Generic.List[object]
-  $newTasks = New-Object System.Collections.Generic.List[object]
+  $added = New-MailArrayList
+  $newTasks = New-MailArrayList
   foreach ($m in @($Mails)) {
     if ($added.Count -ge $MaxNew) { break }
     $eid = [string]$m.entryId
@@ -425,15 +444,19 @@ function Merge-UnreadMailIntoTasks {
     $Data.tasks = @($newTasks.ToArray()) + @($Data.tasks)
     try { $Data | Add-Member -NotePropertyName updatedAt -NotePropertyValue ((Get-Date).ToUniversalTime().ToString('o')) -Force } catch { $Data.updatedAt = (Get-Date).ToUniversalTime().ToString('o') }
   }
-  $slim = New-Object System.Collections.Generic.List[object]
-  foreach ($t in $added) {
+  $slim = New-MailArrayList
+  foreach ($t in @($added)) {
     $s = ConvertTo-SlimMailSyncItem $t
     if ($s) { [void]$slim.Add($s) }
   }
+  $slimArr = @()
+  try { if ($slim.Count -gt 0) { $slimArr = @($slim.ToArray()) } } catch { $slimArr = @($slim) }
+  $addedArr = @()
+  try { if ($added.Count -gt 0) { $addedArr = @($added.ToArray()) } } catch { $addedArr = @($added) }
   return [ordered]@{
     data = $Data
-    added = @($added)
-    slim = @($slim)
+    added = $addedArr
+    slim = $slimArr
     addedCount = $added.Count
   }
 }
@@ -516,10 +539,16 @@ function Sync-MailToTasksCore {
     if (-not $data) {
       return (New-MailSyncError -ErrorId 'tasks_json_invalid' -Message 'tasks.json parsed empty' -Status 500)
     }
-    $scan = Invoke-InSta -ScriptBlock {
-      param($MaxScan)
-      Read-OutlookUnreadMailDtos -MaxScan $MaxScan
-    } -Parameters @{ MaxScan = $MaxScan } -TimeoutMs $script:MailSyncTimeoutMs
+    $scan = $null
+    $aptNow = [Threading.Thread]::CurrentThread.GetApartmentState()
+    if ($aptNow -eq [Threading.ApartmentState]::STA) {
+      $scan = Read-OutlookUnreadMailDtos -MaxScan ([int]$MaxScan)
+    } else {
+      $scan = Invoke-InSta -ScriptBlock {
+        param($MaxScan)
+        Read-OutlookUnreadMailDtos -MaxScan $MaxScan
+      } -Parameters @{ MaxScan = [int]$MaxScan } -TimeoutMs ([int]$script:MailSyncTimeoutMs)
+    }
     if ($null -eq $scan) {
       return (New-MailSyncError -ErrorId 'outlook_com' -Message 'Outlook scan returned nothing' -Status 500)
     }

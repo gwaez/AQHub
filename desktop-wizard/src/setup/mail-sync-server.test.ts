@@ -43,6 +43,9 @@ test("Mail-Sync.ps1 is ASCII, STA-safe, never starts Outlook or sends", () => {
   assert.doesNotMatch(src, /New-Object\s+-ComObject\s+Outlook/i);
   assert.doesNotMatch(src, /\.Send\s*\(/);
   assert.match(src, /never calls \/api\/task\/approve-send/);
+  assert.doesNotMatch(src, /New-Object System\.Collections\.Generic\.List/);
+  assert.match(src, /New-MailArrayList/);
+  assert.match(src, /System\.Collections\.ArrayList/);
   assert.doesNotMatch(src, /\$it\.Body/);
   assert.doesNotMatch(src, /\$MailItem\.Body/);
 });
