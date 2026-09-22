@@ -12,6 +12,7 @@ import { BubbleEngine } from "./engines/bubble-engine.ts";
 import { injectWizardSvg, loadCharacterPack } from "./ui/character.ts";
 import { EisenhowerPanel } from "./ui/eisenhower-panel.ts";
 import { SettingsPanel } from "./ui/settings-panel.ts";
+import { measureAndPlaceMenu } from "./ui/place-menu.ts";
 import { applyDocumentLocale, localeCopy } from "./i18n/index.ts";
 import { firstRunBubbleText, shouldMarkFirstRunQuiet, shouldShowFirstRun } from "./settings/first-run.ts";
 import type { WizardAction } from "./actions/wizard-action.ts";
@@ -552,8 +553,7 @@ async function main() {
     ev.preventDefault();
     idle.pause();
     ctx.hidden = false;
-    ctx.style.left = `${Math.min(ev.clientX, window.innerWidth - 200)}px`;
-    ctx.style.top = `${Math.min(ev.clientY, window.innerHeight - 240)}px`;
+    measureAndPlaceMenu(ctx, ev.clientX, ev.clientY, window.innerWidth, window.innerHeight, 320);
   });
 
   ctx.addEventListener("click", async (ev) => {
