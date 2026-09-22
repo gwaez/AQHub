@@ -96,8 +96,15 @@ body{color:var(--text);font-family:"IBM Plex Sans Arabic",system-ui,sans-serif;b
 
 .box-note{margin:10px 0 14px;padding:10px 12px;border-radius:12px;background:#f0fdfa;border:1px solid #99f6e4;color:#115e59;font-size:.92rem;line-height:1.45}
 .box-note b{display:block;margin-bottom:4px;color:#0f766e;font-size:.78rem}
-.box-note textarea{width:100%;min-height:88px;margin:6px 0;border:1px solid #99f6e4;border-radius:10px;padding:8px;font:inherit;background:#04131a;color:#e8f3ff}
+.box-note .preview{white-space:pre-wrap;word-break:break-word;min-height:1.4em;margin:6px 0;color:#0f766e}
 .box-note .row{display:flex;gap:6px;flex-wrap:wrap}
+.modal-back{display:none;position:fixed;inset:0;z-index:10000;align-items:center;justify-content:center;padding:18px;background:rgba(2,8,16,.72)}
+.modal-back.on{display:flex}
+.modal{width:min(640px,96vw);max-height:min(88vh,720px);overflow:auto;background:#0c1826;border:1px solid rgba(125,211,252,.28);border-radius:18px;padding:18px 16px;box-shadow:0 30px 80px rgba(0,0,0,.55)}
+.modal h3{margin:0 0 8px;font-size:1.1rem;color:var(--cyan)}
+.modal .help{margin:0 0 10px;font-size:.82rem;color:var(--muted);line-height:1.5}
+.modal textarea{width:100%;min-height:220px;margin:6px 0 12px;border:1px solid #99f6e4;border-radius:12px;padding:12px;font:inherit;background:#04131a;color:#e8f3ff;resize:vertical}
+.modal .row{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
 </style>
 </head>
 <body>
@@ -123,10 +130,9 @@ body{color:var(--text);font-family:"IBM Plex Sans Arabic",system-ui,sans-serif;b
       <div class="panel-h"><h2>تعليقات وتذكيرات</h2><span class="chip" id="tlCount">0</span></div>
       <div class="box-note" id="boxNote">
         <b>نوت الصندوق</b>
-        <textarea id="boxNoteText" placeholder="اكتب نوت تظهر على كارت أيزنهاور…"></textarea>
+        <div class="preview" id="boxNotePreview">مفيش نوت</div>
         <div class="row">
-          <button class="btn ok" type="button" id="btnSaveBoxNote">حفظ النوت</button>
-          <button class="btn ghost" type="button" id="btnClearBoxNote">مسح</button>
+          <button class="btn ok" type="button" id="btnOpenBoxNote">نوت</button>
         </div>
       </div><div class="panel-b" id="timeline">
         <div class="sec-title">تذكيرات على التاسك ده</div>
@@ -173,6 +179,18 @@ body{color:var(--text);font-family:"IBM Plex Sans Arabic",system-ui,sans-serif;b
     </section>
   </div>
 </div>
+<div class="modal-back" id="boxNoteModal" role="dialog" aria-modal="true" aria-labelledby="boxNoteModalTitle">
+  <div class="modal" onclick="event.stopPropagation()">
+    <h3 id="boxNoteModalTitle">نوت</h3>
+    <p class="help">اكتب نوت الصندوق هنا. بعد الحفظ هتظهر على كارت أيزنهاور. إغلاق من غير حفظ مش بيغيّر حاجة.</p>
+    <textarea id="boxNoteText" placeholder="اكتب نوت تظهر على كارت أيزنهاور…"></textarea>
+    <div class="row">
+      <button class="btn ghost" type="button" id="btnCancelBoxNote">إغلاق</button>
+      <button class="btn ghost" type="button" id="btnClearBoxNote">مسح</button>
+      <button class="btn ok" type="button" id="btnSaveBoxNote">حفظ</button>
+    </div>
+  </div>
+</div>
 <div class="toast-wrap" id="toasts"></div>
 <script>
 const STATUSES={backlog:'لاحقاً',todo:'مطلوب',doing:'جاري',blocked:'معلّق',done:'تم'};
@@ -207,9 +225,24 @@ function seedDraft(force){
 
 function renderBoxNote(){
   var tx=document.getElementById('boxNoteText');
-  if(!tx||!task) return;
-  if(document.activeElement===tx) return;
-  tx.value=String(task.boxNote||'');
+  var prev=document.getElementById('boxNotePreview');
+  if(!task) return;
+  const text=String(task.boxNote||'').trim();
+  if(prev) prev.textContent = text || 'مفيش نوت';
+  if(tx && document.activeElement!==tx) tx.value=String(task.boxNote||'');
+}
+function openBoxNoteModal(){
+  if(!task) return;
+  const modal=$('boxNoteModal');
+  $('boxNoteText').value=String(task.boxNote||'');
+  modal.classList.add('on');
+  document.body.style.overflow='hidden';
+  setTimeout(()=>{ try{ const t=$('boxNoteText'); t.focus(); t.setSelectionRange((t.value||'').length,(t.value||'').length);}catch(e){} },40);
+}
+function closeBoxNoteModal(){
+  const modal=$('boxNoteModal');
+  if(modal) modal.classList.remove('on');
+  document.body.style.overflow='';
 }
 async function saveBoxNote(clear){
   if(!task) return;
@@ -217,6 +250,8 @@ async function saveBoxNote(clear){
   try{
     await api('/api/task/box-note',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({taskId:task.id,note})});
     task.boxNote=note;
+    renderBoxNote();
+    closeBoxNoteModal();
     toast(note?'اتحفظت النوت':'اتمسحت النوت','هتظهر على كارت أيزنهاور');
   }catch(e){ toast('فشل حفظ النوت', e.message||e) }
 }
@@ -501,6 +536,11 @@ $('btnAddRem').onclick=()=>addReminder();
 $('btnAddComment').onclick=()=>addComment();
 $('btnSaveBoxNote').onclick=()=>saveBoxNote(false);
 $('btnClearBoxNote').onclick=()=>saveBoxNote(true);
+$('btnOpenBoxNote').onclick=openBoxNoteModal;
+$('btnCancelBoxNote').onclick=closeBoxNoteModal;
+$('boxNoteModal').addEventListener('click',e=>{ if(e.target===$('boxNoteModal')) closeBoxNoteModal(); });
+document.addEventListener('keydown',e=>{ if(e.key==='Escape' && $('boxNoteModal').classList.contains('on')){ e.preventDefault(); closeBoxNoteModal(); }});
+$('boxNoteText').addEventListener('keydown',e=>{ if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){ e.preventDefault(); saveBoxNote(false); }});
 loadTask();
 </script>
 </body>

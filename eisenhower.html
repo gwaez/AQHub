@@ -149,15 +149,29 @@ input[type=range]{width:100%;accent-color:var(--teal)}
 #ctx .sep{height:1px;background:#e2e8f0;margin:3px 0}
 #ctx .danger{color:#be123c}
 #ctx .ctx-label{padding:4px 10px 2px;font-size:.68rem;font-weight:800;color:#94a3b8}
-.modal-back{display:none !important;position:fixed !important;top:0;right:0;bottom:0;left:0;width:100vw;height:100vh;margin:0;background:rgba(15,23,42,.62);z-index:10000;align-items:center;justify-content:center;padding:24px;box-sizing:border-box}
+.modal-back{display:none !important;position:fixed !important;inset:0;width:100vw;height:100vh;margin:0;background:rgba(15,23,42,.62);z-index:10000;align-items:center;justify-content:center;padding:18px;box-sizing:border-box}
 .modal-back.on{display:flex !important}
 .modal{width:min(560px,100%);max-height:min(90vh,720px);overflow:auto;background:#fff;border-radius:20px;padding:22px 20px;box-shadow:0 30px 100px rgba(0,0,0,.45);border:1px solid #e2e8f0}
+.modal.note-float{width:min(920px,96vw);max-height:min(88vh,760px);padding:0;overflow:hidden;display:flex;flex-direction:column}
+.note-float-h{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid #e2e8f0;flex:0 0 auto}
+.note-float-h h3{margin:0;font-size:1.15rem;font-weight:800}
+.note-float-body{display:flex;flex:1;min-height:0}
+.note-float-list{flex:0 0 240px;max-width:42%;overflow:auto;padding:10px;background:#f8fafc;border-inline-end:1px solid #e2e8f0}
+.note-float-editor{flex:1;min-width:0;padding:16px 18px 18px;display:flex;flex-direction:column;overflow:auto}
+.note-float-editor textarea{flex:1;min-height:220px}
+.note-float-list .notes-item.on{border-color:var(--teal);background:#f0fdfa}
+#noteTitleInput{width:100%;border:1px solid #99f6e4;border-radius:10px;padding:8px 10px;font:inherit;margin-bottom:8px;background:#fff}
+#noteTitleInput[hidden]{display:none !important}
 .modal h3{margin:0 0 6px;font-size:1.2rem;font-weight:800;color:#0f172a}
-.modal .note-title{margin:0 0 10px;font-size:.92rem;font-weight:700;color:#0f766e;line-height:1.4;word-break:break-word}
-.modal .note-help{margin:0 0 12px;font-size:.82rem;color:#64748b;line-height:1.5}
+.modal .note-title{margin:0 0 8px;font-size:.92rem;font-weight:700;color:#0f766e;line-height:1.4;word-break:break-word}
+.modal .note-help{margin:0 0 10px;font-size:.82rem;color:#64748b;line-height:1.5}
 .modal textarea{width:100%;min-height:200px;border:2px solid #99f6e4;border-radius:14px;padding:14px;font:inherit;font-size:1rem;resize:vertical;background:#f8fffd;outline:none}
 .modal textarea:focus{border-color:#0d9488;box-shadow:0 0 0 3px rgba(13,148,136,.18)}
 .modal .actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:14px}
+@media(max-width:720px){
+  .note-float-body{flex-direction:column}
+  .note-float-list{flex:0 0 120px;max-width:none;border-inline-end:0;border-bottom:1px solid #e2e8f0}
+}
 #status{font-size:.8rem;color:var(--muted)}
 .pa-app{background:#111827;color:#e5e7eb;padding:7px 16px;font-size:.78rem;font-weight:700;letter-spacing:.04em;margin:0}
 .pa-ribbon{display:none;flex-wrap:wrap;gap:6px;align-items:center;background:#fff;border-bottom:1px solid #e5e7eb;padding:8px 14px;margin:0 0 4px;box-shadow:0 1px 0 #e5e7eb}
@@ -229,12 +243,9 @@ body.edit-mode #dashNameBar{display:flex}
 .cell-body .grid{height:100%;min-height:220px}
 .cell-body .doing,.cell-body .trash-box{height:100%;overflow:auto}
 .cell-body .doing .lane,.cell-body .trash-box .lane{max-height:none;flex:1}
-.notes-editor{display:grid;gap:6px;margin-top:8px;padding-top:8px;border-top:1px dashed #99f6e4}
-.notes-editor[hidden],#notesSelected[hidden]{display:none !important}
+#notesSelected[hidden]{display:none !important}
 .cell-body .grid{min-height:180px !important;height:100% !important}
-.notes-editor input,.notes-editor textarea{width:100%;border:1px solid #99f6e4;border-radius:10px;padding:8px;font:inherit;background:#fff}
-.notes-editor textarea{min-height:90px;resize:vertical}
-#mods > #modNotes{flex:0 0 180px;min-height:160px;max-height:200px}
+.cell-body #modNotes{min-height:160px}
 .note-line{cursor:pointer}
 .cell.drop-mod{outline:2px dashed var(--teal);outline-offset:-2px;background:#f0fdfa}
 body.edit-mode .cell-h{cursor:grab}
@@ -309,6 +320,7 @@ body.view-mode .pa-tabs,body.view-mode .hint-edit{display:none !important}
       <div class="row" style="margin-top:8px"><span class="badge wait" id="badge">…</span><span id="status">—</span><span class="sel-hint" id="selHint"></span></div>
     </div>
     <div class="row">
+      <button class="btn primary" type="button" id="btnOpenNotes">نوت</button>
       <button class="btn" type="button" id="btnEditMode">تعديل التخطيط</button>
       <button class="btn danger-ghost" type="button" id="btnResetLayout">إعادة ضبط التخطيط</button>
       <button class="btn primary" type="button" id="btnSave">حفظ التاسكات</button>
@@ -338,6 +350,7 @@ body.view-mode .pa-tabs,body.view-mode .hint-edit{display:none !important}
     </div>
     <div class="row">
       <button class="btn small btn-add-manual" type="button" id="btnManualTask">إضافة تاسك يدوي</button>
+      <button class="btn small primary" type="button" id="btnOpenNotesBar">نوت</button>
       <div class="chips" id="filterChips"></div>
     </div>
   </div>
@@ -514,21 +527,13 @@ body.view-mode .pa-tabs,body.view-mode .hint-edit{display:none !important}
     <section class="mod" id="modNotes">
       <div class="mod-h">
         <h2>نوتس</h2>
+        <button class="btn small" type="button" id="btnNoteOpenMod">فتح</button>
         <button class="btn small" type="button" id="btnNoteNew">+ نوت</button>
       </div>
       <div class="mod-body">
         <div class="notes-item notes-sel" id="notesSelected" hidden></div>
         <div id="notesList"></div>
-        <div class="notes-editor" id="notesEditor" hidden>
-          <input id="noteModTitle" placeholder="عنوان النوت…" />
-          <textarea id="noteModBody" placeholder="اكتب نوت مستقلة… تظهر هنا وفي الكروت لو ربطتها ببند."></textarea>
-          <div class="row">
-            <button class="btn small primary" type="button" id="btnNoteModSave">حفظ النوت</button>
-            <button class="btn small" type="button" id="btnNoteModCancel">إلغاء</button>
-            <button class="btn small" type="button" id="btnNoteModDel">مسح</button>
-          </div>
-        </div>
-        <p class="muted" id="notesHint">+ نوت هنا للنوتس المستقلة. دبل-كليك على كارت أو قائمة يمين لتعديل نوت البند. النوت بتظهر على الكارت بس لو مكتوبة.</p>
+        <p class="muted" id="notesHint">اضغط نوت عشان تفتح الشاشة في النص. اكتب واحفظ. الكارت بيبين النوت بس لو فيها نص.</p>
       </div>
     </section>
 </div>
@@ -569,15 +574,27 @@ body.view-mode .pa-tabs,body.view-mode .hint-edit{display:none !important}
 <div id="tip"></div>
 <div id="ctx"></div>
 <div class="modal-back" id="noteModal" role="dialog" aria-modal="true" aria-labelledby="noteModalTitle">
-  <div class="modal" onclick="event.stopPropagation()">
-    <h3 id="noteModalTitle">كتابة نوت</h3>
-    <p class="note-title" id="noteSub"></p>
-    <p class="note-help">اكتب هنا اللي يخليك تفتكر البند بسرعة. بعد الحفظ هتظهر سطر صغير بلون مختلف تحت العنوان.</p>
-    <textarea id="noteText" placeholder="مثال: محتاج شيك ضمان · ردّ على العميل بكرة · مستني توقيع SPA…"></textarea>
-    <div class="actions">
-      <button class="btn" type="button" id="noteCancel">إلغاء</button>
-      <button class="btn" type="button" id="noteClear">مسح النوت</button>
-      <button class="btn primary" type="button" id="noteSave">حفظ النوت</button>
+  <div class="modal note-float" id="noteFloatCard" onclick="event.stopPropagation()">
+    <div class="note-float-h">
+      <h3 id="noteModalTitle">نوت</h3>
+      <div class="row">
+        <button class="btn small" type="button" id="btnNoteNewFloat">+ نوت</button>
+        <button class="btn small" type="button" id="noteCancelHdr">إغلاق</button>
+      </div>
+    </div>
+    <div class="note-float-body">
+      <aside class="note-float-list" id="noteFloatList"></aside>
+      <div class="note-float-editor">
+        <p class="note-title" id="noteSub"></p>
+        <p class="note-help" id="noteHelp">اكتب النوت وبعدين احفظ. إغلاق من غير حفظ مش بيغيّر حاجة.</p>
+        <input id="noteTitleInput" placeholder="عنوان النوت…" hidden />
+        <textarea id="noteText" placeholder="اكتب النوت هنا… مثال: محتاج شيك ضمان · ردّ على العميل بكرة"></textarea>
+        <div class="actions">
+          <button class="btn" type="button" id="noteCancel">إغلاق</button>
+          <button class="btn" type="button" id="noteClear">مسح</button>
+          <button class="btn primary" type="button" id="noteSave">حفظ</button>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -608,6 +625,8 @@ let saveTimer = null;
 let tipTimer = null;
 let ctxId = null;
 let noteId = null;
+let noteKind = null;
+let pendingDashNote = null;
 let selected = new Set();
 let lastClickedId = null;
 let lastClickedList = [];
@@ -1249,28 +1268,122 @@ function openTask(it){
   alert('مفيش تاسك مربوط بالعنصر ده');
 }
 
-function openNote(id){
-  const it = items.find(x => x.id === id);
-  if (!it) return;
-  hideTip(); hideCtx();
-  noteId = id;
-  $('noteModalTitle').textContent = (it.note||'').trim() ? 'تعديل النوت' : 'كتابة نوت';
-  $('noteSub').textContent = it.title || 'بند بدون عنوان';
-  $('noteText').value = it.note||'';
+function isNoteModalOpen(){
   const modal = $('noteModal');
+  return !!(modal && modal.classList.contains('on'));
+}
+function showNoteModal(){
+  hideTip(); hideCtx();
+  const modal = $('noteModal');
+  if (!modal) return;
   modal.classList.add('on');
   modal.style.display = 'flex';
   document.body.style.overflow = 'hidden';
-  setTimeout(() => { try { $('noteText').focus(); $('noteText').setSelectionRange(($('noteText').value||'').length, ($('noteText').value||'').length); } catch(_){} }, 50);
+  paintNoteEditor();
+  renderNoteFloatList();
+  setTimeout(() => {
+    try {
+      const focusEl = (!$('noteTitleInput').hidden && !($('noteTitleInput').value||'').trim()) ? $('noteTitleInput') : $('noteText');
+      focusEl.focus();
+      if (focusEl === $('noteText')) focusEl.setSelectionRange((focusEl.value||'').length, (focusEl.value||'').length);
+    } catch(_){}
+  }, 50);
 }
 function closeNote(){
   const modal = $('noteModal');
-  modal.classList.remove('on');
-  modal.style.display = 'none';
+  if (modal){
+    modal.classList.remove('on');
+    modal.style.display = 'none';
+  }
   document.body.style.overflow = '';
-  noteId=null;
+  noteId = null;
+  noteKind = null;
+  editingNoteId = null;
+  pendingDashNote = null;
+}
+function currentDashNote(){
+  if (pendingDashNote && pendingDashNote.id === editingNoteId) return pendingDashNote;
+  return dashNotes.find(x => x.id === editingNoteId) || null;
+}
+function paintNoteEditor(){
+  const titleIn = $('noteTitleInput');
+  const clearBtn = $('noteClear');
+  const saveBtn = $('noteSave');
+  if (noteKind === 'item' && noteId){
+    const it = items.find(x => x.id === noteId);
+    if (!it){ closeNote(); return; }
+    $('noteModalTitle').textContent = (it.note||'').trim() ? 'تعديل النوت' : 'كتابة نوت';
+    $('noteSub').textContent = it.title || 'بند بدون عنوان';
+    $('noteHelp').textContent = 'اكتب هنا اللي يخليك تفتكر البند. بعد الحفظ هتظهر على الكارت بس لو فيها نص.';
+    titleIn.hidden = true;
+    $('noteText').value = it.note || '';
+    clearBtn.hidden = false;
+    clearBtn.textContent = 'مسح';
+    saveBtn.disabled = false;
+    return;
+  }
+  if (noteKind === 'dash' && editingNoteId){
+    const n = currentDashNote() || { title:'', body:'' };
+    $('noteModalTitle').textContent = (n.body||n.title) ? 'تعديل النوت' : 'نوت جديدة';
+    $('noteSub').textContent = 'نوت مستقلة';
+    $('noteHelp').textContent = 'نوت مستقلة — مش مربوطة بكارت. اكتب واضغط حفظ.';
+    titleIn.hidden = false;
+    titleIn.value = n.title || '';
+    $('noteText').value = n.body || '';
+    clearBtn.hidden = !dashNotes.some(x => x.id === editingNoteId);
+    clearBtn.textContent = 'مسح';
+    saveBtn.disabled = false;
+    return;
+  }
+  $('noteModalTitle').textContent = 'نوت';
+  $('noteSub').textContent = 'اختار نوت من القائمة أو + نوت';
+  $('noteHelp').textContent = 'الشاشة دي في النص عشان الكتابة والحفظ يبقوا سهلين.';
+  titleIn.hidden = true;
+  $('noteText').value = '';
+  clearBtn.hidden = true;
+  saveBtn.disabled = true;
+}
+function renderNoteFloatList(){
+  const box = $('noteFloatList');
+  if (!box) return;
+  const parts = [];
+  const pending = (pendingDashNote && !dashNotes.some(x => x.id === pendingDashNote.id)) ? [pendingDashNote] : [];
+  pending.concat(dashNotes).forEach(n => {
+    const on = noteKind==='dash' && editingNoteId===n.id;
+    parts.push('<div class="notes-item'+(on?' on':'')+'" data-nid="'+escapeHtml(n.id)+'"><b>'+escapeHtml(n.title||'بدون عنوان')+'</b>'+
+      '<p>'+escapeHtml(String(n.body||'').slice(0,80) || 'فاضية')+'</p></div>');
+  });
+  items.filter(i => (i.note||'').trim() || (noteKind==='item' && i.id===noteId)).forEach(i => {
+    const on = noteKind==='item' && noteId===i.id;
+    const has = !!(i.note||'').trim();
+    parts.push('<div class="notes-item'+(on?' on':'')+'" data-eid="'+escapeHtml(i.id)+'"><b>كارت: '+escapeHtml(i.title||'')+'</b>'+
+      '<p>'+(has ? escapeHtml(String(i.note).slice(0,80)) : 'مفيش نوت لسه')+'</p></div>');
+  });
+  box.innerHTML = parts.length ? parts.join('') : '<p class="muted">مفيش نوتس — + نوت</p>';
+  box.querySelectorAll('[data-nid]').forEach(el => el.onclick = () => openDashNote(el.getAttribute('data-nid')));
+  box.querySelectorAll('[data-eid]').forEach(el => el.onclick = () => openNote(el.getAttribute('data-eid')));
+}
+function openNotesScreen(){
+  const selId = selected.size===1 ? [...selected][0] : null;
+  if (selId){ openNote(selId); return; }
+  noteKind = null;
+  noteId = null;
+  editingNoteId = dashNotes[0] ? dashNotes[0].id : null;
+  if (editingNoteId) noteKind = 'dash';
+  pendingDashNote = null;
+  showNoteModal();
+}
+function openNote(id){
+  const it = items.find(x => x.id === id);
+  if (!it) return;
+  noteKind = 'item';
+  noteId = id;
+  editingNoteId = null;
+  pendingDashNote = null;
+  showNoteModal();
 }
 async function saveNote(){
+  if (noteKind === 'dash'){ await saveDashNote(); return; }
   const it = items.find(x => x.id === noteId);
   if (!it) return closeNote();
   it.note = String($('noteText').value||'').trim();
@@ -1283,9 +1396,14 @@ async function saveNote(){
       });
     } catch {}
   }
-  markDirty(); render(); renderNotesModule(); closeNote();
+  clearTimeout(saveTimer);
+  await save();
+  render();
+  renderNotesModule();
+  closeNote();
 }
 function clearNote(){
+  if (noteKind === 'dash'){ delDashNote(); return; }
   if (!$('noteText')) return;
   $('noteText').value = '';
   saveNote();
@@ -1527,7 +1645,6 @@ function mountClassic(){
   const side = $('sideFilters');
   if (side && ws && mods && side.parentElement !== ws) ws.insertBefore(side, mods);
   if ($('modInbox') && gutter) mods.insertBefore($('modInbox'), gutter);
-  if ($('modNotes') && gutter) mods.insertBefore($('modNotes'), gutter);
   if ($('modMatrix')) mods.appendChild($('modMatrix'));
   const mb = $('modMatrix') && $('modMatrix').querySelector('.mod-body');
   if (mb && $('modDoing')) mb.appendChild($('modDoing'));
@@ -2102,12 +2219,12 @@ function renderNotesModule(){
     if (selItem){
       selBox.hidden = false;
       selBox.innerHTML = '<b>البند المحدد: '+escapeHtml(selItem.title||'')+'</b><p>'+
-        (selItem.note ? escapeHtml(selItem.note) : 'مفيش نوت على الكارت — دبل-كليك أو قائمة يمين لتعديل النوت')+'</p>';
+        ((selItem.note||'').trim() ? escapeHtml(selItem.note) : 'مفيش نوت على الكارت — اضغط نوت أو دبل-كليك')+'</p>';
       selBox.onclick = () => openNote(selItem.id);
     } else { selBox.hidden = true; selBox.innerHTML=''; }
   }
   if (!dashNotes.length && !items.some(i => (i.note||'').trim())){
-    list.innerHTML = '<p class="muted">مفيش نوتس لسه — + نوت أو اكتب على الكروت</p>';
+    list.innerHTML = '<p class="muted">مفيش نوتس لسه — اضغط نوت أو + نوت</p>';
   } else {
     const standalone = dashNotes.map(n =>
       '<div class="notes-item stick" data-nid="'+escapeHtml(n.id)+'"><b>'+escapeHtml(n.title||'بدون عنوان')+'</b>'+
@@ -2121,48 +2238,59 @@ function renderNotesModule(){
     list.querySelectorAll('[data-nid]').forEach(el => el.onclick = () => openDashNote(el.getAttribute('data-nid')));
     list.querySelectorAll('[data-eid]').forEach(el => el.onclick = () => openNote(el.getAttribute('data-eid')));
   }
+  if (isNoteModalOpen()) renderNoteFloatList();
 }
 function openDashNote(id){
+  const n = dashNotes.find(x => x.id===id) || (pendingDashNote && pendingDashNote.id===id ? pendingDashNote : null);
+  if (!n) return;
+  noteKind = 'dash';
+  noteId = null;
   editingNoteId = id;
-  const n = dashNotes.find(x => x.id===id) || { id, title:'', body:'' };
-  $('notesEditor').hidden = false;
-  $('noteModTitle').value = n.title||'';
-  $('noteModBody').value = n.body||'';
+  if (pendingDashNote && pendingDashNote.id !== id) pendingDashNote = null;
+  showNoteModal();
 }
 function newDashNote(){
-  const n = { id: nid('N'), title:'نوت جديدة', body:'', updatedAt: new Date().toISOString() };
-  dashNotes.unshift(n);
-  persistDashNotes();
-  renderNotesModule();
-  openDashNote(n.id);
-  const box = $('modNotes');
-  if (box) box.scrollIntoView({ block:'nearest' });
+  pendingDashNote = { id: nid('N'), title:'', body:'', updatedAt: new Date().toISOString() };
+  noteKind = 'dash';
+  noteId = null;
+  editingNoteId = pendingDashNote.id;
+  showNoteModal();
 }
-function saveDashNote(){
+async function saveDashNote(){
+  if (noteKind !== 'dash') return;
   if (!editingNoteId){
-    newDashNote();
+    pendingDashNote = { id: nid('N'), title:'', body:'', updatedAt: new Date().toISOString() };
+    editingNoteId = pendingDashNote.id;
   }
   let n = dashNotes.find(x => x.id===editingNoteId);
+  if (!n && pendingDashNote && pendingDashNote.id===editingNoteId){
+    n = pendingDashNote;
+    dashNotes.unshift(n);
+  }
   if (!n){ n = { id: editingNoteId }; dashNotes.unshift(n); }
-  n.title = ($('noteModTitle').value||'').trim() || 'بدون عنوان';
-  n.body = ($('noteModBody').value||'').trim();
+  n.title = ($('noteTitleInput').value||'').trim() || 'بدون عنوان';
+  n.body = ($('noteText').value||'').trim();
   n.updatedAt = new Date().toISOString();
-  persistDashNotes();
-  $('notesEditor').hidden = true;
-  editingNoteId = null;
+  pendingDashNote = null;
+  await persistDashNotes();
   renderNotesModule();
+  closeNote();
 }
 function delDashNote(){
   if (!editingNoteId) return;
   dashNotes = dashNotes.filter(x => x.id!==editingNoteId);
-  editingNoteId = null;
-  $('notesEditor').hidden = true;
+  if (pendingDashNote && pendingDashNote.id===editingNoteId) pendingDashNote = null;
   persistDashNotes();
   renderNotesModule();
+  noteKind = null;
+  editingNoteId = dashNotes[0] ? dashNotes[0].id : null;
+  if (editingNoteId) noteKind = 'dash';
+  if (isNoteModalOpen()){ paintNoteEditor(); renderNoteFloatList(); }
+  else closeNote();
 }
 function persistDashNotes(){
   try { localStorage.setItem(NOTES_KEY, JSON.stringify({ notes: dashNotes })); } catch {}
-  fetch('/api/notes', {
+  return fetch('/api/notes', {
     method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({ notes: dashNotes, updatedAt: new Date().toISOString() })
   }).catch(()=>{});
@@ -2353,16 +2481,27 @@ $('newTitle').addEventListener('keydown', e => { if (e.key==='Enter') addNew(); 
 $('btnSave').onclick = save;
 $('btnImport').onclick = importOpenTasks;
 $('noteCancel').onclick = closeNote;
+$('noteCancelHdr').onclick = closeNote;
 $('noteClear').onclick = clearNote;
 $('noteSave').onclick = saveNote;
+$('btnNoteNewFloat').onclick = newDashNote;
 $('noteModal').addEventListener('click', e => { if (e.target===$('noteModal')) closeNote(); });
+$('noteText').addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key==='Enter'){ e.preventDefault(); saveNote(); }
+});
+$('noteTitleInput').addEventListener('keydown', e => {
+  if (e.key==='Enter'){ e.preventDefault(); $('noteText').focus(); }
+});
 document.addEventListener('click', e => { if (!$('ctx').contains(e.target)) hideCtx(); });
 document.addEventListener('click', e => {
-  if (e.target.closest('.card') || e.target.closest('#ctx') || e.target.closest('.side')) return;
+  if (e.target.closest('.card') || e.target.closest('#ctx') || e.target.closest('.side') || e.target.closest('#noteModal')) return;
   if (!e.ctrlKey && !e.metaKey && !e.shiftKey){ selected = new Set(); paintSelection(); }
 });
 document.addEventListener('keydown', e => {
-  if (e.key==='Escape'){ selected = new Set(); hideCtx(); paintSelection(); }
+  if (e.key==='Escape'){
+    if (isNoteModalOpen()){ e.preventDefault(); closeNote(); return; }
+    selected = new Set(); hideCtx(); paintSelection();
+  }
   const tag = (e.target && e.target.tagName) || '';
   if (tag==='INPUT' || tag==='TEXTAREA' || (e.target && e.target.isContentEditable)) return;
   if (editMode && (e.ctrlKey || e.metaKey) && String(e.key).toLowerCase()==='z' && !e.shiftKey){
@@ -2435,9 +2574,9 @@ $('dashName').addEventListener('input', () => { dash.name = $('dashName').value;
 $('propApply').onclick = applyProps;
 $('propClose').onclick = () => $('propsPanel').classList.remove('on');
 $('btnNoteNew').onclick = newDashNote;
-$('btnNoteModSave').onclick = saveDashNote;
-$('btnNoteModCancel').onclick = () => { $('notesEditor').hidden = true; editingNoteId=null; };
-$('btnNoteModDel').onclick = delDashNote;
+$('btnNoteOpenMod').onclick = openNotesScreen;
+$('btnOpenNotes').onclick = openNotesScreen;
+$('btnOpenNotesBar').onclick = openNotesScreen;
 
 consumeLayoutReset();
 bindDrops();

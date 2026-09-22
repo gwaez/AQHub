@@ -38,6 +38,24 @@ test("Background VBS launches Watch-Board with WScript window style 0", () => {
   assert.match(vbs, /WindowStyle Hidden/);
 });
 
+test("Eisenhower notes use a centered floating modal with save/close", () => {
+  const eis = read("eisenhower.html");
+  assert.match(eis, /id="noteModal"/);
+  assert.match(eis, /note-float/);
+  assert.match(eis, /id="btnOpenNotes"/);
+  assert.match(eis, /id="noteSave"/);
+  assert.match(eis, />حفظ</);
+  assert.match(eis, />إغلاق</);
+  assert.match(eis, /await save\(\)/);
+  assert.doesNotMatch(eis, /id="notesEditor"/);
+  assert.doesNotMatch(eis, /insertBefore\(\$\('modNotes'\), gutter\)/);
+  const task = read("task.html");
+  assert.match(task, /id="boxNoteModal"/);
+  assert.match(task, /id="btnOpenBoxNote"/);
+  assert.match(task, />حفظ</);
+  assert.match(task, />إغلاق</);
+});
+
 test("merged tree keeps filters dashboard UX and wizard roam/drag", () => {
   const eis = read("eisenhower.html");
   assert.match(eis, /\/api\/dashboard-layout/);
