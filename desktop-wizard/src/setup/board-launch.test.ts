@@ -18,9 +18,13 @@ test("Watch-Board starts Start-Board hidden with -NoBrowser", () => {
 
 test("Start-Board.ps1 does not always open a browser tab", () => {
   const start = read("Start-Board.ps1");
+  assert.match(start, /\[switch\]\$OpenBrowser/);
+  assert.match(start, /\[switch\]\$NoBrowser/);
   assert.match(start, /\$args -contains '-NoBrowser'/);
   assert.match(start, /AQHUB_NO_BROWSER/);
-  assert.match(start, /if \(\$openBrowser\)/);
+  assert.match(start, /AQHUB_OPEN_BROWSER/);
+  assert.match(start, /if \(\$wantOpen\)/);
+  assert.doesNotMatch(start, /Start-Process "http:\/\/127\.0\.0\.1:\$Port\/board\.html"/);
 });
 
 test("Background VBS launches Watch-Board with WScript window style 0", () => {
@@ -33,13 +37,30 @@ test("Background VBS launches Watch-Board with WScript window style 0", () => {
   assert.match(vbs, /WindowStyle Hidden/);
 });
 
-test("Background bat calls VBS then opens the board URL and exits", () => {
+test("merged tree keeps filters dashboard UX and wizard roam/drag", () => {
+  const eis = read("eisenhower.html");
+  assert.match(eis, /\/api\/dashboard-layout/);
+  assert.match(eis, /modNotes/);
+  assert.match(eis, /btnApplyBatch/);
+  const roam = read("desktop-wizard/src/engines/roam-engine.ts");
+  assert.match(roam, /roamEnabled/);
+  const main = read("desktop-wizard/src/main.ts");
+  assert.match(main, /startDragging/);
+  const styles = read("desktop-wizard/src/styles.css");
+  assert.match(styles, /--char-scale/);
+});
+
+test("Background bat calls VBS then opens the homepage and exits", () => {
   const bat = read("Start-Board-Background.bat");
   assert.match(bat, /Start-Board-Background\.vbs/);
-  assert.match(bat, /127\.0\.0\.1:8766\/board\.html/);
+  assert.match(bat, /127\.0\.0\.1:8766\/"/);
+  assert.doesNotMatch(bat, /board\.html/);
   assert.match(bat, /exit \/b 0/);
   assert.doesNotMatch(bat, /title /);
   const keep = read("Start-Board-KeepAlive.bat");
   assert.match(keep, /Start-Board-Background\.vbs/);
   assert.doesNotMatch(keep, /\/min powershell/);
+  const startBat = read("Start-Board.bat");
+  assert.match(startBat, /Start-Board-Background\.vbs/);
+  assert.doesNotMatch(startBat, /\/min powershell/);
 });

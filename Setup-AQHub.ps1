@@ -6,7 +6,7 @@
 
 $ErrorActionPreference = 'Continue'
 $RepoUrl = 'https://github.com/gwaez/AQHub.git'
-$BoardUrl = 'http://127.0.0.1:8766/board.html'
+$BoardUrl = 'http://127.0.0.1:8766/'
 $DefaultCloneParent = Join-Path $env:USERPROFILE 'Documents'
 $DefaultClonePath = Join-Path $DefaultCloneParent 'AQHub'
 
@@ -251,8 +251,8 @@ function Start-BoardKeepAlive {
 }
 
 function Wait-And-OpenBrowser {
-  Write-Step 'Waiting for local board, then opening browser...'
-  Write-Host '    Opening browser...' -ForegroundColor Yellow
+  Write-Step 'Waiting for local server, then opening the control homepage once...'
+  Write-Host '    Opening homepage (not the task board)...' -ForegroundColor Yellow
 
   $ready = $false
   for ($i = 1; $i -le 20; $i++) {
@@ -276,9 +276,9 @@ function Wait-And-OpenBrowser {
   }
 
   if ($ready) {
-    Write-Ok ("Board is responding at $BoardUrl")
+    Write-Ok ("Control home is responding at $BoardUrl")
   } else {
-    Write-WarnLine "Board did not answer yet. Open $BoardUrl in a few seconds, or re-run Start-Board-Background.bat"
+    Write-WarnLine "Server did not answer yet. Open $BoardUrl in a few seconds, or re-run Start-Board-Background.bat"
   }
 }
 
@@ -309,7 +309,8 @@ Start-BoardKeepAlive -Root $root
 Wait-And-OpenBrowser
 
 Write-Step 'Done' 'Green'
-Write-Host "    Board URL: $BoardUrl" -ForegroundColor Green
+Write-Host "    Control home: $BoardUrl" -ForegroundColor Green
+Write-Host "    Task board:   http://127.0.0.1:8766/board.html (not auto-opened)" -ForegroundColor Green
 Write-Host '    Safety: email never auto-sends; approve only.' -ForegroundColor Green
 Write-Host '    For Arabic steps see SETUP-AR.md' -ForegroundColor Green
 Write-Host ''

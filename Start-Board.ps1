@@ -1,4 +1,11 @@
 # Aqaar Command Board server (ASCII-only script)
+# Does not auto-open a browser. Pass -OpenBrowser or set AQHUB_OPEN_BROWSER=1
+# to open the control homepage once (index.html / /), never the task board.
+# -NoBrowser / AQHUB_NO_BROWSER=1 always wins (watchdog / hidden restarts).
+param(
+  [switch]$OpenBrowser,
+  [switch]$NoBrowser
+)
 $ErrorActionPreference = 'Stop'
 $Root = Split-Path -Parent $MyInvocation.MyCommand.Path
 if (-not $Root) { $Root = (Get-Location).Path }
@@ -6,6 +13,8 @@ $Port = 8766
 $dataDir = Join-Path $Root 'data'
 $tasksPath = Join-Path $dataDir 'tasks.json'
 $eisenhowerPath = Join-Path $dataDir 'eisenhower.json'
+$dashboardLayoutPath = Join-Path $dataDir 'dashboard-layout.json'
+$notesPath = Join-Path $dataDir 'notes.json'
 $auditPath = Join-Path $dataDir 'audit.jsonl'
 $jobsDir = Join-Path $dataDir 'jobs'
 $crmConfigPath = Join-Path $dataDir 'crm-config.json'
@@ -50,12 +59,21 @@ try { $listener.Start() } catch {
   Write-Host "Could not bind port $Port"
   throw
 }
-Write-Host "Aqaar Command: http://127.0.0.1:$Port/board.html"
-$openBrowser = $true
-if ($args -contains '-NoBrowser') { $openBrowser = $false }
-if ($env:AQHUB_NO_BROWSER -eq '1') { $openBrowser = $false }
-if ($openBrowser) {
-  Start-Process "http://127.0.0.1:$Port/board.html"
+$homeUrl = "http://127.0.0.1:$Port/"
+$boardUrl = "http://127.0.0.1:$Port/board.html"
+Write-Host "Aqaar Control home: $homeUrl"
+Write-Host "Task board:         $boardUrl"
+$envOpen = [string]$env:AQHUB_OPEN_BROWSER
+$wantOpen = [bool]$OpenBrowser
+if (-not $wantOpen -and $envOpen) {
+  if ($envOpen.Trim().ToLowerInvariant() -in @('1','true','yes')) { $wantOpen = $true }
+}
+if ($NoBrowser -or ($args -contains '-NoBrowser') -or ($env:AQHUB_NO_BROWSER -eq '1')) { $wantOpen = $false }
+if ($wantOpen) {
+  Write-Host "Opening homepage in browser (-OpenBrowser / AQHUB_OPEN_BROWSER)."
+  try { Start-Process $homeUrl } catch { Write-Host "Could not open browser. Open $homeUrl manually." }
+} else {
+  Write-Host "Browser not opened. Pass -OpenBrowser or set AQHUB_OPEN_BROWSER=1 to open the homepage once."
 }
 
 function Get-Mime($path) {
@@ -2619,7 +2637,7 @@ while ($listener.IsListening) {
   $res = $ctx.Response
   try {
     $path = [Uri]::UnescapeDataString($req.Url.AbsolutePath)
-    if ($path -eq '/') { $path = '/board.html' }
+    if ($path -eq '/' -or $path -eq '') { $path = '/index.html' }
     if ($req.HttpMethod -eq 'OPTIONS') {
       $res.AddHeader('Access-Control-Allow-Origin','*')
       $res.AddHeader('Access-Control-Allow-Methods','GET,POST,PUT,OPTIONS')
@@ -2923,6 +2941,34 @@ if ($path -eq '/api/eisenhower' -and $req.HttpMethod -eq 'GET') {
       continue
     }
     
+    if ($path -eq '/api/dashboard-layout' -and $req.HttpMethod -eq 'GET') {
+      if (Test-Path $dashboardLayoutPath) { Write-FileResp $res $dashboardLayoutPath; continue }
+      Write-Json $res @{ ok = $true; layout = $null }
+      continue
+    }
+    if ($path -eq '/api/dashboard-layout' -and $req.HttpMethod -eq 'POST') {
+      $body = Read-Body $req
+      $parsed = $null
+      try { $parsed = $body | ConvertFrom-Json } catch { Write-Json $res @{ ok = $false; error = 'bad_json' }; continue }
+      if (-not $parsed) { Write-Json $res @{ ok = $false; error = 'bad_json' }; continue }
+      [IO.File]::WriteAllText($dashboardLayoutPath, $body, [Text.UTF8Encoding]::new($false))
+      Write-Json $res @{ ok = $true }
+      continue
+    }
+    if ($path -eq '/api/notes' -and $req.HttpMethod -eq 'GET') {
+      if (Test-Path $notesPath) { Write-FileResp $res $notesPath; continue }
+      Write-Json $res @{ ok = $true; notes = @(); updatedAt = '' }
+      continue
+    }
+    if ($path -eq '/api/notes' -and $req.HttpMethod -eq 'POST') {
+      $body = Read-Body $req
+      $parsed = $null
+      try { $parsed = $body | ConvertFrom-Json } catch { Write-Json $res @{ ok = $false; error = 'bad_json' }; continue }
+      if (-not $parsed) { Write-Json $res @{ ok = $false; error = 'bad_json' }; continue }
+      [IO.File]::WriteAllText($notesPath, $body, [Text.UTF8Encoding]::new($false))
+      Write-Json $res @{ ok = $true }
+      continue
+    }
         if ($path -eq '/api/task/box-note' -and $req.HttpMethod -eq 'POST') {
       $bodyRaw = Read-Body $req
       $body = $null

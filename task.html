@@ -94,7 +94,10 @@ body{color:var(--text);font-family:"IBM Plex Sans Arabic",system-ui,sans-serif;b
 .audit-list{display:grid;gap:6px;padding:6px 0 10px}
 .audit-row{font-size:.7rem;color:var(--muted);padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:rgba(0,0,0,.18);line-height:1.35}
 
-.box-note{margin:10px 0 14px;padding:10px 12px;border-radius:12px;background:#f0fdfa;border:1px solid #99f6e4;color:#115e59;font-size:.92rem;line-height:1.45}.box-note b{display:block;margin-bottom:4px;color:#0f766e;font-size:.78rem}.box-note.empty{display:none}
+.box-note{margin:10px 0 14px;padding:10px 12px;border-radius:12px;background:#f0fdfa;border:1px solid #99f6e4;color:#115e59;font-size:.92rem;line-height:1.45}
+.box-note b{display:block;margin-bottom:4px;color:#0f766e;font-size:.78rem}
+.box-note textarea{width:100%;min-height:88px;margin:6px 0;border:1px solid #99f6e4;border-radius:10px;padding:8px;font:inherit;background:#04131a;color:#e8f3ff}
+.box-note .row{display:flex;gap:6px;flex-wrap:wrap}
 </style>
 </head>
 <body>
@@ -118,7 +121,14 @@ body{color:var(--text);font-family:"IBM Plex Sans Arabic",system-ui,sans-serif;b
   <div class="workspace">
     <section class="panel">
       <div class="panel-h"><h2>تعليقات وتذكيرات</h2><span class="chip" id="tlCount">0</span></div>
-      <div class="box-note empty" id="boxNote"><b>Box note</b><div id="boxNoteText"></div></div><div class="panel-b" id="timeline">
+      <div class="box-note" id="boxNote">
+        <b>نوت الصندوق</b>
+        <textarea id="boxNoteText" placeholder="اكتب نوت تظهر على كارت أيزنهاور…"></textarea>
+        <div class="row">
+          <button class="btn ok" type="button" id="btnSaveBoxNote">حفظ النوت</button>
+          <button class="btn ghost" type="button" id="btnClearBoxNote">مسح</button>
+        </div>
+      </div><div class="panel-b" id="timeline">
         <div class="sec-title">تذكيرات على التاسك ده</div>
         <div class="rem-add">
           <input id="remDue" type="datetime-local" />
@@ -196,12 +206,19 @@ function seedDraft(force){
 }
 
 function renderBoxNote(){
-  var el=document.getElementById('boxNote');
   var tx=document.getElementById('boxNoteText');
-  if(!el||!tx||!task) return;
-  var n=String(task.boxNote||'').trim();
-  if(!n){ el.classList.add('empty'); tx.textContent=''; return; }
-  el.classList.remove('empty'); tx.textContent=n;
+  if(!tx||!task) return;
+  if(document.activeElement===tx) return;
+  tx.value=String(task.boxNote||'');
+}
+async function saveBoxNote(clear){
+  if(!task) return;
+  const note=clear?'':String($('boxNoteText').value||'').trim();
+  try{
+    await api('/api/task/box-note',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({taskId:task.id,note})});
+    task.boxNote=note;
+    toast(note?'اتحفظت النوت':'اتمسحت النوت','هتظهر على كارت أيزنهاور');
+  }catch(e){ toast('فشل حفظ النوت', e.message||e) }
 }
 function renderMeta(){
   const pri=task.priority||'medium';
@@ -390,7 +407,15 @@ async function loadTask(){
   if(!taskId){ $('err').hidden=false; $('err').textContent='ناقص ?id='; return }
   if(!isHttp){ $('err').hidden=false; $('err').textContent='شغّل السيرفر وافتح عبر http://127.0.0.1:8766/task.html?id=...'; return }
   try{
-    const j=await api('/api/task?id='+encodeURIComponent(taskId));
+    let j=null;
+    try { j=await api('/api/task?id='+encodeURIComponent(taskId)); }
+    catch(_){ j=null; }
+    if(!j || !(j.task||j).id){
+      const data=await (await fetch('/api/tasks')).json();
+      const t=(data.tasks||data||[]).find(x=>x && x.id===taskId);
+      if(!t) throw new Error('not found');
+      j={ task:t };
+    }
     task=j.task||j;
     if(!task||!task.id) throw new Error('not found');
     $('err').hidden=true; dirtyTitle=false; $('btnSaveTitle').disabled=true;
@@ -474,6 +499,8 @@ $('fTitle').addEventListener('input',()=>{ dirtyTitle=true; $('btnSaveTitle').di
 
 $('btnAddRem').onclick=()=>addReminder();
 $('btnAddComment').onclick=()=>addComment();
+$('btnSaveBoxNote').onclick=()=>saveBoxNote(false);
+$('btnClearBoxNote').onclick=()=>saveBoxNote(true);
 loadTask();
 </script>
 </body>

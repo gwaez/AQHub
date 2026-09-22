@@ -1,4 +1,5 @@
 # ASCII-only watchdog: keeps Start-Board.ps1 alive on http://127.0.0.1:8766
+# Does not open a browser. Start-Board.ps1 is launched without -OpenBrowser.
 $ErrorActionPreference = 'Continue'
 $Root = Split-Path -Parent $MyInvocation.MyCommand.Path
 if (-not $Root) { $Root = (Get-Location).Path }
@@ -14,7 +15,7 @@ function Write-Log([string]$msg) {
 
 function Test-BoardUp {
   try {
-    $r = Invoke-WebRequest -UseBasicParsing 'http://127.0.0.1:8766/board.html' -TimeoutSec 3
+    $r = Invoke-WebRequest -UseBasicParsing 'http://127.0.0.1:8766/' -TimeoutSec 3
     return ($r.StatusCode -eq 200)
   } catch { return $false }
 }
