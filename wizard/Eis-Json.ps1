@@ -303,8 +303,8 @@ function ConvertTo-EisJson {
       $tlJson = ConvertTo-EisNoteTimelineJson $tl
       if ($obj.EndsWith('}') -and $obj.StartsWith('{')) {
         $inner = $obj.Substring(1, $obj.Length - 2)
-        if ($inner) { $obj = '{' + $inner + ',"noteTimeline":' + $tlJson + '}' }
-        else { $obj = '{"noteTimeline":' + $tlJson + '}' }
+        if ($inner) { $obj = '{' + $inner + ',' + '"noteTimeline":' + $tlJson + '}' }
+        else { $obj = '{' + '"noteTimeline":' + $tlJson + '}' }
       }
     }
     [void]$parts.Add($obj)
