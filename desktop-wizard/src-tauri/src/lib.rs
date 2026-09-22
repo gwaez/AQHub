@@ -33,6 +33,7 @@ pub fn run() {
                 let _ = w.set_always_on_top(on_top);
                 let _ = w.set_skip_taskbar(true);
                 let _ = w.set_decorations(false);
+                let _ = w.set_ignore_cursor_events(false);
             }
             Ok(())
         })

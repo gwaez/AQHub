@@ -192,7 +192,13 @@ test("reduced steps are smaller than normal", () => {
 
 test("character body is a window-drag hit, not drag-region=false", () => {
   const html = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "..", "index.html"), "utf8");
+  const main = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "main.ts"), "utf8");
   assert.match(html, /id="petHit"[^>]*data-tauri-drag-region/);
+  assert.match(html, /id="character"[^>]*data-tauri-drag-region/);
   assert.doesNotMatch(html, /id="character"[^>]*data-tauri-drag-region="false"/);
   assert.match(html, /id="displayName"[^>]*data-tauri-drag-region="false"/);
+  assert.match(html, /class="pet-plate"/);
+  assert.match(main, /pointerdown[\s\S]*startDragging\(\)/);
+  assert.match(main, /noteDrag/);
+  assert.match(main, /SET_POSITION/);
 });

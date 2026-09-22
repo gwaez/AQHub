@@ -467,21 +467,35 @@ async function main() {
   petHit.addEventListener("pointerdown", (ev) => {
     if (ev.button !== 0) return;
     if ((ev.target as HTMLElement).closest("button, input, textarea, select, a")) return;
+    idle.nudge(Date.now());
+    roam.noteDrag(Date.now());
+    if (machine.state !== "DRAGGING") void run({ type: "DRAG_START" });
+    if (isTauri) {
+      skipCharacterClick = true;
+      void getCurrentWindow().startDragging();
+      return;
+    }
+    const origin = lastRoamPos ?? {
+      x: Math.round(petHit.getBoundingClientRect().left),
+      y: Math.round(petHit.getBoundingClientRect().top),
+    };
     const sx = ev.clientX;
     const sy = ev.clientY;
     const onMove = (e: PointerEvent) => {
-      if (Math.hypot(e.clientX - sx, e.clientY - sy) < 5) return;
-      window.removeEventListener("pointermove", onMove);
-      window.removeEventListener("pointerup", onUp);
-      skipCharacterClick = true;
-      idle.nudge(Date.now());
-      roam.noteDrag(Date.now());
-      if (machine.state !== "DRAGGING") void run({ type: "DRAG_START" });
-      if (isTauri) void getCurrentWindow().startDragging();
+      if (Math.hypot(e.clientX - sx, e.clientY - sy) >= 4) skipCharacterClick = true;
+      const next = { x: Math.round(origin.x + (e.clientX - sx)), y: Math.round(origin.y + (e.clientY - sy)) };
+      lastRoamPos = next;
+      void ports.window.setPosition(next.x, next.y);
     };
     const onUp = () => {
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
+      if (lastRoamPos && skipCharacterClick) {
+        void run({ type: "SET_POSITION", x: lastRoamPos.x, y: lastRoamPos.y });
+        void run({ type: "DRAG_END" });
+      } else if (machine.state === "DRAGGING") {
+        void run({ type: "DRAG_END" });
+      }
     };
     window.addEventListener("pointermove", onMove);
     window.addEventListener("pointerup", onUp);
@@ -603,6 +617,11 @@ async function main() {
       if (t === "WATCH") await run({ type: "WATCH" });
     });
     const win = getCurrentWindow();
+    try {
+      await win.setIgnoreCursorEvents(false);
+    } catch {
+      /* older WebView2 builds still hit-test the character pixels */
+    }
     let moveTimer: number | undefined;
     await win.onMoved(async (pos) => {
       if (Date.now() < roamQuietUntil) return;

@@ -57,6 +57,7 @@ body.browser-preview {
 }
 
 .pet-hit {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -64,9 +65,20 @@ body.browser-preview {
   min-height: 290px;
   cursor: grab;
   pointer-events: auto;
+  touch-action: none;
+  background: rgba(8, 16, 28, 0.04);
+  border-radius: 28px;
 }
 .pet-hit:active {
   cursor: grabbing;
+}
+.pet-plate {
+  position: absolute;
+  inset: 4px;
+  border-radius: 24px;
+  background: rgba(8, 16, 28, 0.05);
+  z-index: 0;
+  pointer-events: auto;
 }
 
 #stage.is-sleeping {
@@ -76,12 +88,15 @@ body.browser-preview {
 }
 
 .character {
+  position: relative;
+  z-index: 1;
   width: 200px;
   height: 250px;
   transform-origin: bottom center;
   user-select: none;
   cursor: grab;
   pointer-events: auto;
+  touch-action: none;
   --look-x: 0px;
   --look-y: 0px;
   --char-scale: 1;
@@ -93,6 +108,8 @@ body.browser-preview {
   height: 100%;
   display: block;
   overflow: visible;
+  pointer-events: auto;
+  touch-action: none;
   filter: drop-shadow(0 8px 12px rgba(0, 0, 0, 0.45));
 }
 
@@ -432,11 +449,14 @@ body[data-anim="reduced"] .character .lid {
 #stage.corner-top-start { align-items: flex-start; justify-content: flex-start; }
 
 .nameplate {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 2px;
   margin-top: 4px;
+  pointer-events: auto;
 }
 
 .display-name {

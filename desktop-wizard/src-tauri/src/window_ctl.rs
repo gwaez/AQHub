@@ -6,6 +6,7 @@ pub fn show_character(app: AppHandle) -> Result<(), String> {
         w.show().map_err(|e| e.to_string())?;
         let _ = w.set_always_on_top(true);
         let _ = w.set_skip_taskbar(true);
+        let _ = w.set_ignore_cursor_events(false);
     }
     Ok(())
 }
