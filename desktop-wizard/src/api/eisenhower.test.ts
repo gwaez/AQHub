@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { flavourBubble, flavourForQuad, isEisQuad, itemTitle, latestNoteText, moveEisItem, normalizeEisItems, normalizeNoteTimeline, type EisDoc } from "./eisenhower.ts";
+import { flavourBubble, flavourForQuad, isEisCrmSource, isEisQuad, itemTitle, latestNoteText, moveEisItem, normalizeEisItems, normalizeNoteTimeline, rejectInboxCrm, type EisDoc } from "./eisenhower.ts";
 
 const doc: EisDoc = {
   items: [
@@ -73,4 +73,26 @@ test("moveEisItem unwraps a wrapped items list first", () => {
   assert.equal(item.quad, "do");
   assert.equal(next.items?.length, 1);
   assert.equal(next.items?.[0].id, "E-1");
+});
+
+test("isEisCrmSource matches CRM Unit / sync / entity refs", () => {
+  assert.equal(isEisCrmSource({ source: "crm" }), true);
+  assert.equal(isEisCrmSource({ crmEntity: "md_units" }), true);
+  assert.equal(isEisCrmSource({ createdBy: "CRM Sync" }), true);
+  assert.equal(isEisCrmSource({ crmId: "abc" }), true);
+  assert.equal(isEisCrmSource({ sourceRef: "md_units:11111111-1111-1111-1111-111111111111" }), true);
+  assert.equal(isEisCrmSource({ sourceRef: "leads/22222222-2222-2222-2222-222222222222" }), true);
+  assert.equal(isEisCrmSource({ title: "CRM Unit 12" }), true);
+  assert.equal(isEisCrmSource({ tags: ["crm"] }), true);
+  assert.equal(isEisCrmSource({ source: "task", title: "عقد" }), false);
+});
+
+test("rejectInboxCrm drops CRM inbox cards and keeps organized quads", () => {
+  const kept = rejectInboxCrm([
+    { id: "E-in", title: "mail", source: "task", quad: "inbox" },
+    { id: "E-crm-in", title: "وحدة", source: "crm", quad: "inbox" },
+    { id: "E-crm-do", title: "وحدة", source: "crm", quad: "do" },
+    { id: "E-unit", title: "CRM Unit A", quad: "inbox" },
+  ]);
+  assert.deepEqual(kept.map((i) => i.id), ["E-in", "E-crm-do"]);
 });
