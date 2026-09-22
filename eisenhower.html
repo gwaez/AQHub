@@ -31,6 +31,11 @@ h1{margin:0;font-size:1.28rem;font-weight:700}
 .badge.off{color:#64748b}
 
 .lay-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;margin-bottom:8px;flex:0 0 auto}
+.quick-wrap{position:relative}
+.quick-menu{position:absolute;top:calc(100% + 4px);right:0;z-index:40;min-width:160px;background:#fff;border:1px solid #cbd5e1;border-radius:12px;padding:4px;box-shadow:0 12px 30px rgba(15,23,42,.15)}
+.quick-menu button{display:block;width:100%;text-align:right;border:0;background:transparent;padding:7px 10px;font:inherit;font-size:.78rem;font-weight:700;cursor:pointer;border-radius:8px}
+.quick-menu button:hover{background:#f0fdfa;color:var(--teal)}
+.btn-add-manual{border-color:var(--teal);color:var(--teal)}
 .chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center;min-height:28px}
 .chip{display:inline-flex;align-items:center;gap:6px;border:1px solid #99f6e4;background:#f0fdfa;color:#115e59;border-radius:999px;padding:3px 8px;font-size:.72rem;font-weight:700}
 .chip button{border:0;background:transparent;color:#0f766e;cursor:pointer;font:inherit;font-weight:800;padding:0 2px}
@@ -75,6 +80,7 @@ input[type=range]{width:100%;accent-color:var(--teal)}
 
 .add{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
 .add input,.add select{flex:1;min-width:140px;border:1px solid #cbd5e1;border-radius:10px;padding:10px 12px;font:inherit;background:#fff}
+#newTitle.on,.add input:focus{outline:2px solid var(--teal);border-color:var(--teal)}
 .lane{min-height:54px;max-height:100%;overflow:auto;display:flex;flex-direction:row;flex-wrap:wrap;align-content:flex-start;align-items:flex-start;gap:8px;padding:8px;border-radius:12px;border:1px dashed #cbd5e1;background:repeating-linear-gradient(180deg,#fff,#fff 27px,#eef2f7 28px)}
 .lane.drag{border-color:var(--teal);background:#f0fdfa}
 .lane-count{font-size:.72rem;font-weight:700;color:var(--muted);margin:4px 2px 0}
@@ -263,8 +269,20 @@ body.edit-mode .lay-bar .hint-edit{display:inline}
       <button class="btn small" type="button" id="btnToggleInbox">طي الوارد</button>
       <button class="btn small" type="button" id="btnToggleMatrix">طي المصفوفة</button>
       <button class="btn small on" type="button" id="btnToggleSide">التصفية</button>
+      <button class="btn small" type="button" id="btnQuickEmail">فلتر إيميلات</button>
+      <div class="quick-wrap">
+        <button class="btn small" type="button" id="btnQuickDate">فلتر اليوم أو الأسبوع</button>
+        <div class="quick-menu" id="dateQuickMenu" hidden>
+          <button type="button" data-range="today">اليوم</button>
+          <button type="button" data-range="week">هذا الأسبوع</button>
+          <button type="button" data-range="clear">مسح</button>
+        </div>
+      </div>
     </div>
-    <div class="chips" id="filterChips"></div>
+    <div class="row">
+      <button class="btn small btn-add-manual" type="button" id="btnManualTask">إضافة تاسك يدوي</button>
+      <div class="chips" id="filterChips"></div>
+    </div>
   </div>
 
   <div class="pa-name" id="dashNameBar">
@@ -767,6 +785,7 @@ function render(){
   paintSelection();
   markPerDirtyUi();
   refreshGenerated();
+  updateQuickButtons();
 }
 
 function renderChips(){
@@ -860,6 +879,67 @@ function syncAgeSliderMax(){
   const mx = sliderMax();
   ['fAgeMin','fAgeMax'].forEach(id => { $(id).max = String(mx); });
   if (Number($('fAgeMax').value) > mx) $('fAgeMax').value = String(mx);
+}
+
+function ymd(d){
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function weekStartSat(d){
+  const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const sinceSat = (x.getDay()+1) % 7;
+  x.setDate(x.getDate()-sinceSat);
+  return x;
+}
+function dateQuickMode(){
+  const from = draft.dateFrom||committed.dateFrom||'';
+  const to = draft.dateTo||committed.dateTo||'';
+  const today = ymd(new Date());
+  if (from===today && to===today) return 'today';
+  if (from===ymd(weekStartSat(new Date())) && to===today) return 'week';
+  return '';
+}
+function updateQuickButtons(){
+  const emailOn = (filterMode==='live' ? committed.hasEmail : draft.hasEmail)==='yes';
+  if ($('btnQuickEmail')) $('btnQuickEmail').classList.toggle('on', emailOn);
+  const mode = dateQuickMode();
+  if ($('btnQuickDate')){
+    $('btnQuickDate').classList.toggle('on', !!mode);
+    $('btnQuickDate').textContent = mode==='today' ? 'فلتر: اليوم' : (mode==='week' ? 'فلتر: هذا الأسبوع' : 'فلتر اليوم أو الأسبوع');
+  }
+}
+function toggleEmailQuick(){
+  const on = (draft.hasEmail==='yes');
+  draft.hasEmail = on ? '' : 'yes';
+  writeFilterUi();
+  onFilterChange('flags');
+  if (filterMode==='live') { /* committed inside onFilterChange */ }
+  updateQuickButtons();
+}
+function applyDateQuick(range){
+  const today = new Date();
+  if (range==='today'){ draft.dateField='created'; draft.dateFrom=ymd(today); draft.dateTo=ymd(today); }
+  else if (range==='week'){ draft.dateField='created'; draft.dateFrom=ymd(weekStartSat(today)); draft.dateTo=ymd(today); }
+  else { draft.dateFrom=''; draft.dateTo=''; }
+  writeFilterUi();
+  onFilterChange('date');
+  $('dateQuickMenu').hidden = true;
+  updateQuickButtons();
+}
+function focusManualAdd(){
+  if (!isTypePlaced('inbox')){
+    const tab = currentTab();
+    const first = tab.sections[0];
+    first.cells.splice(1, 0, { id:nid('c'), type:'inbox', width:30 });
+    persistDash(); paintCanvas();
+  }
+  layout.inboxOn = true;
+  applyLayoutButtons();
+  const inp = $('newTitle');
+  if (!inp) return;
+  inp.scrollIntoView({ block:'nearest', behavior:'smooth' });
+  inp.focus();
+  inp.classList.add('on');
+  setTimeout(() => inp.classList.remove('on'), 1200);
 }
 
 function persistFilters(){
@@ -1817,6 +1897,19 @@ $('btnToggleMatrix').onclick = () => { layout.matrixOn = !layout.matrixOn; if (!
 $('btnCollapseInbox').onclick = () => $('btnToggleInbox').click();
 $('btnCollapseMatrix').onclick = () => $('btnToggleMatrix').click();
 $('btnToggleSide').onclick = () => { layout.side = !isTypePlaced('filters'); toggleTypeInLayout('filters'); };
+$('btnQuickEmail').onclick = toggleEmailQuick;
+$('btnQuickDate').onclick = (e) => {
+  e.stopPropagation();
+  $('dateQuickMenu').hidden = !$('dateQuickMenu').hidden;
+};
+$('dateQuickMenu').onclick = (e) => {
+  const b = e.target.closest('[data-range]');
+  if (b) applyDateQuick(b.getAttribute('data-range'));
+};
+document.addEventListener('click', e => {
+  if ($('dateQuickMenu') && !e.target.closest('.quick-wrap')) $('dateQuickMenu').hidden = true;
+});
+$('btnManualTask').onclick = focusManualAdd;
 
 $('btnEditMode').onclick = () => setEditMode(!editMode);
 $('btnDashSave').onclick = persistDashServer;
