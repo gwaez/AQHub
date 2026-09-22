@@ -59,7 +59,8 @@
       <button type="button" data-ctx="QUICK_NOTE">ملاحظة سريعة</button>
       <button type="button" data-ctx="MATRIX">أيزنهاور</button>
       <button type="button" data-ctx="OPEN_AQHUB">فتح AQHub</button>
-      <button type="button" data-ctx="ASK" disabled>اسأل الساحر</button>
+      <!-- ASK stays disabled. Later PR: tag each message as conversational chat vs execute-order, optional Grok Bot / agent bridge. Do not implement the chat pipeline in this slice. -->
+      <button type="button" data-ctx="ASK" disabled title="لاحقًا: دردشة أو أوامر، مع جسر وكيل اختياري">اسأل الساحر</button>
       <button type="button" data-ctx="SETTINGS">إعدادات</button>
       <button type="button" data-ctx="HIDE">إخفاء للصينية</button>
       <button type="button" data-ctx="EXIT">خروج</button>

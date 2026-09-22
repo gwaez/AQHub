@@ -594,6 +594,7 @@ async function main() {
     if (key === "QUICK_NOTE") openComposer("note");
     if (key === "MATRIX") await openAqHubEisenhower();
     if (key === "OPEN_AQHUB") await run({ type: "OPEN_AQHUB" });
+    // ASK is disabled in the menu. Planned later (not this PR): chat vs execute tags, optional Grok Bot / external agent bridge.
     if (key === "ASK") speak("thought", ui.askLater);
     if (key === "SETTINGS") await openSettings();
     if (key === "HIDE") await run({ type: "HIDE" });
