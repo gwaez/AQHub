@@ -21,7 +21,12 @@ export type WizardAction =
   | { type: "CREATE_TASK"; title: string; notes?: string }
   | { type: "CREATE_NOTE"; note: string; taskId?: string }
   | { type: "SET_REMINDER"; text: string; dueAt: string }
-  | { type: "ENTER_STUB"; state: "WAND" | "NOTE" | "MATRIX" | "TRASH" }
+  | { type: "OPEN_MATRIX" }
+  | { type: "CLOSE_MATRIX" }
+  | { type: "MOVE_EIS_ITEM"; id: string; quad: import("../api/eisenhower.ts").EisQuad }
+  | { type: "TRASH_EIS_ITEM"; id: string }
+  | { type: "UNDO_TRASH"; id: string; prevQuad: import("../api/eisenhower.ts").EisQuad }
+  | { type: "ENTER_STUB"; state: "WAND" | "NOTE" }
   | { type: "APPROVE_SEND"; taskId: string };
 
 export type BubbleKind = "speech" | "thought" | "alert";
@@ -33,6 +38,10 @@ export type WizardActionResult =
       health?: { ok: boolean; aqhub: boolean; version: string };
       taskId?: string;
       bubble?: { kind: BubbleKind; text: string };
+      eisDoc?: import("../api/eisenhower.ts").EisDoc;
+      flavour?: string;
+      undo?: { id: string; prevQuad: string };
+      returnTo?: "MATRIX" | "IDLE";
     }
   | { ok: false; action: WizardAction; error: string; bubble?: { kind: BubbleKind; text: string } };
 
@@ -59,6 +68,11 @@ const TYPES: WizardAction["type"][] = [
   "CREATE_TASK",
   "CREATE_NOTE",
   "SET_REMINDER",
+  "OPEN_MATRIX",
+  "CLOSE_MATRIX",
+  "MOVE_EIS_ITEM",
+  "TRASH_EIS_ITEM",
+  "UNDO_TRASH",
   "ENTER_STUB",
   "APPROVE_SEND",
 ];

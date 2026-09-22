@@ -35,7 +35,7 @@
         <button type="submit" class="primary">حفظ</button>
         <button type="button" id="composerCancel">إلغاء</button>
       </div>
-      <p class="hint">يُرسل عبر HTTP إلى AQHub — بدون كتابة tasks.json من هنا.</p>
+      <p class="hint">يُرسل عبر HTTP إلى AQHub — بدون كتابة tasks.json من هنا. الأمر <code>/matrix</code> يفتح أيزنهاور.</p>
     </form>
 
     <div id="settingsPanel" class="settings-panel" hidden>
@@ -62,6 +62,7 @@
     <nav id="ctx" class="ctx-menu" hidden>
       <button type="button" data-ctx="NEW_TASK">تاسك جديد</button>
       <button type="button" data-ctx="QUICK_NOTE">ملاحظة سريعة</button>
+      <button type="button" data-ctx="MATRIX">أيزنهاور</button>
       <button type="button" data-ctx="OPEN_AQHUB">فتح AQHub</button>
       <button type="button" data-ctx="ASK" disabled>اسأل الساحر</button>
       <button type="button" data-ctx="SETTINGS">إعدادات</button>
@@ -79,6 +80,7 @@
         <button type="button" data-act="SLEEP">نوم</button>
         <button type="button" data-act="THINK">يفكر</button>
         <button type="button" data-act="ALERT">تنبيه</button>
+        <button type="button" data-act="MATRIX">مصفوفة</button>
         <button type="button" data-act="OPEN_AQHUB">فتح AQHub</button>
       </div>
       <label class="scale-label">الحجم
@@ -88,6 +90,8 @@
       <p id="stateLabel" class="hint">الحالة: IDLE</p>
       <p class="hint">معاينة المتصفح: الشفافية والصينية تُختبران على ويندوز داخل Tauri.</p>
     </div>
+
+    <aside id="matrixPanel" class="matrix-panel" hidden dir="rtl" lang="ar"></aside>
 
     <script type="module" src="/src/main.ts"></script>
   </body>

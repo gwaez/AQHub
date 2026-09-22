@@ -76,9 +76,11 @@ export const VISUAL_STATES: WizardStateId[] = [
   "DRAGGING",
   "SLEEPING",
   "HIDDEN",
+  "MATRIX",
+  "TRASH",
 ];
 
-export const STUB_STATES: WizardStateId[] = ["WAND", "NOTE", "MATRIX", "TRASH"];
+export const STUB_STATES: WizardStateId[] = ["WAND", "NOTE"];
 
 const ALL_STATES: WizardStateId[] = [...VISUAL_STATES, ...STUB_STATES];
 
@@ -135,8 +137,8 @@ const handlers: Record<WizardStateId, StateHandler> = {
   HIDDEN: handler("HIDDEN", "fade-out"),
   WAND: handler("WAND", "work", true),
   NOTE: handler("NOTE", "ponder", true),
-  MATRIX: handler("MATRIX", "ponder", true),
-  TRASH: handler("TRASH", "work", true),
+  MATRIX: handler("MATRIX", "work"),
+  TRASH: handler("TRASH", "work"),
 };
 
 function emptyCtx(): StateContext {
@@ -200,5 +202,5 @@ export function stateFromVisible(visible: boolean, watching = false): WizardStat
 }
 
 export function isTransientState(state: WizardStateId): boolean {
-  return state === "SUCCESS" || state === "ERROR" || state === "ALERT";
+  return state === "SUCCESS" || state === "ERROR" || state === "ALERT" || state === "TRASH";
 }

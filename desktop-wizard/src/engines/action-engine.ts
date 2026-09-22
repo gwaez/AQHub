@@ -1,5 +1,6 @@
 import type { WizardAction, WizardActionResult } from "../actions/wizard-action.ts";
 import { createTaskViaHub, type AqHubApi } from "../api/aqhub-client.ts";
+import { flavourBubble, flavourForQuad, isEisQuad, moveEisItem, type EisQuad } from "../api/eisenhower.ts";
 import { WizardSettingsStore } from "../settings/wizard-settings.ts";
 import {
   WizardStateMachine,
@@ -15,6 +16,7 @@ export interface CharacterWindowPort {
   openAqHub(): Promise<void>;
   exit(): Promise<void>;
   setPosition(x: number, y: number): Promise<void>;
+  setMatrixLayout(open: boolean): Promise<void>;
 }
 
 export interface WizardPorts {
@@ -203,6 +205,71 @@ export async function dispatch(
         await audit(ports, action, { id });
         machine.enter("SUCCESS", c());
         return { ok: true, action, bubble: { kind: "speech", text: "التذكير اتسجل" } };
+      }
+      case "OPEN_MATRIX": {
+        machine.enter("WORKING", c());
+        const eisDoc = await ports.api.getEisDoc();
+        await ports.window.setMatrixLayout(true);
+        await audit(ports, action, { count: eisDoc.items?.length || 0 });
+        machine.enter("MATRIX", c());
+        return { ok: true, action, eisDoc, returnTo: "MATRIX" };
+      }
+      case "CLOSE_MATRIX": {
+        await ports.window.setMatrixLayout(false);
+        if (machine.state !== "HIDDEN") machine.enter("IDLE", c());
+        return { ok: true, action, returnTo: "IDLE" };
+      }
+      case "MOVE_EIS_ITEM": {
+        if (!action.id.trim()) return fail(action, "id_required", machine, ports);
+        if (!isEisQuad(action.quad)) return fail(action, "bad_quad", machine, ports);
+        machine.enter("WORKING", c());
+        const current = await ports.api.getEisDoc();
+        const moved = moveEisItem(current, action.id, action.quad);
+        await ports.api.putEisDoc(moved.next);
+        await audit(ports, action, { id: action.id, quad: action.quad, flavour: flavourForQuad(action.quad) });
+        machine.enter("SUCCESS", c());
+        return {
+          ok: true,
+          action,
+          eisDoc: moved.next,
+          flavour: flavourForQuad(action.quad),
+          bubble: { kind: "speech", text: flavourBubble(action.quad, String(moved.item.title || "")) },
+          returnTo: "MATRIX",
+        };
+      }
+      case "TRASH_EIS_ITEM": {
+        if (!action.id.trim()) return fail(action, "id_required", machine, ports);
+        machine.enter("WORKING", c());
+        const current = await ports.api.getEisDoc();
+        const moved = moveEisItem(current, action.id, "trash");
+        await ports.api.putEisDoc(moved.next);
+        await audit(ports, action, { id: action.id, prevQuad: moved.prevQuad });
+        machine.enter("TRASH", c());
+        return {
+          ok: true,
+          action,
+          eisDoc: moved.next,
+          flavour: "TRASH",
+          undo: { id: action.id, prevQuad: moved.prevQuad },
+          bubble: { kind: "alert", text: flavourBubble("trash", String(moved.item.title || "")) + " — تراجع؟" },
+          returnTo: "MATRIX",
+        };
+      }
+      case "UNDO_TRASH": {
+        const quad: EisQuad = isEisQuad(action.prevQuad) ? action.prevQuad : "inbox";
+        machine.enter("WORKING", c());
+        const current = await ports.api.getEisDoc();
+        const moved = moveEisItem(current, action.id, quad === "trash" ? "inbox" : quad);
+        await ports.api.putEisDoc(moved.next);
+        await audit(ports, action, { id: action.id, quad: moved.item.quad });
+        machine.enter("SUCCESS", c());
+        return {
+          ok: true,
+          action,
+          eisDoc: moved.next,
+          bubble: { kind: "speech", text: "تم التراجع" },
+          returnTo: "MATRIX",
+        };
       }
       case "ENTER_STUB": {
         machine.enter(action.state as WizardStateId, c());

@@ -47,6 +47,7 @@ export class IdleDirector {
     if (this.animationLevel === "off") return false;
     if (current === "HIDDEN" || current === "DRAGGING" || current === "SLEEPING") return false;
     if (current === "WORKING" || current === "SPEAKING" || current === "THINKING") return false;
+    if (current === "MATRIX" || current === "TRASH") return false;
     return this.idleMs(nowMs) >= this.sleepAfterMs;
   }
 

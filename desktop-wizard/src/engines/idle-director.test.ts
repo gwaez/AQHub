@@ -13,10 +13,11 @@ test("sleeps after inactivity and can be paused", () => {
   assert.equal(d.shouldSleep(60_000, "IDLE"), true);
 });
 
-test("does not sleep while working or hidden", () => {
+test("does not sleep while working, hidden, or matrix", () => {
   const d = new IdleDirector({ sleepAfterMs: 1000, animationLevel: "normal" }, 0);
   assert.equal(d.shouldSleep(5000, "WORKING"), false);
   assert.equal(d.shouldSleep(5000, "HIDDEN"), false);
+  assert.equal(d.shouldSleep(5000, "MATRIX"), false);
 });
 
 test("animation off never sleeps", () => {

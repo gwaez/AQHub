@@ -78,6 +78,8 @@ export interface AqHubApi {
   putTasksDoc(doc: BoardDoc): Promise<void>;
   postBoxNote(taskId: string, note: string): Promise<void>;
   postAudit(entry: Record<string, unknown>): Promise<void>;
+  getEisDoc(): Promise<import("./eisenhower.ts").EisDoc>;
+  putEisDoc(doc: import("./eisenhower.ts").EisDoc): Promise<void>;
 }
 
 export function createAqHubClient(baseUrl = DEFAULT_AQHUB_URL): AqHubApi {
@@ -150,6 +152,18 @@ export function createAqHubClient(baseUrl = DEFAULT_AQHUB_URL): AqHubApi {
         /* audit is best-effort */
       }
     },
+    async getEisDoc() {
+      const body = await json("/api/eisenhower");
+      const items = Array.isArray(body.items) ? body.items : [];
+      return { ...body, items };
+    },
+    async putEisDoc(doc) {
+      await json("/api/eisenhower", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ items: doc.items || [], updatedAt: doc.updatedAt || new Date().toISOString() }),
+      });
+    },
   };
 }
 
@@ -171,3 +185,4 @@ export async function createTaskViaHub(
 
 export { mergeTaskIntoDoc, nextTaskId, newWizardTask };
 export type { BoardDoc };
+export type { EisDoc, EisItem, EisQuad } from "./eisenhower.ts";

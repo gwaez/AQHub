@@ -9,8 +9,10 @@ import { applyAnimation } from "./engines/animation-engine.ts";
 import { IdleDirector } from "./engines/idle-director.ts";
 import { BubbleEngine } from "./engines/bubble-engine.ts";
 import { injectWizardSvg, loadCharacterPack } from "./ui/character.ts";
+import { EisenhowerPanel } from "./ui/eisenhower-panel.ts";
 import { copy } from "./i18n/ar.ts";
 import type { WizardAction } from "./actions/wizard-action.ts";
+import type { EisQuad } from "./api/eisenhower.ts";
 
 const isTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 
@@ -39,6 +41,9 @@ function browserWindowPort(): CharacterWindowPort {
       /* browser preview has no process to exit */
     },
     async setPosition() {},
+    async setMatrixLayout(open: boolean) {
+      document.body.classList.toggle("matrix-open", open);
+    },
   };
 }
 
@@ -58,6 +63,10 @@ function tauriWindowPort(): CharacterWindowPort {
     },
     async setPosition(x: number, y: number) {
       await invoke("set_character_position", { x, y });
+    },
+    async setMatrixLayout(open: boolean) {
+      document.body.classList.toggle("matrix-open", open);
+      await invoke("set_matrix_layout", { open });
     },
   };
 }
@@ -81,6 +90,7 @@ async function main() {
   const settingsName = el<HTMLInputElement>("settingsName");
   const settingsAnim = el<HTMLSelectElement>("settingsAnim");
   const settingsSleep = el<HTMLInputElement>("settingsSleep");
+  const matrixHost = el("matrixPanel");
 
   const pack = await loadCharacterPack("old-wizard");
   try {
@@ -111,6 +121,7 @@ async function main() {
   const idle = new IdleDirector({ sleepAfterMs: 90_000, animationLevel: "normal" }, Date.now());
   const look = { x: 0, y: 0 };
   let idleReturnTimer = 0;
+  let lastUndo: { id: string; prevQuad: EisQuad } | null = null;
 
   const ports = {
     api,
@@ -135,16 +146,60 @@ async function main() {
     paint();
   };
 
-  const run = async (action: WizardAction) => {
+  const matrix = new EisenhowerPanel(matrixHost, {
+    onMove(id, quad) {
+      void run({ type: "MOVE_EIS_ITEM", id, quad });
+    },
+    onTrash(id) {
+      void run({ type: "TRASH_EIS_ITEM", id });
+    },
+    onUndo() {
+      if (lastUndo) void run({ type: "UNDO_TRASH", id: lastUndo.id, prevQuad: lastUndo.prevQuad });
+    },
+    onClose() {
+      void run({ type: "CLOSE_MATRIX" });
+    },
+  });
+
+  async function run(action: WizardAction) {
     const result = await dispatch(action, ports, machine);
     idle.animationLevel = settings.current.animationLevel;
     idle.sleepAfterMs = settings.current.idleSleepMs;
+    if (result.ok && "eisDoc" in result && result.eisDoc) {
+      matrix.setDoc(result.eisDoc);
+      if (action.type === "OPEN_MATRIX") {
+        idle.pause();
+        matrix.show(result.eisDoc);
+      }
+    }
+    if (result.ok && "undo" in result && result.undo) {
+      lastUndo = { id: result.undo.id, prevQuad: result.undo.prevQuad as EisQuad };
+      matrix.setUndo(lastUndo);
+    }
+    if (action.type === "UNDO_TRASH" && result.ok) {
+      lastUndo = null;
+      matrix.setUndo(null);
+    }
+    if (action.type === "CLOSE_MATRIX") {
+      matrix.hide();
+      lastUndo = null;
+      idle.resume(Date.now());
+    }
     if (result.bubble?.text) speak(result.bubble.kind, result.bubble.text);
     if (isTransientState(machine.state)) {
       window.clearTimeout(idleReturnTimer);
+      const back = result.ok && "returnTo" in result && result.returnTo === "MATRIX" ? "MATRIX" : "IDLE";
       idleReturnTimer = window.setTimeout(() => {
-        if (isTransientState(machine.state)) void run({ type: "IDLE" });
-      }, 1600);
+        if (!isTransientState(machine.state)) return;
+        if (back === "MATRIX" && matrix.visible) machine.enter("MATRIX", {
+          displayName: settings.current.displayName,
+          scale: settings.current.window.scale,
+          nowMs: Date.now(),
+          animationLevel: settings.current.animationLevel,
+        });
+        else if (back !== "MATRIX") void run({ type: "IDLE" });
+        paint();
+      }, 1200);
     }
     paint();
     if (action.type === "PING_HEALTH") {
@@ -157,13 +212,13 @@ async function main() {
       }
     }
     return result;
-  };
+  }
 
   const closeOverlays = () => {
     composer.hidden = true;
     ctx.hidden = true;
     settingsPanel.hidden = true;
-    idle.resume(Date.now());
+    if (!matrix.visible) idle.resume(Date.now());
   };
 
   const openComposer = (mode: "task" | "note" | "reminder") => {
@@ -213,6 +268,7 @@ async function main() {
     if (act === "SLEEP") await run({ type: "SLEEP" });
     if (act === "THINK") await run({ type: "THINK" });
     if (act === "ALERT") await run({ type: "ALERT", text: "تنبيه تجريبي" });
+    if (act === "MATRIX") await run({ type: "OPEN_MATRIX" });
     if (act === "OPEN_AQHUB") await run({ type: "OPEN_AQHUB" });
   });
 
@@ -227,7 +283,7 @@ async function main() {
   character.addEventListener("pointerleave", () => {
     look.x = 0;
     look.y = 0;
-    if (machine.state === "WATCHING") void run({ type: "IDLE" });
+    if (machine.state === "WATCHING" && !matrix.visible) void run({ type: "IDLE" });
   });
   character.addEventListener("click", (ev) => {
     ev.preventDefault();
@@ -249,6 +305,7 @@ async function main() {
     closeOverlays();
     if (key === "NEW_TASK") openComposer("task");
     if (key === "QUICK_NOTE") openComposer("note");
+    if (key === "MATRIX") await run({ type: "OPEN_MATRIX" });
     if (key === "OPEN_AQHUB") await run({ type: "OPEN_AQHUB" });
     if (key === "ASK") speak("thought", copy.askLater);
     if (key === "SETTINGS") {
@@ -272,7 +329,9 @@ async function main() {
     const title = composerTitle.value.trim();
     const body = composerBody.value.trim();
     closeOverlays();
-    if (mode === "task") await run({ type: "CREATE_TASK", title: title || body, notes: body });
+    if (title === "/matrix" || body === "/matrix" || title.startsWith("/matrix")) {
+      await run({ type: "OPEN_MATRIX" });
+    } else if (mode === "task") await run({ type: "CREATE_TASK", title: title || body, notes: body });
     else if (mode === "note") await run({ type: "CREATE_NOTE", note: body || title });
     else if (mode === "reminder") {
       const due = composerDue.value ? new Date(composerDue.value).toISOString() : "";

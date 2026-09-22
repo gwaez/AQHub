@@ -21,8 +21,8 @@
     "HIDDEN": { "asset": null, "loop": false, "motion": "fade-out" },
     "WAND": { "asset": "wizard.svg", "stub": true },
     "NOTE": { "asset": "wizard.svg", "stub": true },
-    "MATRIX": { "asset": "wizard.svg", "stub": true },
-    "TRASH": { "asset": "wizard.svg", "stub": true }
+    "MATRIX": { "asset": "wizard.svg", "loop": true, "motion": "work" },
+    "TRASH": { "asset": "wizard.svg", "loop": false, "motion": "work" }
   },
   "anchors": {
     "bubble": { "x": 28, "y": 36, "dir": "rtl" },

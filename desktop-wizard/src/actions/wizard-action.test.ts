@@ -5,10 +5,20 @@ import { dispatch, type WizardPorts } from "../engines/action-engine.ts";
 import { WizardStateMachine } from "../state/wizard-state-machine.ts";
 import { defaultSettings, type WizardSettings } from "../api/aqhub-client.ts";
 import type { BoardDoc } from "../api/tasks.ts";
+import type { EisDoc } from "../api/eisenhower.ts";
 
 function mockPorts(): {
   ports: WizardPorts;
-  store: { settings: WizardSettings; hidden: boolean; opened: boolean; docs: BoardDoc[]; notes: { taskId: string; note: string }[]; audits: number };
+  store: {
+    settings: WizardSettings;
+    hidden: boolean;
+    opened: boolean;
+    docs: BoardDoc[];
+    notes: { taskId: string; note: string }[];
+    audits: number;
+    eis: EisDoc[];
+    matrixOpen: boolean;
+  };
 } {
   const store = {
     settings: defaultSettings(),
@@ -17,6 +27,15 @@ function mockPorts(): {
     docs: [{ version: 1, title: "Aqaar Command", tasks: [{ id: "T-001", title: "existing" }] }] as BoardDoc[],
     notes: [] as { taskId: string; note: string }[],
     audits: 0,
+    eis: [
+      {
+        items: [
+          { id: "E-1", title: "عقد موجان", quad: "inbox", entryId: "keep-me" },
+          { id: "E-2", title: "تقرير", quad: "do" },
+        ],
+      },
+    ] as EisDoc[],
+    matrixOpen: false,
   };
   const ports: WizardPorts = {
     api: {
@@ -36,6 +55,10 @@ function mockPorts(): {
       postAudit: async () => {
         store.audits += 1;
       },
+      getEisDoc: async () => store.eis[store.eis.length - 1],
+      putEisDoc: async (doc) => {
+        store.eis.push(doc);
+      },
     },
     window: {
       show: async () => {
@@ -49,6 +72,9 @@ function mockPorts(): {
       },
       exit: async () => {},
       setPosition: async () => {},
+      setMatrixLayout: async (open) => {
+        store.matrixOpen = open;
+      },
     },
   };
   return { ports, store };
@@ -125,4 +151,41 @@ test("stub WAND enters without HTTP", async () => {
   assert.equal(sm.state, "WAND");
   assert.equal(sm.lastEnterWasStub(), true);
   assert.equal(store.docs.length, 1);
+});
+
+test("OPEN_MATRIX loads GET /api/eisenhower and enters MATRIX", async () => {
+  const { ports, store } = mockPorts();
+  const sm = new WizardStateMachine();
+  const result = await dispatch({ type: "OPEN_MATRIX" }, ports, sm);
+  assert.equal(result.ok, true);
+  assert.equal(sm.state, "MATRIX");
+  assert.equal(store.matrixOpen, true);
+  if (result.ok) assert.equal(result.eisDoc?.items?.[0].id, "E-1");
+});
+
+test("MOVE_EIS_ITEM GET-merge-POST keeps other items and linkage", async () => {
+  const { ports, store } = mockPorts();
+  const sm = new WizardStateMachine();
+  const result = await dispatch({ type: "MOVE_EIS_ITEM", id: "E-1", quad: "do" }, ports, sm);
+  assert.equal(result.ok, true);
+  const last = store.eis.at(-1);
+  assert.equal(last?.items?.[0].quad, "do");
+  assert.equal(last?.items?.[0].entryId, "keep-me");
+  assert.equal(last?.items?.[1].id, "E-2");
+  if (result.ok) {
+    assert.equal(result.flavour, "DO");
+    assert.equal(result.returnTo, "MATRIX");
+  }
+});
+
+test("TRASH_EIS_ITEM is soft-delete with undo, not purge", async () => {
+  const { ports, store } = mockPorts();
+  const sm = new WizardStateMachine();
+  const trashed = await dispatch({ type: "TRASH_EIS_ITEM", id: "E-2" }, ports, sm);
+  assert.equal(trashed.ok, true);
+  assert.equal(store.eis.at(-1)?.items?.find((i) => i.id === "E-2")?.quad, "trash");
+  assert.equal(store.eis.at(-1)?.items?.length, 2);
+  if (trashed.ok) assert.equal(trashed.undo?.prevQuad, "do");
+  await dispatch({ type: "UNDO_TRASH", id: "E-2", prevQuad: "do" }, ports, sm);
+  assert.equal(store.eis.at(-1)?.items?.find((i) => i.id === "E-2")?.quad, "do");
 });

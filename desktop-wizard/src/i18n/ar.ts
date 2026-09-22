@@ -40,6 +40,10 @@ export const ar = {
   notePlaceholder: "النص",
   duePlaceholder: "موعد التذكير",
   previewNote: "معاينة المتصفح: الشفافية والصينية تُختبران على ويندوز داخل Tauri.",
+  matrix: "أيزنهاور",
+  matrixClose: "إغلاق",
+  undo: "تراجع",
+  composerMatrixHint: "اكتب /matrix لفتح المصفوفة",
 };
 
 export type UiCopy = typeof ar;

@@ -14,6 +14,7 @@ pub fn run() {
             window_ctl::hide_character,
             window_ctl::set_character_position,
             window_ctl::exit_app,
+            window_ctl::set_matrix_layout,
             aqhub::open_aqhub,
             settings::load_settings_file,
             settings::save_settings_file,

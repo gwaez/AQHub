@@ -31,3 +31,27 @@ pub fn set_character_position(app: AppHandle, x: i32, y: i32) -> Result<(), Stri
 pub fn exit_app(app: AppHandle) {
     app.exit(0);
 }
+
+#[tauri::command]
+pub fn set_matrix_layout(app: AppHandle, open: bool) -> Result<(), String> {
+    let Some(w) = app.get_webview_window("wizard") else {
+        return Ok(());
+    };
+    if open {
+        w.set_size(tauri::Size::Logical(tauri::LogicalSize {
+            width: 920.0,
+            height: 640.0,
+        }))
+        .map_err(|e| e.to_string())?;
+        let _ = w.set_resizable(true);
+    } else {
+        let _ = w.set_resizable(false);
+        w.set_size(tauri::Size::Logical(tauri::LogicalSize {
+            width: 380.0,
+            height: 560.0,
+        }))
+        .map_err(|e| e.to_string())?;
+    }
+    let _ = w.set_always_on_top(true);
+    Ok(())
+}
