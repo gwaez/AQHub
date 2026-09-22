@@ -3,7 +3,7 @@
 # Outlook status probe (GetActiveObject wrap). Never writes tasks.json / tokens.
 # Never starts Outlook. Never calls approve-send.
 
-$script:WizardBridgeVersion = '0.5.0-p12'
+$script:WizardBridgeVersion = '0.5.1-mail-sync'
 
 function Get-WizardSettingsPath {
   param([string]$DataDir)
@@ -316,7 +316,9 @@ function Invoke-WizardBridge {
     [string]$Path,
     [string]$DataDir
   )
-  if (-not $Path.StartsWith('/api/v1/wizard/')) {
+  $Path = [string]$Path
+  if ($Path.EndsWith('/') -and $Path.Length -gt 1) { $Path = $Path.TrimEnd('/') }
+  if (-not $Path.StartsWith('/api/v1/wizard')) {
     return $false
   }
 
@@ -366,11 +368,20 @@ function Invoke-WizardBridge {
   }
 
   if ($Path -eq '/api/v1/wizard/mail/status' -and $Req.HttpMethod -eq 'GET') {
+    if (Get-Command Get-OutlookRunningStatus -ErrorAction SilentlyContinue) {
+      Write-Json $Res (Get-OutlookRunningStatus -DataDir $DataDir)
+      return $true
+    }
     $settings = Read-WizardSettings -DataDir $DataDir
     $outlook = $false
     $reason = 'outlook_not_running'
     try {
-      $app = [Runtime.InteropServices.Marshal]::GetActiveObject('Outlook.Application')
+      $app = $null
+      if (Get-Command Get-ActiveComObject -ErrorAction SilentlyContinue) {
+        $app = Get-ActiveComObject 'Outlook.Application'
+      } else {
+        $app = [Runtime.InteropServices.Marshal]::GetActiveObject('Outlook.Application')
+      }
       if ($app) { $outlook = $true; $reason = '' }
     } catch {
       $reason = 'outlook_not_running'

@@ -10,6 +10,7 @@ const read = (name: string) => readFileSync(join(repoRoot, name), "utf8");
 test("Watch-Board starts Start-Board hidden with -NoBrowser", () => {
   const watch = read("Watch-Board.ps1");
   assert.match(watch, /'-WindowStyle','Hidden'/);
+  assert.match(watch, /'-STA'/);
   assert.match(watch, /-WindowStyle Hidden/);
   assert.match(watch, /-NoBrowser/);
   assert.doesNotMatch(watch, /WindowStyle Minimized/);

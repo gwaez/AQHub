@@ -183,8 +183,9 @@ Settings schema (`data/wizard-settings.json`, gitignored):
 
 **Outlook COM**
 
-- `Get-OutlookApp` / `Open-Mail` / `Sync-MailToTasks` / `Invoke-SendPending` live only in `Start-Board.ps1`.
-- Wizard on Windows must not create `Outlook.Application`. Status uses `GetActiveObject` in `Wizard-Bridge.ps1` only. Open/sync reuse `/api/open` and `/api/mail/sync`.
+- `Open-Mail` / `Invoke-SendPending` live in `Start-Board.ps1` (`Get-OutlookApp` may `New-Object` for open/send only).
+- Unread import is `wizard/Mail-Sync.ps1` (`Sync-MailToTasksCore`): **GetActiveObject only**, STA runspace if the listener is MTA, never `.Body`, never `.Send()`, slim `items` (`id,title,entryId,fromEmail`). `POST /api/mail/sync` always returns JSON `{ok,error,message}` on failure.
+- Wizard on Windows must not create `Outlook.Application`. Status uses `GetActiveObject` (`GET /api/v1/wizard/mail/status` in `Wizard-Bridge.ps1`, with a Start-Board fallback). Open/sync reuse `/api/open` and `/api/mail/sync`.
 - First COM use may show a Windows security prompt — AQHub already documents this; Wizard should not add a second COM host.
 - This Linux agent VM cannot exercise Outlook.
 

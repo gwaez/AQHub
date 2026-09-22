@@ -334,7 +334,16 @@ function normalize(t){
   const status=['backlog','todo','doing','blocked','done'].includes(t.status)?t.status:(t.status==='in_progress'?'doing':'todo');
   return {id:t.id,title:t.title||'',status,priority:t.priority||'medium',source:t.source||'manual',sourceRef:t.sourceRef||t.source_ref||'',entryId:t.entryId||t.entryID||'',tags:t.tags||[],notes:t.notes||'',boxNote:t.boxNote||'',botAction:t.botAction||'none',botInstruction:t.botInstruction||'',comments:Array.isArray(t.comments)?t.comments:[],suggestedReply:t.suggestedReply||'',due:t.due||null,assignee:t.assignee||'',checklist:Array.isArray(t.checklist)?t.checklist:[],progress:typeof t.progress==='number'?t.progress:0,createdAt:t.createdAt||null,updatedAt:t.updatedAt||null,createdBy:t.createdBy||'',fromEmail:t.fromEmail||'',crmUrl:t.crmUrl||'',sourceUrl:t.sourceUrl||'',chat:Array.isArray(t.chat)?t.chat:[],timeline:Array.isArray(t.timeline)?t.timeline:[],pendingSend:t.pendingSend||null,pendingTrash:!!t.pendingTrash,mailClass:t.mailClass||null};
 }
-async function api(path,opts){const r=await fetch(path,opts); if(!r.ok) throw new Error(await r.text()||('HTTP '+r.status)); return r}
+async function api(path,opts){
+  const r=await fetch(path,opts);
+  if(!r.ok){
+    const t=await r.text();
+    let msg=t||('HTTP '+r.status);
+    try{ const j=JSON.parse(t); msg=j.message||j.error||msg; }catch(e){}
+    throw new Error(msg);
+  }
+  return r;
+}
 async function reload(silent){
   if(!isHttp) return; const prev=new Map(state.tasks.map(t=>[t.id,{...t}]));
   const res=await api('/api/tasks'); state=await res.json(); if(!Array.isArray(state.tasks)) state.tasks=[]; state.tasks=state.tasks.map(normalize);
