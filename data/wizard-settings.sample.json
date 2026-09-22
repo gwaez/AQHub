@@ -5,5 +5,8 @@
   "displayName": "الساحر العتيق",
   "window": { "x": null, "y": null, "scale": 1 },
   "visible": true,
+  "animationLevel": "normal",
+  "idleSleepMs": 90000,
+  "reminders": [],
   "updatedAt": ""
 }

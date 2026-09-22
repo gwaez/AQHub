@@ -4,9 +4,11 @@ import { invoke } from "@tauri-apps/api/core";
 import { createAqHubClient } from "./api/aqhub-client.ts";
 import { WizardSettingsStore, type WizardSettings } from "./settings/wizard-settings.ts";
 import { dispatch, type CharacterWindowPort } from "./engines/action-engine.ts";
-import { WizardStateMachine } from "./state/wizard-state-machine.ts";
+import { WizardStateMachine, isTransientState } from "./state/wizard-state-machine.ts";
 import { applyAnimation } from "./engines/animation-engine.ts";
-import { loadCharacterPack } from "./ui/character.ts";
+import { IdleDirector } from "./engines/idle-director.ts";
+import { BubbleEngine } from "./engines/bubble-engine.ts";
+import { injectWizardSvg, loadCharacterPack } from "./ui/character.ts";
 import { copy } from "./i18n/ar.ts";
 import type { WizardAction } from "./actions/wizard-action.ts";
 
@@ -36,9 +38,7 @@ function browserWindowPort(): CharacterWindowPort {
     async exit() {
       /* browser preview has no process to exit */
     },
-    async setPosition() {
-      /* browser preview does not move the OS window */
-    },
+    async setPosition() {},
   };
 }
 
@@ -63,22 +63,31 @@ function tauriWindowPort(): CharacterWindowPort {
 }
 
 async function main() {
-  const sprite = el<HTMLImageElement>("sprite");
   const character = el("character");
   const nameBtn = el<HTMLButtonElement>("displayName");
   const techId = el("techId");
   const chrome = el("chrome");
   const hubStatus = el("hubStatus");
+  const stateLabel = el("stateLabel");
   const scale = el<HTMLInputElement>("scale");
   const bubble = el("bubble");
   const bubbleText = el("bubbleText");
-
-  bubbleText.textContent = copy.bubblePlaceholder;
-  bubble.setAttribute("dir", "rtl");
+  const composer = el<HTMLFormElement>("composer");
+  const composerTitle = el<HTMLInputElement>("composerTitle");
+  const composerBody = el<HTMLTextAreaElement>("composerBody");
+  const composerDue = el<HTMLInputElement>("composerDue");
+  const ctx = el("ctx");
+  const settingsPanel = el("settingsPanel");
+  const settingsName = el<HTMLInputElement>("settingsName");
+  const settingsAnim = el<HTMLSelectElement>("settingsAnim");
+  const settingsSleep = el<HTMLInputElement>("settingsSleep");
 
   const pack = await loadCharacterPack("old-wizard");
-  sprite.src = pack.idleAssetUrl;
-  sprite.alt = pack.defaultDisplayName;
+  try {
+    await injectWizardSvg(character, pack.svgUrl);
+  } catch {
+    character.innerHTML = "<p class='hint'>missing pack</p>";
+  }
 
   const api = createAqHubClient();
   const filePort = isTauri
@@ -98,6 +107,11 @@ async function main() {
 
   const settings = new WizardSettingsStore(api, filePort);
   const machine = new WizardStateMachine();
+  const bubbles = new BubbleEngine();
+  const idle = new IdleDirector({ sleepAfterMs: 90_000, animationLevel: "normal" }, Date.now());
+  const look = { x: 0, y: 0 };
+  let idleReturnTimer = 0;
+
   const ports = {
     api,
     window: isTauri ? tauriWindowPort() : browserWindowPort(),
@@ -105,20 +119,36 @@ async function main() {
   };
 
   const paint = () => {
-    applyAnimation(character, machine.hint);
+    applyAnimation(character, machine.hint, look, settings.current.animationLevel);
     nameBtn.textContent = settings.current.displayName;
-    sprite.alt = settings.current.displayName;
     techId.textContent = `${settings.current.technicalId} · ${settings.current.characterId}`;
     const s = Math.round((settings.current.window.scale || 1) * 100);
     scale.value = String(s);
     character.style.transform = `scale(${settings.current.window.scale || 1})`;
+    stateLabel.textContent = "الحالة: " + machine.state;
+    bubbles.apply(bubble, bubbleText);
+  };
+
+  const speak = (kind: "speech" | "thought" | "alert", text: string) => {
+    if (!text) return;
+    bubbles.show({ kind, text, dir: pack.bubble.dir, lang: pack.bubble.lang });
+    paint();
   };
 
   const run = async (action: WizardAction) => {
     const result = await dispatch(action, ports, machine);
+    idle.animationLevel = settings.current.animationLevel;
+    idle.sleepAfterMs = settings.current.idleSleepMs;
+    if (result.bubble?.text) speak(result.bubble.kind, result.bubble.text);
+    if (isTransientState(machine.state)) {
+      window.clearTimeout(idleReturnTimer);
+      idleReturnTimer = window.setTimeout(() => {
+        if (isTransientState(machine.state)) void run({ type: "IDLE" });
+      }, 1600);
+    }
     paint();
     if (action.type === "PING_HEALTH") {
-      if (result.ok && result.health?.aqhub) {
+      if (result.ok && "health" in result && result.health?.aqhub) {
         hubStatus.textContent = `${copy.hubUp} · ${result.health.version}`;
         hubStatus.className = "hub up";
       } else {
@@ -129,12 +159,34 @@ async function main() {
     return result;
   };
 
+  const closeOverlays = () => {
+    composer.hidden = true;
+    ctx.hidden = true;
+    settingsPanel.hidden = true;
+    idle.resume(Date.now());
+  };
+
+  const openComposer = (mode: "task" | "note" | "reminder") => {
+    closeOverlays();
+    idle.pause();
+    composer.hidden = false;
+    const radios = composer.querySelectorAll<HTMLInputElement>('input[name="mode"]');
+    radios.forEach((r) => {
+      r.checked = r.value === mode;
+    });
+    composerDue.hidden = mode !== "reminder";
+    composerTitle.focus();
+  };
+
   if (!isTauri) {
     document.body.classList.add("browser-preview");
     chrome.hidden = false;
   }
 
   await run({ type: "LOAD_SETTINGS" });
+  idle.sleepAfterMs = settings.current.idleSleepMs;
+  idle.animationLevel = settings.current.animationLevel;
+  idle.nudge(Date.now());
   if (!settings.current.displayName) {
     await run({ type: "RENAME_DISPLAY", displayName: pack.defaultDisplayName });
   }
@@ -158,7 +210,91 @@ async function main() {
     if (act === "HIDE") await run({ type: "HIDE" });
     if (act === "WATCH") await run({ type: "WATCH" });
     if (act === "IDLE") await run({ type: "IDLE" });
+    if (act === "SLEEP") await run({ type: "SLEEP" });
+    if (act === "THINK") await run({ type: "THINK" });
+    if (act === "ALERT") await run({ type: "ALERT", text: "تنبيه تجريبي" });
     if (act === "OPEN_AQHUB") await run({ type: "OPEN_AQHUB" });
+  });
+
+  character.addEventListener("pointermove", (ev) => {
+    idle.nudge(Date.now());
+    const r = character.getBoundingClientRect();
+    look.x = ((ev.clientX - r.left) / r.width - 0.5) * 6;
+    look.y = ((ev.clientY - r.top) / r.height - 0.5) * 4;
+    if (machine.state === "IDLE" || machine.state === "SLEEPING") void run({ type: "WATCH" });
+    else paint();
+  });
+  character.addEventListener("pointerleave", () => {
+    look.x = 0;
+    look.y = 0;
+    if (machine.state === "WATCHING") void run({ type: "IDLE" });
+  });
+  character.addEventListener("click", (ev) => {
+    ev.preventDefault();
+    idle.nudge(Date.now());
+    openComposer("task");
+  });
+  character.addEventListener("contextmenu", (ev) => {
+    ev.preventDefault();
+    idle.pause();
+    ctx.hidden = false;
+    ctx.style.left = `${Math.min(ev.clientX, window.innerWidth - 200)}px`;
+    ctx.style.top = `${Math.min(ev.clientY, window.innerHeight - 240)}px`;
+  });
+
+  ctx.addEventListener("click", async (ev) => {
+    const btn = (ev.target as HTMLElement).closest("button[data-ctx]");
+    if (!btn) return;
+    const key = btn.getAttribute("data-ctx");
+    closeOverlays();
+    if (key === "NEW_TASK") openComposer("task");
+    if (key === "QUICK_NOTE") openComposer("note");
+    if (key === "OPEN_AQHUB") await run({ type: "OPEN_AQHUB" });
+    if (key === "ASK") speak("thought", copy.askLater);
+    if (key === "SETTINGS") {
+      idle.pause();
+      settingsName.value = settings.current.displayName;
+      settingsAnim.value = settings.current.animationLevel;
+      settingsSleep.value = String(Math.round(settings.current.idleSleepMs / 1000));
+      settingsPanel.hidden = false;
+    }
+    if (key === "HIDE") await run({ type: "HIDE" });
+    if (key === "EXIT") await run({ type: "EXIT" });
+  });
+
+  composer.addEventListener("change", () => {
+    const mode = (composer.querySelector('input[name="mode"]:checked') as HTMLInputElement | null)?.value;
+    composerDue.hidden = mode !== "reminder";
+  });
+  composer.addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    const mode = (composer.querySelector('input[name="mode"]:checked') as HTMLInputElement | null)?.value || "task";
+    const title = composerTitle.value.trim();
+    const body = composerBody.value.trim();
+    closeOverlays();
+    if (mode === "task") await run({ type: "CREATE_TASK", title: title || body, notes: body });
+    else if (mode === "note") await run({ type: "CREATE_NOTE", note: body || title });
+    else if (mode === "reminder") {
+      const due = composerDue.value ? new Date(composerDue.value).toISOString() : "";
+      await run({ type: "SET_REMINDER", text: title || body, dueAt: due });
+    }
+    composerTitle.value = "";
+    composerBody.value = "";
+  });
+  el("composerCancel").addEventListener("click", closeOverlays);
+
+  el("settingsSave").addEventListener("click", async () => {
+    await run({ type: "RENAME_DISPLAY", displayName: settingsName.value });
+    await run({ type: "SET_ANIMATION_LEVEL", level: settingsAnim.value as "normal" | "reduced" | "off" });
+    await run({ type: "SET_SLEEP_MS", ms: Number(settingsSleep.value) * 1000 });
+    closeOverlays();
+  });
+  el("settingsClose").addEventListener("click", closeOverlays);
+
+  document.addEventListener("pointerdown", (ev) => {
+    idle.nudge(Date.now());
+    const t = ev.target as Node;
+    if (!ctx.contains(t) && !ctx.hidden && t !== character) ctx.hidden = true;
   });
 
   if (isTauri) {
@@ -172,24 +308,47 @@ async function main() {
     const win = getCurrentWindow();
     let moveTimer: number | undefined;
     await win.onMoved(async (pos) => {
+      idle.nudge(Date.now());
+      if (machine.state !== "DRAGGING") void run({ type: "DRAG_START" });
       window.clearTimeout(moveTimer);
       moveTimer = window.setTimeout(() => {
         void run({ type: "SET_POSITION", x: pos.payload.x, y: pos.payload.y });
+        void run({ type: "DRAG_END" });
       }, 400);
     });
   }
 
   window.setInterval(() => {
+    const now = Date.now();
     machine.update(
       {
         displayName: settings.current.displayName,
         scale: settings.current.window.scale,
-        nowMs: Date.now(),
+        nowMs: now,
+        animationLevel: settings.current.animationLevel,
+        lookX: look.x,
+        lookY: look.y,
       },
       250,
     );
-    applyAnimation(character, machine.hint);
+    if (idle.shouldSleep(now, machine.state)) void run({ type: "SLEEP" });
+    bubbles.tick(now);
+    paint();
   }, 250);
+
+  window.setInterval(() => {
+    const now = Date.now();
+    let changed = false;
+    const next = settings.current.reminders.map((r) => {
+      if (!r.fired && r.dueAt && new Date(r.dueAt).getTime() <= now) {
+        changed = true;
+        void run({ type: "ALERT", text: r.text || "تذكير" });
+        return { ...r, fired: true };
+      }
+      return r;
+    });
+    if (changed) void settings.save({ reminders: next });
+  }, 1000);
 }
 
 void main();

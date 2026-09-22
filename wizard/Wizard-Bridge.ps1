@@ -2,7 +2,7 @@
 # Dotted from Start-Board.ps1. Owns ONLY data/wizard-settings.json.
 # Never reads or writes tasks.json, eisenhower.json, crm-config, or tokens.
 
-$script:WizardBridgeVersion = '0.1.0-p1'
+$script:WizardBridgeVersion = '0.2.0-p2'
 
 function Get-WizardSettingsPath {
   param([string]$DataDir)
@@ -21,6 +21,9 @@ function Get-WizardDefaultSettings {
       scale = 1
     }
     visible = $true
+    animationLevel = 'normal'
+    idleSleepMs = 90000
+    reminders = @()
     updatedAt = ''
   }
 }
@@ -47,6 +50,15 @@ function Read-WizardSettings {
       if ($null -ne $obj.window.scale) { $defaults.window.scale = [double]$obj.window.scale }
     }
     if ($obj.updatedAt) { $defaults.updatedAt = [string]$obj.updatedAt }
+    if ($obj.animationLevel -and ([string]$obj.animationLevel -in @('normal','reduced','off'))) {
+      $defaults.animationLevel = [string]$obj.animationLevel
+    }
+    if ($null -ne $obj.idleSleepMs) {
+      $ms = [int]$obj.idleSleepMs
+      if ($ms -lt 5000) { $ms = 5000 }
+      $defaults.idleSleepMs = $ms
+    }
+    if ($null -ne $obj.reminders) { $defaults.reminders = @($obj.reminders) }
     return $defaults
   } catch {
     return $defaults
@@ -100,6 +112,19 @@ function Merge-WizardSettings {
       if ($scale -gt 3) { $scale = 3 }
       $Current.window.scale = $scale
     }
+  }
+  if ($Incoming.PSObject.Properties['animationLevel'] -and $Incoming.animationLevel) {
+    $lvl = [string]$Incoming.animationLevel
+    if ($lvl -in @('normal','reduced','off')) { $Current.animationLevel = $lvl }
+  }
+  if ($Incoming.PSObject.Properties['idleSleepMs'] -and $null -ne $Incoming.idleSleepMs) {
+    $ms = [int]$Incoming.idleSleepMs
+    if ($ms -lt 5000) { $ms = 5000 }
+    if ($ms -gt 600000) { $ms = 600000 }
+    $Current.idleSleepMs = $ms
+  }
+  if ($Incoming.PSObject.Properties['reminders'] -and $null -ne $Incoming.reminders) {
+    $Current.reminders = @($Incoming.reminders)
   }
   return $Current
 }

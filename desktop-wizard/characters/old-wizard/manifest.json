@@ -1,20 +1,36 @@
 {
   "id": "old-wizard",
   "technicalId": "AQWizard",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "defaultDisplayName": "الساحر العتيق",
   "displayNameAr": "الساحر العتيق",
   "displayNameEn": "Old Wizard",
-  "license": "placeholder-p1",
+  "license": "placeholder",
+  "tone": "professional-dark-magical",
   "states": {
-    "IDLE": { "asset": "idle.svg", "loop": true },
-    "WATCHING": { "asset": "idle.svg", "loop": true },
-    "HIDDEN": { "asset": null, "loop": false }
+    "IDLE": { "asset": "wizard.svg", "loop": true, "motion": "breathe" },
+    "WATCHING": { "asset": "wizard.svg", "loop": true, "motion": "glance" },
+    "THINKING": { "asset": "wizard.svg", "loop": true, "motion": "ponder" },
+    "SPEAKING": { "asset": "wizard.svg", "loop": true, "motion": "speak" },
+    "ALERT": { "asset": "wizard.svg", "loop": false, "motion": "alert" },
+    "WORKING": { "asset": "wizard.svg", "loop": true, "motion": "work" },
+    "SUCCESS": { "asset": "wizard.svg", "loop": false, "motion": "success" },
+    "ERROR": { "asset": "wizard.svg", "loop": false, "motion": "error" },
+    "DRAGGING": { "asset": "wizard.svg", "loop": false, "motion": "lift" },
+    "SLEEPING": { "asset": "wizard.svg", "loop": true, "motion": "sleep" },
+    "HIDDEN": { "asset": null, "loop": false, "motion": "fade-out" },
+    "WAND": { "asset": "wizard.svg", "stub": true },
+    "NOTE": { "asset": "wizard.svg", "stub": true },
+    "MATRIX": { "asset": "wizard.svg", "stub": true },
+    "TRASH": { "asset": "wizard.svg", "stub": true }
+  },
+  "anchors": {
+    "bubble": { "x": 28, "y": 36, "dir": "rtl" },
+    "wand": { "x": 198, "y": 74 }
   },
   "bubble": {
     "dir": "rtl",
     "lang": "ar",
     "side": "start"
-  },
-  "notes": "P1 silhouette pack. Full art and per-state sprites come in later phases."
+  }
 }

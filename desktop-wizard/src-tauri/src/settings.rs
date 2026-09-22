@@ -19,7 +19,22 @@ pub struct WizardSettings {
     pub display_name: Option<String>,
     pub window: Option<WindowSettings>,
     pub visible: Option<bool>,
+    #[serde(default)]
+    pub animation_level: Option<String>,
+    #[serde(default)]
+    pub idle_sleep_ms: Option<u64>,
+    #[serde(default)]
+    pub reminders: Option<Vec<Reminder>>,
     pub updated_at: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct Reminder {
+    pub id: Option<String>,
+    pub text: Option<String>,
+    pub due_at: Option<String>,
+    pub fired: Option<bool>,
 }
 
 fn looks_like_aqhub(root: &Path) -> bool {
@@ -86,6 +101,9 @@ fn read_settings() -> Result<WizardSettings, String> {
                 scale: Some(1.0),
             }),
             visible: Some(true),
+            animation_level: Some("normal".into()),
+            idle_sleep_ms: Some(90_000),
+            reminders: Some(Vec::new()),
             updated_at: Some(String::new()),
         });
     }
