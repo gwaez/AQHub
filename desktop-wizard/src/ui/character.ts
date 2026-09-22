@@ -1,6 +1,17 @@
 /** Character pack loader. Technical id stays on the pack; display name is user data. */
 
-export const DEFAULT_CHARACTER_ID = "secretary";
+import { DEFAULT_AQHUB_URL } from "../api/aqhub-client.ts";
+import {
+  DEFAULT_CHARACTER_ID,
+  isBuiltinCharacterId,
+  normalizeCharacterId,
+} from "../settings/character-id.ts";
+
+export {
+  DEFAULT_CHARACTER_ID,
+  isSafeCharacterId,
+  normalizeCharacterId,
+} from "../settings/character-id.ts";
 export const KNOWN_CHARACTER_IDS = ["secretary", "old-wizard"] as const;
 export type KnownCharacterId = (typeof KNOWN_CHARACTER_IDS)[number];
 
@@ -27,11 +38,7 @@ export interface CharacterPack {
 const RASTER_EXT = /\.(png|webp|jpe?g)(\?|#|$)/i;
 
 export function isKnownCharacterId(id: unknown): id is KnownCharacterId {
-  return id === "secretary" || id === "old-wizard";
-}
-
-export function normalizeCharacterId(id: unknown): KnownCharacterId {
-  return isKnownCharacterId(id) ? id : DEFAULT_CHARACTER_ID;
+  return isBuiltinCharacterId(id);
 }
 
 export function isRasterAsset(asset: string): boolean {
@@ -93,8 +100,7 @@ function fallbackStates(id: string): Record<string, CharacterStateSpec> {
   };
 }
 
-function fallbackPack(id: string): CharacterPack {
-  const baseUrl = `/characters/${id}`;
+function fallbackPack(id: string, baseUrl = `/characters/${id}`): CharacterPack {
   const states = fallbackStates(id);
   const idleAsset = states.IDLE.asset || (id === "old-wizard" ? "wizard.svg" : "idle.png");
   const secretary = id !== "old-wizard";
@@ -131,13 +137,11 @@ function parseStates(raw: unknown, id: string): Record<string, CharacterStateSpe
   return out;
 }
 
-export async function loadCharacterPack(id = DEFAULT_CHARACTER_ID): Promise<CharacterPack> {
-  const packId = normalizeCharacterId(id);
-  const base = `/characters/${packId}`;
-  const fallback = fallbackPack(packId);
+async function fetchPackFromBase(packId: string, base: string): Promise<CharacterPack | null> {
+  const fallback = fallbackPack(packId, base);
   try {
     const res = await fetch(`${base}/manifest.json`);
-    if (!res.ok) return fallback;
+    if (!res.ok) return null;
     const m = (await res.json()) as {
       id?: string;
       technicalId?: string;
@@ -167,8 +171,20 @@ export async function loadCharacterPack(id = DEFAULT_CHARACTER_ID): Promise<Char
       states,
     };
   } catch {
-    return fallback;
+    return null;
   }
+}
+
+export async function loadCharacterPack(id = DEFAULT_CHARACTER_ID): Promise<CharacterPack> {
+  const packId = normalizeCharacterId(id);
+  const local = await fetchPackFromBase(packId, `/characters/${packId}`);
+  if (local) return local;
+  const remote = await fetchPackFromBase(
+    packId,
+    `${DEFAULT_AQHUB_URL}/api/v1/wizard/characters/${packId}`,
+  );
+  if (remote) return remote;
+  return fallbackPack(packId);
 }
 
 export function injectWizardRaster(host: HTMLElement, url: string, alt = ""): void {

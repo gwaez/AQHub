@@ -3,8 +3,9 @@
 import type { AuditLine } from "../api/audit.ts";
 import { formatAuditLine } from "../api/audit.ts";
 import type { MailStatus } from "../api/mail.ts";
-import type { WizardSettings } from "../api/aqhub-client.ts";
+import { DEFAULT_AQHUB_URL, type WizardSettings } from "../api/aqhub-client.ts";
 import type { UiCopy } from "../i18n/ar.ts";
+import { isSafeCharacterId, normalizeCharacterId } from "../settings/character-id.ts";
 import {
   CAPABILITIES,
   type CapabilityId,
@@ -30,6 +31,10 @@ export class SettingsPanel {
   private last: WizardSettings | null = null;
   private debounce = 0;
   private mailStatus: MailStatus | null = null;
+  private packs: { id: string; label: string }[] = [
+    { id: "secretary", label: "secretary — السكرتيرة" },
+    { id: "old-wizard", label: "old-wizard — الساحر العتيق" },
+  ];
 
   constructor(host: HTMLElement, handlers: SettingsHandlers, copy: UiCopy) {
     this.host = host;
@@ -77,6 +82,9 @@ export class SettingsPanel {
   show(settings: WizardSettings, audit: AuditLine[], mail?: MailStatus | null): void {
     this.host.hidden = false;
     this.sync(settings, audit, mail);
+    void this.refreshPacks().then(() => {
+      if (!this.host.hidden && this.last) this.render(this.last, audit);
+    });
   }
 
   hide(): void {
@@ -134,7 +142,7 @@ export class SettingsPanel {
         patch.displayName = el.value;
         break;
       case "characterId":
-        patch.characterId = el.value === "old-wizard" ? "old-wizard" : "secretary";
+        patch.characterId = normalizeCharacterId(el.value);
         break;
       case "scale":
         patch.window = {
@@ -176,6 +184,38 @@ export class SettingsPanel {
         return;
     }
     this.handlers.onPatch(patch);
+  }
+
+  private async refreshPacks(): Promise<void> {
+    try {
+      const res = await fetch(`${DEFAULT_AQHUB_URL}/api/v1/wizard/characters`);
+      if (!res.ok) return;
+      const body = (await res.json()) as {
+        characters?: { id?: string; displayName?: string; defaultDisplayName?: string }[];
+      };
+      const next: { id: string; label: string }[] = [];
+      const seen = new Set<string>();
+      for (const row of body.characters || []) {
+        const id = String(row.id || "");
+        if (!isSafeCharacterId(id) || seen.has(id)) continue;
+        seen.add(id);
+        const name = String(row.displayName || row.defaultDisplayName || id);
+        next.push({ id, label: `${id} — ${name}` });
+      }
+      if (next.length) this.packs = next;
+    } catch {
+      /* keep built-in list when the board is down */
+    }
+  }
+
+  private packOptions(settings: WizardSettings): string {
+    const rows = [...this.packs];
+    if (isSafeCharacterId(settings.characterId) && !rows.some((p) => p.id === settings.characterId)) {
+      rows.push({ id: settings.characterId, label: settings.characterId });
+    }
+    return rows
+      .map((p) => `<option value="${esc(p.id)}" ${sel(settings.characterId === p.id)}>${esc(p.label)}</option>`)
+      .join("");
   }
 
   private fillValues(settings: WizardSettings): void {
@@ -283,8 +323,7 @@ export class SettingsPanel {
         <section data-settings-section="character">
           <label>${esc(c.packSelect)}
             <select data-set="characterId">
-              <option value="secretary" ${sel(settings.characterId === "secretary")}>secretary — السكرتيرة</option>
-              <option value="old-wizard" ${sel(settings.characterId === "old-wizard")}>old-wizard — الساحر العتيق</option>
+              ${this.packOptions(settings)}
             </select>
           </label>
           <label>${esc(c.displayNameLabel)}

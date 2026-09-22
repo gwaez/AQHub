@@ -663,6 +663,11 @@ async function main() {
       if (t === "HIDE") await run({ type: "HIDE" });
       if (t === "OPEN_AQHUB") await run({ type: "OPEN_AQHUB" });
       if (t === "WATCH") await run({ type: "WATCH" });
+      if (t === "SETTINGS") {
+        await run({ type: "SHOW" });
+        await openSettings();
+      }
+      if (t === "MATRIX" || t === "EISENHOWER") await openAqHubEisenhower();
     });
     const win = getCurrentWindow();
     try {

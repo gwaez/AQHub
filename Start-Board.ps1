@@ -2647,7 +2647,7 @@ while ($listener.IsListening) {
     }
     if ($path.StartsWith('/api/v1/wizard/')) {
       if (Get-Command Invoke-WizardBridge -ErrorAction SilentlyContinue) {
-        $handled = Invoke-WizardBridge -Req $req -Res $res -Path $path -DataDir $dataDir
+        $handled = Invoke-WizardBridge -Req $req -Res $res -Path $path -DataDir $dataDir -Root $Root
         if ($handled) { continue }
       }
     }
