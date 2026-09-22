@@ -1,0 +1,37 @@
+{
+  "items": [
+    {
+      "value": [
+        {
+          "id": "E-sample-inbox",
+          "taskId": "T-sample-1",
+          "title": "Inbox sample",
+          "source": "task",
+          "quad": "inbox",
+          "done": false,
+          "note": ""
+        },
+        {
+          "id": "E-sample-do",
+          "taskId": "T-sample-2",
+          "title": "Do sample",
+          "source": "task",
+          "quad": "do",
+          "done": false,
+          "note": ""
+        },
+        {
+          "id": "E-sample-sched",
+          "taskId": "T-sample-3",
+          "title": "Schedule sample",
+          "source": "task",
+          "quad": "sched",
+          "done": false,
+          "note": ""
+        }
+      ],
+      "Count": 3
+    }
+  ],
+  "updatedAt": "2026-01-01T00:00:00.0000000Z"
+}

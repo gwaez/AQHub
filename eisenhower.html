@@ -664,6 +664,51 @@ function markDirty(){
   clearTimeout(saveTimer); saveTimer = setTimeout(save, 700);
 }
 function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function itemTitle(it){
+  if (!it) return 'بدون عنوان';
+  const raw = it.title || it.subject || it.taskTitle || '';
+  let s = String(raw).trim();
+  if (!s || s === 'undefined' || s === 'null') s = it.taskId ? String(it.taskId).trim() : '';
+  if (!s || s === 'undefined' || s === 'null') return 'بدون عنوان';
+  return s;
+}
+function isEisWrapper(it){
+  if (!it || typeof it !== 'object') return true;
+  if (it.id || it.taskId) return false;
+  if (Array.isArray(it.value) || typeof it.value === 'string') return true;
+  return false;
+}
+function normalizeEisItems(raw){
+  if (raw == null) return [];
+  if (typeof raw === 'string'){
+    const t = raw.trim();
+    if (!t) return [];
+    if (t.charAt(0)==='[' || t.charAt(0)==='{'){
+      try { return normalizeEisItems(JSON.parse(t)); } catch { return []; }
+    }
+    return [];
+  }
+  if (Array.isArray(raw)){
+    if (raw.length === 1 && raw[0] && typeof raw[0] === 'object' && !raw[0].id && Object.prototype.hasOwnProperty.call(raw[0], 'value')){
+      return normalizeEisItems(raw[0].value);
+    }
+    const out = [];
+    raw.forEach(it => {
+      if (!it || typeof it !== 'object') return;
+      if (isEisWrapper(it) && Object.prototype.hasOwnProperty.call(it, 'value')){
+        normalizeEisItems(it.value).forEach(x => out.push(x));
+        return;
+      }
+      if (it.id || it.taskId) out.push(it);
+    });
+    return out;
+  }
+  if (typeof raw === 'object'){
+    if (!raw.id && Object.prototype.hasOwnProperty.call(raw, 'value')) return normalizeEisItems(raw.value);
+    if (raw.id || raw.taskId) return [raw];
+  }
+  return [];
+}
 
 function dayKey(v){
   if (!v) return '';
@@ -736,7 +781,7 @@ function matches(it, f){
 function sortList(list, f){
   const arr = list.slice();
   const s = (f&&f.sort)||'new';
-  if (s==='title') arr.sort((a,b)=>String(a.title||'').localeCompare(String(b.title||''),'ar'));
+  if (s==='title') arr.sort((a,b)=>itemTitle(a).localeCompare(itemTitle(b),'ar'));
   else if (s==='old') arr.sort((a,b)=>String(a.createdAt||'').localeCompare(String(b.createdAt||'')));
   else arr.sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
   return arr;
@@ -750,7 +795,7 @@ function listForQuad(quad, f){
 
 function summaryOf(it){
   return [
-    '<b>'+escapeHtml(it.title)+'</b>',
+    '<b>'+escapeHtml(itemTitle(it))+'</b>',
     'المكان: '+(LABELS[it.quad]||it.quad),
     'المصدر: '+(it.source||'manual'),
     it.taskId ? ('تاسك: '+escapeHtml(it.taskId)) : 'تاسك: —',
@@ -769,7 +814,7 @@ function cardEl(it, hostList){
   const notePreview = hasNote
     ? `<div class="note-line">${escapeHtml(String(it.note).slice(0,220))}${String(it.note).length>220?'…':''}</div>`
     : '';
-  el.innerHTML = `<div class="card-title"><span class="tag">${escapeHtml(it.source||'manual')}</span> ${escapeHtml(it.title||'')}</div>
+  el.innerHTML = `<div class="card-title"><span class="tag">${escapeHtml(it.source||'manual')}</span> ${escapeHtml(itemTitle(it))}</div>
     ${notePreview}
     <div class="meta"><span>${LABELS[it.quad]||it.quad}</span></div>`;
   const nl = el.querySelector('.note-line');
@@ -1313,7 +1358,7 @@ function paintNoteEditor(){
     const it = items.find(x => x.id === noteId);
     if (!it){ closeNote(); return; }
     $('noteModalTitle').textContent = (it.note||'').trim() ? 'تعديل النوت' : 'كتابة نوت';
-    $('noteSub').textContent = it.title || 'بند بدون عنوان';
+    $('noteSub').textContent = itemTitle(it);
     $('noteHelp').textContent = 'اكتب هنا اللي يخليك تفتكر البند. بعد الحفظ هتظهر على الكارت بس لو فيها نص.';
     titleIn.hidden = true;
     $('noteText').value = it.note || '';
@@ -1525,7 +1570,7 @@ function refreshGenerated(){
     const vis = items.filter(it => it.quad!=='trash' && matches(it, activeFilter()));
     if (!vis.length){ box.innerHTML = '<p class="muted">مفيش بنود ظاهرة</p>'; return; }
     box.innerHTML = vis.slice(0,80).map(it =>
-      '<div class="notes-item" data-jump="'+escapeHtml(it.id)+'"><b>'+escapeHtml(it.title||'')+'</b>'+
+      '<div class="notes-item" data-jump="'+escapeHtml(it.id)+'"><b>'+escapeHtml(itemTitle(it))+'</b>'+
       '<p>'+escapeHtml(LABELS[it.quad]||it.quad)+(it.note?(' · '+String(it.note).slice(0,80)):'')+'</p></div>'
     ).join('');
     box.querySelectorAll('[data-jump]').forEach(n => n.onclick = () => {
@@ -1539,7 +1584,7 @@ function refreshGenerated(){
     const vis = items.slice().sort((a,b)=>String(b.updatedAt||b.createdAt||'').localeCompare(String(a.updatedAt||a.createdAt||'')));
     box.innerHTML = vis.slice(0,40).map(it =>
       '<div class="tl-row"><span class="when">'+escapeHtml(String(it.updatedAt||it.createdAt||'').slice(0,16).replace('T',' '))+'</span>'+
-      '<span><b>'+escapeHtml(it.title||'')+'</b> · '+(LABELS[it.quad]||it.quad)+
+      '<span><b>'+escapeHtml(itemTitle(it))+'</b> · '+(LABELS[it.quad]||it.quad)+
       (it.note?('<div class="muted">'+escapeHtml(String(it.note).slice(0,100))+'</div>'):'')+'</span></div>'
     ).join('') || '<p class="muted">فاضي</p>';
   });
@@ -2382,13 +2427,13 @@ async function load(){
   let localItems = [];
   try {
     const raw = localStorage.getItem('aqaar-eisenhower');
-    if (raw) localItems = (JSON.parse(raw).items)||[];
+    if (raw) localItems = normalizeEisItems((JSON.parse(raw).items)||[]);
   } catch {}
   try {
     const r = await fetch('/api/eisenhower');
     if (!r.ok) throw new Error('HTTP '+r.status);
     const j = await r.json();
-    items = Array.isArray(j.items) ? j.items : [];
+    items = normalizeEisItems(j.items);
     const localById = {};
     localItems.forEach(x => { if (x && x.id) localById[x.id]=x; });
     items.forEach(it => {
@@ -2400,13 +2445,13 @@ async function load(){
     setBadge('on','أونلاين · محفوظ');
   } catch {
     try {
-      items = localItems;
+      items = normalizeEisItems(localItems);
       if (items.length) setBadge('wait','أوفلاين · من الجهاز');
       else {
         const raw = localStorage.getItem('aqaar-eisenhower');
         if (raw) {
           const j = JSON.parse(raw);
-          items = j.items||[];
+          items = normalizeEisItems(j.items||[]);
           window.__savedAt = j.updatedAt||'';
           setBadge('wait','أوفلاين · من الجهاز');
         } else setBadge('off','فارغ');
@@ -2423,6 +2468,7 @@ async function load(){
 }
 
 async function save(){
+  items = normalizeEisItems(items);
   const payload = { items, updatedAt: new Date().toISOString() };
   try { localStorage.setItem('aqaar-eisenhower', JSON.stringify(payload)); } catch {}
   try {

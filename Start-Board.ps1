@@ -173,6 +173,15 @@ try {
 } catch {
   Write-Host ('Mail-Sync.ps1 failed to load: ' + $_.Exception.Message)
 }
+$eisJsonPath = Join-Path (Join-Path $Root 'wizard') 'Eis-Json.ps1'
+# wizard/Eis-Json.ps1: ConvertTo-EisJson writes items as a JSON array of objects.
+try {
+  if (Test-Path -LiteralPath $eisJsonPath) {
+    . $eisJsonPath
+  }
+} catch {
+  Write-Host ('Eis-Json.ps1 failed to load: ' + $_.Exception.Message)
+}
 function Show-Toast([string]$title, [string]$body) {
   try {
     Add-Type -AssemblyName System.Windows.Forms | Out-Null
@@ -2567,6 +2576,162 @@ if (Test-Path $wizardBridgePath) {
   . $wizardBridgePath
 }
 
+function Get-TaskIndex {
+  $tasksPath = Join-Path $dataDir 'tasks.json'
+  $map = @{}
+  if (-not (Test-Path $tasksPath)) { return $map }
+  try {
+    $tj = [IO.File]::ReadAllText($tasksPath, [Text.Encoding]::UTF8) | ConvertFrom-Json
+    foreach ($t in @($tj.tasks)) {
+      if ($t.id) { $map[[string]$t.id] = $t }
+    }
+  } catch {}
+  return $map
+}
+
+function ConvertTo-EisItemFromTask($t, [string]$quad = 'inbox') {
+  if (-not $t) { return $null }
+  $src = ([string]$t.source).ToLowerInvariant()
+  if (-not $src) { $src = 'task' }
+  $title = [string]$(if ($t.title) { $t.title } elseif ($t.subject) { $t.subject } else { $t.id })
+  if (-not $title -or $title -eq 'undefined' -or $title -eq 'null') { $title = [string]$t.id }
+  $entry = [string]$(if ($t.entryId) { $t.entryId } else { $t.entryID })
+  $mailQuery = ''
+  $sref = [string]$t.sourceRef
+  if ($sref -match '/\s*(.+)$') { $mailQuery = $Matches[1].Trim() }
+  elseif ($title) { $mailQuery = $title }
+  $crmUrl = [string]$t.crmUrl
+  $sourceUrl = [string]$t.sourceUrl
+  $teamsUrl = [string]$t.teamsUrl
+  if ($src -eq 'crm' -and -not $crmUrl -and $sref -match '^([a-z0-9_]+):([0-9a-fA-F-]{36})$') {
+    $crmUrl = "https://aqaar.crm15.dynamics.com/main.aspx?pagetype=entityrecord&etn=$($Matches[1])&id=$($Matches[2])"
+    $sourceUrl = $crmUrl
+  }
+  $now = (Get-Date).ToUniversalTime().ToString('o')
+  return [pscustomobject]@{
+    id = ('E-' + [guid]::NewGuid().ToString('n').Substring(0,12))
+    taskId = [string]$t.id
+    title = $title
+    source = $src
+    quad = $quad
+    done = $false
+    note = ''
+    entryId = $entry
+    sourceRef = $sref
+    fromEmail = [string]$t.fromEmail
+    mailQuery = $mailQuery
+    sourceUrl = $sourceUrl
+    crmUrl = $crmUrl
+    teamsUrl = $teamsUrl
+    url = [string]$t.url
+    createdAt = $now
+    updatedAt = $now
+  }
+}
+
+function Merge-EisItemWithTask($item, $t) {
+  if (-not $item -or -not $t) { return $item }
+  $isHash = $item -is [hashtable] -or $item -is [System.Collections.Specialized.OrderedDictionary]
+  function Set-Prop($o, $name, $val) {
+    if ($null -eq $val -or [string]$val -eq '') { return }
+    if ($o -is [hashtable] -or $o -is [System.Collections.Specialized.OrderedDictionary]) { $o[$name] = $val }
+    else { try { $o | Add-Member -NotePropertyName $name -NotePropertyValue $val -Force } catch {} }
+  }
+  $src = ([string]$t.source).ToLowerInvariant()
+  if ($src) { Set-Prop $item 'source' $src }
+  $entry = [string]$(if ($t.entryId) { $t.entryId } else { $t.entryID })
+  if ($entry) { Set-Prop $item 'entryId' $entry }
+  if ($t.sourceRef) { Set-Prop $item 'sourceRef' ([string]$t.sourceRef) }
+  if ($t.fromEmail) { Set-Prop $item 'fromEmail' ([string]$t.fromEmail) }
+  $mq = ''
+  $sref = [string]$t.sourceRef
+  if ($sref -match '/\s*(.+)$') { $mq = $Matches[1].Trim() }
+  elseif ($t.title) { $mq = [string]$t.title }
+  if ($mq) { Set-Prop $item 'mailQuery' $mq }
+  if ($t.sourceUrl) { Set-Prop $item 'sourceUrl' ([string]$t.sourceUrl) }
+  if ($t.crmUrl) { Set-Prop $item 'crmUrl' ([string]$t.crmUrl) }
+  if ($t.teamsUrl) { Set-Prop $item 'teamsUrl' ([string]$t.teamsUrl) }
+  if ($t.url) { Set-Prop $item 'url' ([string]$t.url) }
+  $curTitle = ''
+  if ($isHash) { $curTitle = [string]$item['title'] } else { try { $curTitle = [string]$item.title } catch { $curTitle = '' } }
+  if (-not $curTitle -or $curTitle -eq 'undefined' -or $curTitle -eq 'null') {
+    $taskTitle = [string]$(if ($t.title) { $t.title } elseif ($t.subject) { $t.subject } else { $t.id })
+    if ($taskTitle) { Set-Prop $item 'title' $taskTitle }
+  }
+  if ($src -eq 'crm') {
+    $crm = if ($isHash) { [string]$item['crmUrl'] } else { [string]$item.crmUrl }
+    if (-not $crm -and $sref -match '^([a-z0-9_]+):([0-9a-fA-F-]{36})$') {
+      $u = "https://aqaar.crm15.dynamics.com/main.aspx?pagetype=entityrecord&etn=$($Matches[1])&id=$($Matches[2])"
+      Set-Prop $item 'crmUrl' $u
+      Set-Prop $item 'sourceUrl' $u
+    }
+  }
+  return $item
+}
+
+function Enrich-EisPayload($payload) {
+  $map = Get-TaskIndex
+  $items = @(Get-EisNormalizedItems $payload)
+  $out = New-EisArrayList
+  foreach ($it in $items) {
+    if (-not (Test-EisRealItem $it)) { continue }
+    $tid = [string]$(if ($it.taskId) { $it.taskId } elseif ($it.PSObject.Properties['taskId']) { $it.taskId } else { '' })
+    if ($tid -and $map.ContainsKey($tid)) {
+      $it = Merge-EisItemWithTask $it $map[$tid]
+    }
+    [void]$out.Add($it)
+  }
+  return (Set-EisPayloadItems $payload @($out))
+}
+
+function Invoke-EisAutoFeed([bool]$force = $false) {
+  $payload = Read-EisDoc $eisenhowerPath
+  $items = New-EisArrayList
+  foreach ($it in @(Get-EisNormalizedItems $payload)) {
+    if (Test-EisRealItem $it) { [void]$items.Add($it) }
+  }
+
+  $existingTask = @{}
+  $trashedTask = @{}
+  foreach ($it in @($items)) {
+    $tid = [string](Get-EisProp $it 'taskId')
+    if (-not $tid) { continue }
+    $quad = [string](Get-EisProp $it 'quad')
+    if ($quad -eq 'trash') { $trashedTask[$tid] = $true }
+    else { $existingTask[$tid] = $true }
+  }
+
+  $added = 0
+  $tasksPath = Join-Path $dataDir 'tasks.json'
+  if (-not (Test-Path $tasksPath)) {
+    return @{ ok = $true; added = 0; total = $items.Count; message = 'no_tasks' }
+  }
+  $tj = [IO.File]::ReadAllText($tasksPath, [Text.Encoding]::UTF8) | ConvertFrom-Json
+  foreach ($t in @($tj.tasks)) {
+    $st = ([string]$(if ($t.status) { $t.status } else { $t.state })).ToLowerInvariant()
+    if ($st -match 'done|closed|complet|archive') { continue }
+    $tid = [string]$t.id
+    if (-not $tid) { continue }
+    if ($existingTask.ContainsKey($tid) -or $trashedTask.ContainsKey($tid)) { continue }
+    $row = ConvertTo-EisItemFromTask $t 'inbox'
+    if ($row) {
+      [void]$items.Insert(0, $row)
+      $existingTask[$tid] = $true
+      $added++
+    }
+  }
+
+  $now = (Get-Date).ToUniversalTime().ToString('o')
+  $outObj = @{
+    items = @($items)
+    updatedAt = $now
+    lastFeedAt = $now
+    lastFeedAdded = $added
+  }
+  [void](Save-EisDoc $outObj $eisenhowerPath)
+  return @{ ok = $true; added = $added; total = $items.Count; lastFeedAt = $now; source = 'feed' }
+}
+
 while ($listener.IsListening) {
   $ctx = $listener.GetContext()
   $req = $ctx.Request
@@ -2630,162 +2795,6 @@ while ($listener.IsListening) {
       Write-Json $res @{ ok = $true }
       continue
     }
-    
-function Get-TaskIndex {
-  $tasksPath = Join-Path $dataDir 'tasks.json'
-  $map = @{}
-  if (-not (Test-Path $tasksPath)) { return $map }
-  try {
-    $tj = [IO.File]::ReadAllText($tasksPath, [Text.Encoding]::UTF8) | ConvertFrom-Json
-    foreach ($t in @($tj.tasks)) {
-      if ($t.id) { $map[[string]$t.id] = $t }
-    }
-  } catch {}
-  return $map
-}
-
-function ConvertTo-EisItemFromTask($t, [string]$quad = 'inbox') {
-  if (-not $t) { return $null }
-  $src = ([string]$t.source).ToLowerInvariant()
-  if (-not $src) { $src = 'task' }
-  $title = [string]$(if ($t.title) { $t.title } elseif ($t.subject) { $t.subject } else { $t.id })
-  $entry = [string]$(if ($t.entryId) { $t.entryId } else { $t.entryID })
-  $mailQuery = ''
-  $sref = [string]$t.sourceRef
-  if ($sref -match '/\s*(.+)$') { $mailQuery = $Matches[1].Trim() }
-  elseif ($title) { $mailQuery = $title }
-  $crmUrl = [string]$t.crmUrl
-  $sourceUrl = [string]$t.sourceUrl
-  $teamsUrl = [string]$t.teamsUrl
-  if ($src -eq 'crm' -and -not $crmUrl -and $sref -match '^([a-z0-9_]+):([0-9a-fA-F-]{36})$') {
-    $crmUrl = "https://aqaar.crm15.dynamics.com/main.aspx?pagetype=entityrecord&etn=$($Matches[1])&id=$($Matches[2])"
-    $sourceUrl = $crmUrl
-  }
-  $now = (Get-Date).ToUniversalTime().ToString('o')
-  return [pscustomobject]@{
-    id = ('E-' + [guid]::NewGuid().ToString('n').Substring(0,12))
-    taskId = [string]$t.id
-    title = $title
-    source = $src
-    quad = $quad
-    done = $false
-    note = ''
-    entryId = $entry
-    sourceRef = $sref
-    fromEmail = [string]$t.fromEmail
-    mailQuery = $mailQuery
-    sourceUrl = $sourceUrl
-    crmUrl = $crmUrl
-    teamsUrl = $teamsUrl
-    url = [string]$t.url
-    createdAt = $now
-    updatedAt = $now
-  }
-}
-
-function Merge-EisItemWithTask($item, $t) {
-  if (-not $item -or -not $t) { return $item }
-  $isHash = $item -is [hashtable] -or $item -is [System.Collections.Specialized.OrderedDictionary]
-  function Set-Prop($o, $name, $val) {
-    if ($null -eq $val -or [string]$val -eq '') { return }
-    if ($o -is [hashtable] -or $o -is [System.Collections.Specialized.OrderedDictionary]) { $o[$name] = $val }
-    else { try { $o | Add-Member -NotePropertyName $name -NotePropertyValue $val -Force } catch {} }
-  }
-  $src = ([string]$t.source).ToLowerInvariant()
-  if ($src) { Set-Prop $item 'source' $src }
-  $entry = [string]$(if ($t.entryId) { $t.entryId } else { $t.entryID })
-  if ($entry) { Set-Prop $item 'entryId' $entry }
-  if ($t.sourceRef) { Set-Prop $item 'sourceRef' ([string]$t.sourceRef) }
-  if ($t.fromEmail) { Set-Prop $item 'fromEmail' ([string]$t.fromEmail) }
-  $mq = ''
-  $sref = [string]$t.sourceRef
-  if ($sref -match '/\s*(.+)$') { $mq = $Matches[1].Trim() }
-  elseif ($t.title) { $mq = [string]$t.title }
-  if ($mq) { Set-Prop $item 'mailQuery' $mq }
-  if ($t.sourceUrl) { Set-Prop $item 'sourceUrl' ([string]$t.sourceUrl) }
-  if ($t.crmUrl) { Set-Prop $item 'crmUrl' ([string]$t.crmUrl) }
-  if ($t.teamsUrl) { Set-Prop $item 'teamsUrl' ([string]$t.teamsUrl) }
-  if ($t.url) { Set-Prop $item 'url' ([string]$t.url) }
-  if ($src -eq 'crm') {
-    $crm = if ($isHash) { [string]$item['crmUrl'] } else { [string]$item.crmUrl }
-    if (-not $crm -and $sref -match '^([a-z0-9_]+):([0-9a-fA-F-]{36})$') {
-      $u = "https://aqaar.crm15.dynamics.com/main.aspx?pagetype=entityrecord&etn=$($Matches[1])&id=$($Matches[2])"
-      Set-Prop $item 'crmUrl' $u
-      Set-Prop $item 'sourceUrl' $u
-    }
-  }
-  return $item
-}
-
-function Enrich-EisPayload($payload) {
-  $map = Get-TaskIndex
-  $items = @()
-  if ($payload.items) { $items = @($payload.items) }
-  $out = @()
-  foreach ($it in $items) {
-    $tid = [string]$(if ($it.taskId) { $it.taskId } elseif ($it.PSObject.Properties['taskId']) { $it.taskId } else { '' })
-    if ($tid -and $map.ContainsKey($tid)) {
-      $it = Merge-EisItemWithTask $it $map[$tid]
-    }
-    $out += $it
-  }
-  if ($payload -is [hashtable]) { $payload['items'] = $out }
-  else { try { $payload | Add-Member -NotePropertyName items -NotePropertyValue $out -Force } catch { $payload.items = $out } }
-  return $payload
-}
-
-function Invoke-EisAutoFeed([bool]$force = $false) {
-  $map = Get-TaskIndex
-  $payload = @{ items = @(); updatedAt = ''; lastFeedAt = '' }
-  if (Test-Path $eisenhowerPath) {
-    try { $payload = [IO.File]::ReadAllText($eisenhowerPath, [Text.Encoding]::UTF8) | ConvertFrom-Json } catch {}
-  }
-  $items = New-Object System.Collections.Generic.List[object]
-  foreach ($it in @($payload.items)) { [void]$items.Add($it) }
-
-  $existingTask = @{}
-  $trashedTask = @{}
-  foreach ($it in $items) {
-    $tid = [string]$it.taskId
-    if (-not $tid) { continue }
-    if ([string]$it.quad -eq 'trash') { $trashedTask[$tid] = $true }
-    else { $existingTask[$tid] = $true }
-  }
-
-  $added = 0
-  $tasksPath = Join-Path $dataDir 'tasks.json'
-  if (-not (Test-Path $tasksPath)) {
-    return @{ ok = $true; added = 0; total = $items.Count; message = 'no_tasks' }
-  }
-  $tj = [IO.File]::ReadAllText($tasksPath, [Text.Encoding]::UTF8) | ConvertFrom-Json
-  foreach ($t in @($tj.tasks)) {
-    $st = ([string]$(if ($t.status) { $t.status } else { $t.state })).ToLowerInvariant()
-    if ($st -match 'done|closed|complet|archive') { continue }
-    $tid = [string]$t.id
-    if (-not $tid) { continue }
-    if ($existingTask.ContainsKey($tid) -or $trashedTask.ContainsKey($tid)) { continue }
-    $row = ConvertTo-EisItemFromTask $t 'inbox'
-    if ($row) {
-      if ($row -is [hashtable] -or $row -is [System.Collections.Specialized.OrderedDictionary]) { $row = [pscustomobject]$row }; [void]$items.Insert(0, $row)
-      $existingTask[$tid] = $true
-      $added++
-    }
-  }
-
-  $now = (Get-Date).ToUniversalTime().ToString('o')
-  $arr = New-Object object[] $items.Count
-  for ($i = 0; $i -lt $items.Count; $i++) { $arr[$i] = $items[$i] }
-  $outObj = @{
-    items = $arr
-    updatedAt = $now
-    lastFeedAt = $now
-    lastFeedAdded = $added
-  }
-  $json = ($outObj | ConvertTo-Json -Depth 10 -Compress)
-  [IO.File]::WriteAllText($eisenhowerPath, $json, [Text.UTF8Encoding]::new($false))
-  return @{ ok = $true; added = $added; total = $items.Count; lastFeedAt = $now; source = 'feed' }
-}
-
 
     if ($path -eq '/api/signing-platforms' -and $req.HttpMethod -eq 'GET') {
       $sp = Join-Path $dataDir 'signing-platforms.json'
@@ -2795,63 +2804,76 @@ function Invoke-EisAutoFeed([bool]$force = $false) {
         @{ id = 'digisign'; url = 'https://digisign.aqaar.com/'; kind = 'internal_sign' }
       ) }
       continue
-    }if ($path -eq '/api/eisenhower/feed' -and $req.HttpMethod -eq 'POST') {
-  $force = $false
-  try {
-    $qb = [string]$req.QueryString['force']
-    if ($qb -and ($qb.Trim().ToLowerInvariant() -in @('1','true','yes'))) { $force = $true }
-  } catch {}
-  $result = Invoke-EisAutoFeed -force $force
-  Write-Json $res $result
-  continue
-}
-if ($path -eq '/api/eisenhower' -and $req.HttpMethod -eq 'GET') {
-  try {
-    $payload = $null
-    if (Test-Path $eisenhowerPath) { $payload = [IO.File]::ReadAllText($eisenhowerPath, [Text.Encoding]::UTF8) | ConvertFrom-Json }
-    if (-not $payload) { $payload = [pscustomobject]@{ items = @(); updatedAt = '' } }
-    $payload = Enrich-EisPayload $payload
-    try {
-      $payload | Add-Member -NotePropertyName enrichedAt -NotePropertyValue ((Get-Date).ToUniversalTime().ToString('o')) -Force
-      [IO.File]::WriteAllText($eisenhowerPath, ($payload | ConvertTo-Json -Depth 10 -Compress), [Text.UTF8Encoding]::new($false))
-    } catch {}
-    Write-Json $res $payload
-  } catch { Write-FileResp $res $eisenhowerPath }
-  continue
-}
+    }
+    if ($path -eq '/api/eisenhower/feed' -and $req.HttpMethod -eq 'POST') {
+      $force = $false
+      try {
+        $qb = [string]$req.QueryString['force']
+        if ($qb -and ($qb.Trim().ToLowerInvariant() -in @('1','true','yes'))) { $force = $true }
+      } catch {}
+      $result = Invoke-EisAutoFeed -force $force
+      Write-Json $res $result
+      continue
+    }
+    if ($path -eq '/api/eisenhower' -and $req.HttpMethod -eq 'GET') {
+      try {
+        $payload = Read-EisDoc $eisenhowerPath
+        $real = @(Get-EisNormalizedItems $payload)
+        if ($real.Count -eq 0) {
+          $null = Invoke-EisAutoFeed
+          $payload = Read-EisDoc $eisenhowerPath
+        }
+        $payload = Enrich-EisPayload $payload
+        try {
+          $payload | Add-Member -NotePropertyName enrichedAt -NotePropertyValue ((Get-Date).ToUniversalTime().ToString('o')) -Force
+        } catch {}
+        $json = Save-EisDoc $payload $eisenhowerPath
+        Write-Text $res 200 'application/json; charset=utf-8' $json
+      } catch {
+        try {
+          $fallback = ConvertTo-EisJson (Read-EisDoc $eisenhowerPath)
+          Write-Text $res 200 'application/json; charset=utf-8' $fallback
+        } catch {
+          Write-Json $res @{ items = @(); updatedAt = ''; error = 'eis_read_failed' }
+        }
+      }
+      continue
+    }
     if ($path -eq '/api/eisenhower' -and $req.HttpMethod -eq 'POST') {
       $body = Read-Body $req
       $incoming = $null
       try { $incoming = $body | ConvertFrom-Json } catch { Write-Json $res @{ ok = $false; error = 'bad_json' }; continue }
-      # Preserve source linkage if browser posted older items without entryId/crmUrl
       $prevMap = @{}
-      if (Test-Path $eisenhowerPath) {
-        try {
-          $prev = [IO.File]::ReadAllText($eisenhowerPath, [Text.Encoding]::UTF8) | ConvertFrom-Json
-          foreach ($p in @($prev.items)) {
-            if ($p.id) { $prevMap[[string]$p.id] = $p }
-            elseif ($p.taskId) { $prevMap[('task:' + [string]$p.taskId)] = $p }
-          }
-        } catch {}
+      $prev = Read-EisDoc $eisenhowerPath
+      foreach ($p in @(Get-EisNormalizedItems $prev)) {
+        $pid = [string](Get-EisProp $p 'id')
+        $ptid = [string](Get-EisProp $p 'taskId')
+        if ($pid) { $prevMap[$pid] = $p }
+        elseif ($ptid) { $prevMap[('task:' + $ptid)] = $p }
       }
-      $merged = @()
-      foreach ($it in @($incoming.items)) {
+      $merged = New-EisArrayList
+      foreach ($it in @(Get-EisNormalizedItems $incoming)) {
+        if (-not (Test-EisRealItem $it)) { continue }
         $old = $null
-        if ($it.id -and $prevMap.ContainsKey([string]$it.id)) { $old = $prevMap[[string]$it.id] }
-        elseif ($it.taskId -and $prevMap.ContainsKey(('task:' + [string]$it.taskId))) { $old = $prevMap[('task:' + [string]$it.taskId)] }
+        $iid = [string](Get-EisProp $it 'id')
+        $itid = [string](Get-EisProp $it 'taskId')
+        if ($iid -and $prevMap.ContainsKey($iid)) { $old = $prevMap[$iid] }
+        elseif ($itid -and $prevMap.ContainsKey(('task:' + $itid))) { $old = $prevMap[('task:' + $itid)] }
         if ($old) {
           foreach ($k in @('entryId','sourceUrl','crmUrl','teamsUrl','sourceRef','mailQuery','fromEmail','source')) {
-            $cur = [string]$it.$k
-            $prv = [string]$old.$k
-            if ((-not $cur) -and $prv) { try { $it | Add-Member -NotePropertyName $k -NotePropertyValue $prv -Force } catch {} }
+            $cur = [string](Get-EisProp $it $k)
+            $prv = [string](Get-EisProp $old $k)
+            if ((-not $cur) -and $prv) {
+              if ($it -is [hashtable] -or $it -is [System.Collections.Specialized.OrderedDictionary]) { $it[$k] = $prv }
+              else { try { $it | Add-Member -NotePropertyName $k -NotePropertyValue $prv -Force } catch {} }
+            }
           }
         }
-        $merged += $it
+        [void]$merged.Add($it)
       }
-      $incoming = Enrich-EisPayload ([pscustomobject]@{ items = $merged; updatedAt = (Get-Date).ToUniversalTime().ToString('o') })
-      $outJson = ($incoming | ConvertTo-Json -Depth 10 -Compress)
-      [IO.File]::WriteAllText($eisenhowerPath, $outJson, [Text.UTF8Encoding]::new($false))
-      Write-Json $res @{ ok = $true; count = @($incoming.items).Count }
+      $incoming = Enrich-EisPayload ([pscustomobject]@{ items = @($merged); updatedAt = (Get-Date).ToUniversalTime().ToString('o') })
+      [void](Save-EisDoc $incoming $eisenhowerPath)
+      Write-Json $res @{ ok = $true; count = @(Get-EisNormalizedItems $incoming).Count }
       continue
     }
     if ($path -eq '/api/audit' -and $req.HttpMethod -eq 'GET') { Write-FileResp $res $auditPath; continue }

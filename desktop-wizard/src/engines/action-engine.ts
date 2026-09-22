@@ -1,6 +1,6 @@
 import type { WizardAction, WizardActionResult } from "../actions/wizard-action.ts";
 import { createTaskViaHub, type AqHubApi } from "../api/aqhub-client.ts";
-import { flavourBubble, flavourForQuad, isEisQuad, moveEisItem, type EisQuad } from "../api/eisenhower.ts";
+import { flavourBubble, flavourForQuad, isEisQuad, itemTitle, moveEisItem, type EisQuad } from "../api/eisenhower.ts";
 import { mailAlertText, mailUnavailableText, pickRecentMail } from "../api/mail.ts";
 import { WizardSettingsStore } from "../settings/wizard-settings.ts";
 import {
@@ -296,7 +296,7 @@ export async function dispatch(
           action,
           eisDoc: moved.next,
           flavour: flavourForQuad(action.quad),
-          bubble: { kind: "speech", text: flavourBubble(action.quad, String(moved.item.title || "")) },
+          bubble: { kind: "speech", text: flavourBubble(action.quad, itemTitle(moved.item)) },
           returnTo: "MATRIX",
         };
       }
@@ -314,7 +314,7 @@ export async function dispatch(
           eisDoc: moved.next,
           flavour: "TRASH",
           undo: { id: action.id, prevQuad: moved.prevQuad },
-          bubble: { kind: "alert", text: flavourBubble("trash", String(moved.item.title || "")) + " — تراجع؟" },
+          bubble: { kind: "alert", text: flavourBubble("trash", itemTitle(moved.item)) + " — تراجع؟" },
           returnTo: "MATRIX",
         };
       }
