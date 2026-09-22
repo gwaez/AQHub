@@ -32,11 +32,11 @@
 | `desktop-wizard/` | AQWizard (Tauri 2) — رفيق ويندوز؛ **لا** يكتب `tasks.json` مباشرة |
 | `wizard/Wizard-Bridge.ps1` | جسر رفيع: `GET /api/v1/wizard/health` و `GET/PUT /api/v1/wizard/settings` |
 
-## AQWizard (P2–P4 slice)
+## AQWizard (P5 matrix)
 - فرع العمل: `feat/aqhub-wizard-companion`. التشغيل بجانب اللوحة: `desktop-wizard/README.md`.
 - الاسم الظاهر قابل للتغيير؛ المعرّف التقني `AQWizard` / حزمة `old-wizard`.
-- آلة حالات حقيقية + فقاعات RTL + تاسك/نوت عبر HTTP (`GET+POST /api/tasks`، `/api/task/box-note`). التذكير في `wizard-settings.json`.
-- Magic Wand / UIA / فقاعات الإيميل / أيزنهاور الكامل: مراحل لاحقة.
+- تاسك/نوت عبر HTTP + مصفوفة أيزنهاور `GET/POST /api/eisenhower` (سحب بين الأرباع). تراش ناعم + تراجع. لا كتابة `eisenhower.json` من Tauri.
+- Magic Wand / UIA / فقاعات الإيميل: مراحل لاحقة.
 
 
 ## قواعد أعمال مهمة (CRM / أهلية)

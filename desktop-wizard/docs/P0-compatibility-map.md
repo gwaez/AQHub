@@ -69,12 +69,13 @@ Keep AQHub core routes stable. Add a **thin optional module** `wizard/Wizard-Bri
 | GET | `/api/v1/wizard/settings` | Settings JSON including `animationLevel`, `idleSleepMs`, `reminders[]` | Character UX + local reminder list. |
 | PUT | `/api/v1/wizard/settings` | Same schema; merge known keys | Live writes. Reminders are **not** tasks.json. |
 
-### P4 adapters (implemented in the companion, reuse AQHub)
+### P4–P5 adapters (companion, reuse AQHub)
 
 | Method | Path | Wizard use |
 |--------|------|------------|
 | GET then POST | `/api/tasks` | Quick Task: GET document → prepend one task → POST full board. Never empty the array. |
 | POST | `/api/task/box-note` | Quick Note after a task id exists. |
+| GET then POST | `/api/eisenhower` | P5 matrix: GET items → change one `quad` → POST `{ items, updatedAt }`. Never empty. Soft-delete = `quad: trash`. |
 | POST | `/api/audit` | Best-effort wizard action audit stub. |
 
 ### Planned later
