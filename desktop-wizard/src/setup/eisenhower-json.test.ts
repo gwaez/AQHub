@@ -80,6 +80,7 @@ test("eisenhower.html live filters apply without Apply and notes are a chat time
   assert.match(eis, /function ensureNoteTimeline/);
   assert.match(eis, /noteTimeline/);
   assert.match(eis, /latestNoteText/);
+  assert.match(eis, /String\(t\.source\|\|''\)\.toLowerCase\(\)==='crm'\) return/);
   assert.doesNotMatch(eis, /\/api\/task\/approve-send/);
   assert.doesNotMatch(eis, /\/api\/task\/chat/);
 });
