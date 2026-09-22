@@ -41,7 +41,7 @@ h1{margin:0;font-size:1.28rem;font-weight:700}
 .chip button{border:0;background:transparent;color:#0f766e;cursor:pointer;font:inherit;font-weight:800;padding:0 2px}
 .sel-hint{font-size:.75rem;color:var(--muted)}
 
-.workspace{flex:1;display:flex;flex-direction:column;gap:6px;min-height:0;align-items:stretch}
+.workspace{flex:1;display:flex;gap:10px;min-height:0;align-items:stretch}
 .workspace.side-off .side{display:none}
 .side{flex:0 0 286px;width:286px;background:#fff;border:1px solid var(--line);border-radius:16px;padding:10px;overflow:auto;display:flex;flex-direction:column;gap:8px;box-shadow:0 10px 30px rgba(15,23,42,.06)}
 .sf-h{display:flex;justify-content:space-between;align-items:center;gap:8px}
@@ -145,8 +145,14 @@ input[type=range]{width:100%;accent-color:var(--teal)}
 .pa-ribbon{display:none;flex-wrap:wrap;gap:6px;align-items:center;background:#fff;border-bottom:1px solid #e5e7eb;padding:8px 14px;margin:0 0 4px;box-shadow:0 1px 0 #e5e7eb}
 body.edit-mode .pa-ribbon{display:flex}
 .pa-sep{width:1px;height:22px;background:#e5e7eb;margin:0 4px}
+.pa-lab{font-size:.7rem;font-weight:800;color:#64748b}
 .pa-add{border:1px solid #cbd5e1;background:#f8fafc;border-radius:10px;padding:6px 9px;font:inherit;font-size:.72rem;font-weight:700;cursor:pointer}
 .pa-add:hover{border-color:var(--teal);color:var(--teal)}
+.pa-add.off{opacity:.45}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.pa-vis.off{opacity:.45;text-decoration:line-through}
+#dashDraftHint{font-size:.72rem;font-weight:800;color:#b45309;display:none}
+#dashDraftHint.on{display:inline}
 .pa-name{display:flex;align-items:center;gap:8px;margin-bottom:8px}
 .pa-name input{min-width:240px;flex:1;border:1px solid #e11d48;border-radius:4px;padding:6px 10px;font:inherit}
 .pa-tabs{display:flex;gap:0;align-items:flex-end;margin-bottom:0;flex-wrap:wrap}
@@ -185,8 +191,15 @@ body.edit-mode .cell-h{display:flex}
 .props h3{margin:0 0 8px;font-size:.9rem}
 .props label{display:grid;gap:4px;font-size:.75rem;color:var(--muted);font-weight:700;margin-bottom:8px}
 .props input,.props select{border:1px solid #cbd5e1;border-radius:8px;padding:7px;font:inherit}
-body.view-mode .sec{border-color:#e2e8f0;background:transparent}
-body.view-mode .cell{border-color:#eef2f7}
+body.view-mode .sec,body.custom-view .sec{border:0;background:transparent;padding:0;margin:0 0 8px}
+body.view-mode .sec-h,body.custom-view .sec-h{display:none}
+body.view-mode .cell,body.custom-view .cell{border:0;background:transparent}
+body.view-mode .canvas,body.custom-view .canvas{border:0;outline:none;padding:0}
+body.custom-view .pa-app,body.custom-view .pa-tabs,body.custom-view #dashNameBar,body.custom-view .hint-edit{display:none !important}
+body.custom-view .mods{display:none}
+body.custom-view .dash-pane{display:flex}
+body.custom-view .workspace{flex-direction:column;gap:6px}
+.cell-body > .side{display:flex !important}
 
 .card .card-actions{display:flex;gap:4px;margin-top:6px;flex-wrap:wrap;align-items:center}
 .card .mini-note{pointer-events:auto}
@@ -212,7 +225,13 @@ body.edit-mode .cell-h{cursor:grab}
 .sec-tools{display:flex;gap:4px}
 body.edit-mode .lay-bar .hint-edit{display:inline}
 .hint-edit{display:none;font-size:.72rem;color:#1d4ed8;font-weight:700}
-.cell.ph-only .cell-body{min-height:120px}
+.dash-pane{display:none;flex-direction:column;flex:1;min-height:0}
+body.edit-mode .workspace{flex-direction:column;gap:6px}
+body.edit-mode .mods{display:none}
+body.edit-mode .dash-pane{display:flex}
+body.view-mode .pa-app{display:none}
+body.view-mode .pa-tabs,body.view-mode .hint-edit{display:none !important}
+.btn.danger-ghost{border-color:#fecdd3;color:#be123c}
 
 @media(max-width:980px){
   .workspace{flex-direction:column}
@@ -230,35 +249,47 @@ body.edit-mode .lay-bar .hint-edit{display:inline}
 <div class="shell">
   <div class="pa-ribbon" id="paRibbon">
     <button class="btn small primary" type="button" id="btnDashSave">حفظ</button>
-    <button class="btn small" type="button" id="btnDashClose">إغلاق</button>
+    <button class="btn small" type="button" id="btnDashClose">إلغاء</button>
+    <button class="btn small" type="button" id="btnDashUndo" disabled>رجوع</button>
+    <button class="btn small" type="button" id="btnDashRedo" disabled>إعادة</button>
+    <button class="btn small" type="button" id="btnDashReset">إعادة ضبط التخطيط</button>
+    <span class="pa-sep"></span>
     <button class="btn small" type="button" id="btnDashProps">خصائص</button>
     <button class="btn small" type="button" id="btnDashEditComp">تعديل المكوّن</button>
+    <button class="btn small" type="button" id="btnAddSection">+ Section</button>
+    <button class="btn small" type="button" id="btnAddTab">+ Tab</button>
+    <span id="dashDraftHint">مسودة — مش محفوظة</span>
     <span class="pa-sep"></span>
+    <span class="pa-lab">اسحب للوحة:</span>
+    <button class="pa-add" type="button" data-add="inbox">وارد</button>
+    <button class="pa-add" type="button" data-add="matrix">مصفوفة</button>
+    <button class="pa-add" type="button" data-add="notes">نوتس</button>
+    <button class="pa-add" type="button" data-add="filters">تصفية</button>
+    <button class="pa-add" type="button" data-add="doing">تنفيذ</button>
+    <button class="pa-add" type="button" data-add="trash">تراش</button>
     <button class="pa-add" type="button" data-add="chart">Chart</button>
     <button class="pa-add" type="button" data-add="list">قائمة</button>
     <button class="pa-add" type="button" data-add="iframe">Web</button>
     <button class="pa-add" type="button" data-add="timeline">تايملاين</button>
-    <button class="pa-add" type="button" data-add="iframe">IFrame</button>
-    <span class="pa-sep"></span>
-    <button class="pa-add" type="button" data-add="inbox">وارد</button>
-    <button class="pa-add" type="button" data-add="matrix">مصفوفة</button>
-    <button class="pa-add" type="button" data-add="doing">تنفيذ</button>
-    <button class="pa-add" type="button" data-add="trash">تراش</button>
-    <button class="pa-add" type="button" data-add="filters">تصفية</button>
-    <button class="pa-add" type="button" data-add="notes">نوتس</button>
     <button class="pa-add" type="button" data-add="links">لوحة/CRM</button>
     <span class="pa-sep"></span>
-    <button class="btn small" type="button" id="btnAddSection">+ Section</button>
-    <button class="btn small" type="button" id="btnAddTab">+ Tab</button>
+    <span class="pa-lab">إخفاء/إظهار:</span>
+    <button class="btn small pa-vis" type="button" data-toggle-mod="inbox">وارد</button>
+    <button class="btn small pa-vis" type="button" data-toggle-mod="matrix">مصفوفة</button>
+    <button class="btn small pa-vis" type="button" data-toggle-mod="notes">نوتس</button>
+    <button class="btn small pa-vis" type="button" data-toggle-mod="filters">تصفية</button>
+    <button class="btn small pa-vis" type="button" data-toggle-mod="doing">تنفيذ</button>
+    <button class="btn small pa-vis" type="button" data-toggle-mod="trash">تراش</button>
   </div>
   <div class="top">
     <div>
       <h1>صندوق أيزنهاور لإدارة المهام</h1>
-      <p class="muted">عرض للعمل اليومي · تعديل = تخطيط زي لوحة Power Apps · Ctrl/⌘ تحديد متعدد · نوت من زر الكارت</p>
+      <p class="muted">عرض كلاسيكي للعمل اليومي · «تعديل التخطيط» اختياري · التجريب مسودة لحد «حفظ» · «إعادة ضبط التخطيط» يرجع الشكل الأصلي</p>
       <div class="row" style="margin-top:8px"><span class="badge wait" id="badge">…</span><span id="status">—</span><span class="sel-hint" id="selHint"></span></div>
     </div>
     <div class="row">
       <button class="btn" type="button" id="btnEditMode">تعديل التخطيط</button>
+      <button class="btn danger-ghost" type="button" id="btnResetLayout">إعادة ضبط التخطيط</button>
       <button class="btn primary" type="button" id="btnSave">حفظ التاسكات</button>
       <button class="btn" type="button" id="btnImport">سحب تاسكات مفتوحة</button>
       <label class="btn" style="cursor:pointer"><input type="checkbox" id="fShowTrash" style="margin-left:6px" /> إظهار التراش</label>
@@ -290,14 +321,19 @@ body.edit-mode .lay-bar .hint-edit{display:inline}
     </div>
   </div>
 
-  <div class="pa-name" id="dashNameBar">
-    <label>Name: <span style="color:#e11d48">*</span></label>
-    <input id="dashName" value="Aqaar Control Eisenhower" />
-  </div>
-  <div class="pa-tabs" id="dashTabs"></div>
-  <p class="hint-edit">تعديل: اضغط خلية فاضية بعدين أضف مكوّن من الشريط · اسحب الحواف لتغيير العرض/الارتفاع · حفظ يحفظ التخطيط</p>
-  <div class="workspace" id="workspace">
-    <div class="canvas" id="canvas"></div>
+  <div class="workspace stack" id="workspace">
+    <div class="mods" id="mods">
+      <div class="gutter" id="gutter" title="اسحب لتغيير الحجم"></div>
+    </div>
+    <div class="dash-pane" id="dashPane">
+      <div class="pa-name" id="dashNameBar">
+        <label>Name: <span style="color:#e11d48">*</span></label>
+        <input id="dashName" value="Aqaar Control Eisenhower" />
+      </div>
+      <div class="pa-tabs" id="dashTabs"></div>
+      <p class="hint-edit">تجريب: اسحب المكوّنات · حرّك أو أخفِ · رجوع يتراجع · حفظ بس هو اللي بيخزّن · إلغاء بيرجع آخر نسخة محفوظة</p>
+      <div class="canvas" id="canvas"></div>
+    </div>
   </div>
 </div>
 
@@ -548,10 +584,17 @@ let draft = emptyFilter();
 let perDirty = {};
 let layout = { orient:'stack', inboxPct:34, side:true, inboxOn:true, matrixOn:true };
 let dash = null;
+let savedDash = null;
+let savedLayout = null;
+let customCommitted = false;
 let editMode = false;
 let selectedCellId = null;
 let dashNotes = [];
 let editingNoteId = null;
+let justReset = false;
+let undoStack = [];
+let redoStack = [];
+let dashDirty = false;
 
 const $ = (id) => document.getElementById(id);
 function uid(){ return 'E-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2,7); }
@@ -935,14 +978,15 @@ function applyDateQuick(range){
   updateQuickButtons();
 }
 function focusManualAdd(){
-  if (!isTypePlaced('inbox')){
+  if (editMode && !isTypePlaced('inbox')){
     const tab = currentTab();
     const first = tab.sections[0];
+    beginDashEdit();
     first.cells.splice(1, 0, { id:nid('c'), type:'inbox', width:30 });
-    persistDash(); paintCanvas();
+    paintCanvas();
   }
   layout.inboxOn = true;
-  applyLayoutButtons();
+  if (!editMode) applyLayout();
   const inp = $('newTitle');
   if (!inp) return;
   inp.scrollIntoView({ block:'nearest', behavior:'smooth' });
@@ -1277,7 +1321,7 @@ function paintTabs(){
     '<button type="button" class="pa-tab'+(i===dash.activeTab?' on':'')+'" data-tab="'+i+'">'+escapeHtml(t.title||('Tab '+(i+1)))+'</button>'
   ).join('') + (editMode ? '<button type="button" class="pa-tab" id="tabAddInline">+</button>' : '');
   box.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => {
-    dash.activeTab = Number(b.getAttribute('data-tab')); persistDash(); paintCanvas(); render();
+    dash.activeTab = Number(b.getAttribute('data-tab')); paintCanvas(); render();
   });
   const add = $('tabAddInline');
   if (add) add.onclick = addTab;
@@ -1385,7 +1429,7 @@ function paintCanvas(){
     row.style.minHeight = h+'px';
     row.style.height = h+'px';
     (sec.cells||[]).forEach((cell, i) => {
-      if (i){
+      if (i && editMode){
         const g = document.createElement('div');
         g.className = 'col-gutter';
         g.dataset.split = cell.id;
@@ -1409,41 +1453,279 @@ function paintCanvas(){
   paintTabs();
   refreshGenerated();
   renderNotesModule();
+  refreshPalette();
+}
+function dashHasRequired(d){
+  if (!d || !Array.isArray(d.tabs) || !d.tabs.length) return false;
+  let inbox=false, matrix=false;
+  d.tabs.forEach(t => (t.sections||[]).forEach(s => (s.cells||[]).forEach(c => {
+    if (c && c.type==='inbox') inbox=true;
+    if (c && c.type==='matrix') matrix=true;
+  })));
+  return inbox && matrix;
+}
+function isCommittedDash(d){
+  return !!(d && d.savedCustom && dashHasRequired(d));
+}
+function consumeLayoutReset(){
+  try {
+    const u = new URL(location.href);
+    if (u.searchParams.get('layoutReset')==='1' || u.searchParams.get('resetLayout')==='1'){
+      justReset = true;
+      try { localStorage.removeItem(DASH_KEY); localStorage.removeItem(LAYOUT_KEY); } catch {}
+      u.searchParams.delete('layoutReset');
+      u.searchParams.delete('resetLayout');
+      const q = u.searchParams.toString();
+      history.replaceState({}, '', u.pathname + (q ? ('?'+q) : '') + u.hash);
+    }
+  } catch {}
+}
+function defaultLayout(){
+  return { orient:'stack', inboxPct:34, side:true, inboxOn:true, matrixOn:true };
+}
+function usesCanvasView(){
+  return editMode || (customCommitted && dashHasRequired(dash));
+}
+function mountClassic(){
+  parkUnique();
+  const ws = $('workspace');
+  const mods = $('mods');
+  const gutter = $('gutter');
+  const side = $('sideFilters');
+  if (side && ws && mods && side.parentElement !== ws) ws.insertBefore(side, mods);
+  if ($('modInbox') && gutter) mods.insertBefore($('modInbox'), gutter);
+  if ($('modMatrix')) mods.appendChild($('modMatrix'));
+  const mb = $('modMatrix') && $('modMatrix').querySelector('.mod-body');
+  if (mb && $('modDoing')) mb.appendChild($('modDoing'));
+  if (mb && $('trashBox')) mb.appendChild($('trashBox'));
+  if ($('modInbox')) $('modInbox').style.height = '';
+  if ($('modMatrix')) $('modMatrix').style.height = '';
+}
+function mountShell(){
+  document.body.classList.toggle('custom-view', !editMode && customCommitted && dashHasRequired(dash));
+  if (usesCanvasView()) paintCanvas();
+  else { mountClassic(); applyLayout(); }
+}
+function refreshPalette(){
+  document.querySelectorAll('#paRibbon [data-add]').forEach(b => {
+    const t = b.getAttribute('data-add');
+    if (UNIQUE[t]) b.classList.toggle('off', !isTypePlaced(t));
+  });
+  document.querySelectorAll('[data-toggle-mod]').forEach(b => {
+    const t = b.getAttribute('data-toggle-mod');
+    const on = isTypePlaced(t);
+    b.classList.toggle('on', on);
+    b.classList.toggle('off', !on);
+    b.textContent = (TYPE_LABEL[t]||t) + (on ? ' · ظاهر' : ' · مخفي');
+  });
+  if ($('btnDashUndo')) $('btnDashUndo').disabled = !editMode || !undoStack.length;
+  if ($('btnDashRedo')) $('btnDashRedo').disabled = !editMode || !redoStack.length;
+  if ($('dashDraftHint')) $('dashDraftHint').classList.toggle('on', !!(editMode && dashDirty));
+}
+function beginDashEdit(){
+  if (!editMode) return;
+  undoStack.push(clone(dash));
+  if (undoStack.length > 40) undoStack.shift();
+  redoStack = [];
+  dashDirty = true;
+}
+function undoDash(){
+  if (!editMode || !undoStack.length) return;
+  redoStack.push(clone(dash));
+  dash = undoStack.pop();
+  dashDirty = true;
+  paintCanvas(); render();
+}
+function redoDash(){
+  if (!editMode || !redoStack.length) return;
+  undoStack.push(clone(dash));
+  dash = redoStack.pop();
+  dashDirty = true;
+  paintCanvas(); render();
 }
 function persistDash(){
-  try { localStorage.setItem(DASH_KEY, JSON.stringify(dash)); } catch {}
+  /* draft-only: layout writes happen only in commitDash() */
+  dashDirty = true;
+  refreshPalette();
 }
-function persistDashServer(){
-  persistDash();
+function commitDash(){
+  if (!dashHasRequired(dash)){
+    alert('لازم الوارد والمصفوفة يبقوا ظاهرين قبل الحفظ.');
+    return false;
+  }
+  dash.savedCustom = true;
+  customCommitted = true;
+  savedDash = clone(dash);
+  savedLayout = clone(layout);
+  dashDirty = false;
+  undoStack = [];
+  redoStack = [];
+  try { localStorage.setItem(DASH_KEY, JSON.stringify(dash)); } catch {}
+  try { localStorage.setItem(LAYOUT_KEY, JSON.stringify(layout)); } catch {}
   fetch('/api/dashboard-layout', {
     method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify(dash)
-  }).then(r => r.ok ? setBadge('on','التخطيط اتحفظ') : null).catch(()=>{});
+  }).then(r => r.ok ? setBadge('on','التخطيط اتحفظ') : setBadge('on','التخطيط اتحفظ محليًا')).catch(()=> setBadge('on','التخطيط اتحفظ محليًا'));
+  setEditMode(false, { fromSave:true });
+  return true;
+}
+function persistDashServer(){ commitDash(); }
+function takeSavedSnapshot(){
+  if (customCommitted && dashHasRequired(dash)) savedDash = clone(dash);
+  else savedDash = defaultDash();
+  savedLayout = clone(layout);
 }
 async function loadDash(){
+  customCommitted = false;
+  dash = null;
+  if (justReset){
+    dash = defaultDash();
+    savedDash = clone(dash);
+    savedLayout = clone(layout);
+    return;
+  }
   try {
     const raw = localStorage.getItem(DASH_KEY);
-    if (raw){ dash = JSON.parse(raw); }
-  } catch {}
+    if (raw){
+      const parsed = JSON.parse(raw);
+      if (isCommittedDash(parsed)){ dash = parsed; customCommitted = true; }
+      else { localStorage.removeItem(DASH_KEY); }
+    }
+  } catch { try { localStorage.removeItem(DASH_KEY); } catch {} dash = null; }
   try {
     const r = await fetch('/api/dashboard-layout');
     if (r.ok){
       const j = await r.json();
       const layoutObj = j.layout || ((j.tabs) ? j : null);
-      if (layoutObj && layoutObj.tabs) dash = layoutObj;
+      if (isCommittedDash(layoutObj)){ dash = layoutObj; customCommitted = true; }
     }
   } catch {}
-  if (!dash || !dash.tabs) dash = defaultDash();
+  if (!dashHasRequired(dash)){ dash = defaultDash(); customCommitted = false; }
+  savedDash = clone(dash);
+  savedLayout = clone(layout);
 }
-function setEditMode(on){
-  editMode = !!on;
+function discardDraft(){
+  dash = clone(savedDash || defaultDash());
+  layout = clone(savedLayout || defaultLayout());
+  undoStack = [];
+  redoStack = [];
+  dashDirty = false;
+  selectedCellId = null;
+}
+function setEditMode(on, opts){
+  const fromSave = !!(opts && opts.fromSave);
+  on = !!on;
+  if (on === editMode){
+    mountShell(); render();
+    return;
+  }
+  if (!on && editMode && dashDirty && !fromSave){
+    if (!confirm('هتطلع من التعديل من غير حفظ. كل النقل والإخفاء هيرجع لآخر نسخة محفوظة.')) return;
+  }
+  if (on){
+    takeSavedSnapshot();
+    dash = clone(savedDash || defaultDash());
+    undoStack = [];
+    redoStack = [];
+    dashDirty = false;
+  } else if (!fromSave){
+    discardDraft();
+  } else {
+    undoStack = [];
+    redoStack = [];
+    dashDirty = false;
+  }
+  editMode = on;
   document.body.classList.toggle('edit-mode', editMode);
   document.body.classList.toggle('view-mode', !editMode);
   $('btnEditMode').textContent = editMode ? 'عرض العمل' : 'تعديل التخطيط';
   if (!editMode) $('propsPanel').classList.remove('on');
-  paintCanvas();
+  mountShell();
   render();
 }
+function resetLayout(skipConfirm){
+  if (!skipConfirm && !confirm('إعادة ضبط التخطيط؟\nهيرجع الشكل الأصلي (وارد + مصفوفة + تصفية) ويتمسح التخطيط المحفوظ.\nالفلاتر والنوتس والتاسكات مش هتتمسح.')) return;
+  justReset = true;
+  customCommitted = false;
+  dashDirty = false;
+  undoStack = [];
+  redoStack = [];
+  try {
+    localStorage.removeItem(DASH_KEY);
+    localStorage.removeItem(LAYOUT_KEY);
+  } catch {}
+  dash = defaultDash();
+  layout = defaultLayout();
+  savedDash = clone(dash);
+  savedLayout = clone(layout);
+  selectedCellId = null;
+  fetch('/api/dashboard-layout', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ savedCustom:false, reset:true, layout:null })
+  }).catch(()=>{});
+  setEditMode(false, { fromSave:true });
+  setBadge('on','التخطيط رجع الأصلي');
+}
+
+function persistLayout(){
+  if (editMode) return;
+  try { localStorage.setItem(LAYOUT_KEY, JSON.stringify(layout)); } catch {}
+}
+function applyLayout(){
+  const ws = $('workspace');
+  if (!ws || !$('modInbox') || !$('modMatrix')) return;
+  $('btnOrientStack').classList.toggle('on', layout.orient!=='split');
+  $('btnOrientSplit').classList.toggle('on', layout.orient==='split');
+  $('btnToggleSide').classList.toggle('on', !!layout.side);
+  if (editMode) return;
+  if (customCommitted && $('modInbox') && $('modInbox').closest('#canvas')) return;
+  ws.classList.toggle('stack', layout.orient!=='split');
+  ws.classList.toggle('split', layout.orient==='split');
+  ws.classList.toggle('side-off', !layout.side);
+  $('modInbox').classList.toggle('collapsed', !layout.inboxOn);
+  $('modMatrix').classList.toggle('collapsed', !layout.matrixOn);
+  const a = layout.inboxOn ? Math.max(18, Math.min(82, Number(layout.inboxPct)||34)) : 0;
+  const b = layout.matrixOn ? (100-a) : 0;
+  if (layout.inboxOn && layout.matrixOn){
+    $('modInbox').style.flex = a+' 1 0';
+    $('modMatrix').style.flex = b+' 1 0';
+  } else if (layout.inboxOn){
+    $('modInbox').style.flex = '1 1 auto';
+    $('modMatrix').style.flex = '0 0 42px';
+  } else if (layout.matrixOn){
+    $('modInbox').style.flex = '0 0 42px';
+    $('modMatrix').style.flex = '1 1 auto';
+  }
+  persistLayout();
+}
+function applyLayoutButtons(){ applyLayout(); }
+function bindSplitter(){
+  const gutter = $('gutter');
+  if (!gutter) return;
+  let hot = false;
+  gutter.addEventListener('pointerdown', e => {
+    if (editMode) return;
+    hot = true; gutter.classList.add('hot');
+    gutter.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  });
+  gutter.addEventListener('pointermove', e => {
+    if (!hot || editMode) return;
+    const mods = $('mods');
+    const rect = mods.getBoundingClientRect();
+    if (layout.orient==='split'){
+      const fromStart = rect.right - e.clientX;
+      layout.inboxPct = Math.max(18, Math.min(82, (fromStart/rect.width)*100));
+    } else {
+      layout.inboxPct = Math.max(18, Math.min(82, ((e.clientY-rect.top)/rect.height)*100));
+    }
+    applyLayout();
+  });
+  const end = () => { hot=false; gutter.classList.remove('hot'); };
+  gutter.addEventListener('pointerup', end);
+  gutter.addEventListener('pointercancel', end);
+}
+
 function firstEmptyOrSelected(){
   if (selectedCellId && findCell(selectedCellId)) return findCell(selectedCellId);
   let empty=null;
@@ -1456,13 +1738,14 @@ function firstEmptyOrSelected(){
   return cell;
 }
 function placeType(type, destCell){
-  if (!type) return;
+  if (!editMode || !type) return;
   const extra = {};
   if (type==='iframe' && !(destCell && destCell.url)){
     const url = prompt('رابط الـ Web / IFrame', 'https://');
     if (url===null) return;
     extra.url = String(url||'').trim();
   }
+  beginDashEdit();
   const dest = destCell || firstEmptyOrSelected();
   if (UNIQUE[type]){
     let old = null;
@@ -1475,19 +1758,22 @@ function placeType(type, destCell){
   dest.type = type;
   Object.assign(dest, extra);
   selectedCellId = dest.id;
-  persistDash();
   paintCanvas();
   render();
 }
 function addSection(){
+  if (!editMode) return;
+  beginDashEdit();
   currentTab().sections.push({ id:nid('s'), title:'Section', height:180, cells:[
     { id:nid('c'), type:null, width:33 },
     { id:nid('c'), type:null, width:33 },
     { id:nid('c'), type:null, width:33 }
   ]});
-  persistDash(); paintCanvas();
+  paintCanvas();
 }
 function addTab(){
+  if (!editMode) return;
+  beginDashEdit();
   dash.tabs.push({ id:nid('tab'), title:'Tab '+(dash.tabs.length+1), sections:[
     { id:nid('s'), title:'Section', height:220, cells:[
       { id:nid('c'), type:null, width:50 },
@@ -1495,26 +1781,29 @@ function addTab(){
     ]}
   ]});
   dash.activeTab = dash.tabs.length-1;
-  persistDash(); paintCanvas();
+  paintCanvas();
 }
 function addCellTo(secId){
   const tab = currentTab();
   const sec = (tab.sections||[]).find(s => s.id===secId);
   if (!sec) return;
+  beginDashEdit();
   sec.cells.push({ id:nid('c'), type:null, width: Math.max(16, Math.round(100/((sec.cells.length||0)+1))) });
-  persistDash(); paintCanvas();
+  paintCanvas();
 }
 function delSection(secId){
   const tab = currentTab();
   if ((tab.sections||[]).length<=1) return;
+  beginDashEdit();
   tab.sections = tab.sections.filter(s => s.id!==secId);
-  persistDash(); paintCanvas(); render();
+  paintCanvas(); render();
 }
 function clearCell(id){
   const c = findCell(id);
   if (!c) return;
+  beginDashEdit();
   c.type = null; c.url = '';
-  persistDash(); paintCanvas(); render();
+  paintCanvas(); render();
 }
 function collectExtras(){
   const extra = [];
@@ -1524,6 +1813,7 @@ function collectExtras(){
   return extra;
 }
 function applyOrientPreset(orient){
+  beginDashEdit();
   layout.orient = orient;
   const extras = collectExtras();
   const tab = currentTab();
@@ -1559,9 +1849,10 @@ function applyOrientPreset(orient){
     const last = tab.sections[tab.sections.length-1];
     last.cells.push({ id:nid('c'), type:ex.type, url:ex.url, width: Math.max(20, Math.round(100/(last.cells.length+1))) });
   });
-  persistLayout(); persistDash(); paintCanvas(); render(); applyLayoutButtons();
+  paintCanvas(); render(); applyLayoutButtons();
 }
 function toggleTypeInLayout(type){
+  beginDashEdit();
   if (isTypePlaced(type)){
     clearType(type);
   } else {
@@ -1569,17 +1860,18 @@ function toggleTypeInLayout(type){
     const first = tab.sections[0];
     first.cells.unshift({ id:nid('c'), type:type, width:22 });
   }
-  persistDash(); paintCanvas(); render(); applyLayoutButtons();
+  paintCanvas(); render(); applyLayout();
 }
-function applyLayoutButtons(){
-  $('btnOrientStack').classList.toggle('on', layout.orient!=='split');
-  $('btnOrientSplit').classList.toggle('on', layout.orient==='split');
-  $('btnToggleSide').classList.toggle('on', isTypePlaced('filters'));
-  if ($('modInbox')) $('modInbox').classList.toggle('collapsed', !layout.inboxOn);
-  if ($('modMatrix')) $('modMatrix').classList.toggle('collapsed', !layout.matrixOn);
-  persistLayout();
+function toggleModVisible(type){
+  if (!editMode || !type) return;
+  if (isTypePlaced(type)){
+    beginDashEdit();
+    clearType(type);
+    paintCanvas(); render();
+  } else {
+    placeType(type);
+  }
 }
-function applyLayout(){ applyLayoutButtons(); }
 
 function bindCanvasUi(){
   const canvas = $('canvas');
@@ -1603,7 +1895,7 @@ function bindCanvasUi(){
     if (res){
       const sec = currentTab().sections.find(s => s.id===res.getAttribute('data-cell-res'));
       if (!sec) return;
-      drag = { kind:'h', sec, startY:e.clientY, startH:Number(sec.height)||200 };
+      drag = { kind:'h', sec, startY:e.clientY, startH:Number(sec.height)||200, before:clone(dash) };
       res.setPointerCapture(e.pointerId);
       e.preventDefault();
     } else if (gut && editMode){
@@ -1614,7 +1906,7 @@ function bindCanvasUi(){
       const prev = sec.cells[idx-1];
       if (!prev) return;
       const row = gut.parentElement.getBoundingClientRect();
-      drag = { kind:'w', prev, cell, row, startX:e.clientX, pw:Number(prev.width)||33, cw:Number(cell.width)||33 };
+      drag = { kind:'w', prev, cell, row, startX:e.clientX, pw:Number(prev.width)||33, cw:Number(cell.width)||33, before:clone(dash) };
       gut.setPointerCapture(e.pointerId);
       e.preventDefault();
     }
@@ -1639,7 +1931,20 @@ function bindCanvasUi(){
       if (cellEl) cellEl.style.flex = drag.cell.width+' 1 0';
     }
   });
-  const end = () => { if (drag){ persistDash(); drag=null; } };
+  const end = () => {
+    if (!drag) return;
+    let changed = false;
+    if (drag.kind==='h') changed = Number(drag.sec.height) !== Number(drag.startH);
+    if (drag.kind==='w') changed = Number(drag.prev.width) !== Number(drag.pw) || Number(drag.cell.width) !== Number(drag.cw);
+    if (changed && drag.before){
+      undoStack.push(drag.before);
+      if (undoStack.length > 40) undoStack.shift();
+      redoStack = [];
+      dashDirty = true;
+      refreshPalette();
+    }
+    drag=null;
+  };
   canvas.addEventListener('pointerup', end);
   canvas.addEventListener('pointercancel', end);
 }
@@ -1689,11 +1994,12 @@ function bindModuleDrag(){
     }
     const src = findCell(raw.slice(5));
     if (!src || src===dest) return;
+    beginDashEdit();
     const tmp = { type: dest.type, url: dest.url };
     dest.type = src.type; dest.url = src.url;
     src.type = tmp.type; src.url = tmp.url;
     selectedCellId = dest.id;
-    persistDash(); paintCanvas(); render();
+    paintCanvas(); render();
   });
   canvas.addEventListener('dragend', () => {
     document.querySelectorAll('.cell.drop-mod').forEach(n => n.classList.remove('drop-mod'));
@@ -1801,6 +2107,7 @@ function openProps(){
 function applyProps(){
   const cell = findCell(selectedCellId);
   if (!cell) return;
+  beginDashEdit();
   const type = $('propType').value||null;
   if (type && UNIQUE[type] && cell.type!==type) clearType(type);
   cell.type = type;
@@ -1808,7 +2115,8 @@ function applyProps(){
   cell.url = ($('propUrl').value||'').trim();
   const sec = findSecForCell(cell.id);
   if (sec) sec.height = Math.max(80, Number($('propHeight').value)||200);
-  persistDash(); paintCanvas(); render();
+  dashDirty = true;
+  paintCanvas(); render();
 }
 
 
@@ -1836,9 +2144,6 @@ function bindDrops(){
   });
 }
 
-function persistLayout(){
-  try { localStorage.setItem(LAYOUT_KEY, JSON.stringify(layout)); } catch {}
-}
 function loadLayout(){
   try {
     const raw = localStorage.getItem(LAYOUT_KEY);
@@ -1849,11 +2154,11 @@ function loadLayout(){
 }
 
 async function load(){
+  consumeLayoutReset();
   setBadge('wait','تحميل…');
   await loadDash();
   await loadDashNotes();
-  paintCanvas();
-  applyLayoutButtons();
+  mountShell();
   try {
     const r = await fetch('/api/eisenhower');
     if (!r.ok) throw new Error('HTTP '+r.status);
@@ -1929,9 +2234,10 @@ async function importOpenTasks(){
 }
 
 $('fShowTrash').onchange = () => {
-  if ($('fShowTrash').checked && !isTypePlaced('trash')){
+  if (editMode && $('fShowTrash').checked && !isTypePlaced('trash')){
+    beginDashEdit();
     currentTab().sections.push({ id:nid('s'), title:'Section', height:160, cells:[{ id:nid('c'), type:'trash', width:100 }]});
-    persistDash(); paintCanvas();
+    paintCanvas();
   }
   render();
 };
@@ -1950,6 +2256,13 @@ document.addEventListener('click', e => {
 });
 document.addEventListener('keydown', e => {
   if (e.key==='Escape'){ selected = new Set(); hideCtx(); paintSelection(); }
+  const tag = (e.target && e.target.tagName) || '';
+  if (tag==='INPUT' || tag==='TEXTAREA' || (e.target && e.target.isContentEditable)) return;
+  if (editMode && (e.ctrlKey || e.metaKey) && String(e.key).toLowerCase()==='z' && !e.shiftKey){
+    e.preventDefault(); undoDash();
+  } else if (editMode && (e.ctrlKey || e.metaKey) && (String(e.key).toLowerCase()==='y' || (String(e.key).toLowerCase()==='z' && e.shiftKey))){
+    e.preventDefault(); redoDash();
+  }
 });
 window.addEventListener('beforeunload', () => { if (dirty) save(); });
 
@@ -1966,13 +2279,16 @@ $('btnApplyBatch').onclick = () => { readDraft(); applyAll(); };
 $('btnCancelBatch').onclick = () => { draft = clone(committed); writeFilterUi(); render(); };
 $('btnClearFilters').onclick = clearAllFilters;
 
-$('btnOrientStack').onclick = () => applyOrientPreset('stack');
-$('btnOrientSplit').onclick = () => applyOrientPreset('split');
-$('btnToggleInbox').onclick = () => { layout.inboxOn = !layout.inboxOn; if (!layout.inboxOn && !layout.matrixOn) layout.matrixOn = true; applyLayoutButtons(); };
-$('btnToggleMatrix').onclick = () => { layout.matrixOn = !layout.matrixOn; if (!layout.inboxOn && !layout.matrixOn) layout.inboxOn = true; applyLayoutButtons(); };
+$('btnOrientStack').onclick = () => { if (editMode) applyOrientPreset('stack'); else { layout.orient='stack'; applyLayout(); } };
+$('btnOrientSplit').onclick = () => { if (editMode) applyOrientPreset('split'); else { layout.orient='split'; applyLayout(); } };
+$('btnToggleInbox').onclick = () => { layout.inboxOn = !layout.inboxOn; if (!layout.inboxOn && !layout.matrixOn) layout.matrixOn = true; applyLayout(); };
+$('btnToggleMatrix').onclick = () => { layout.matrixOn = !layout.matrixOn; if (!layout.inboxOn && !layout.matrixOn) layout.inboxOn = true; applyLayout(); };
 $('btnCollapseInbox').onclick = () => $('btnToggleInbox').click();
 $('btnCollapseMatrix').onclick = () => $('btnToggleMatrix').click();
-$('btnToggleSide').onclick = () => { layout.side = !isTypePlaced('filters'); toggleTypeInLayout('filters'); };
+$('btnToggleSide').onclick = () => {
+  if (editMode){ layout.side = !isTypePlaced('filters'); toggleTypeInLayout('filters'); }
+  else { layout.side = !layout.side; applyLayout(); }
+};
 $('btnQuickEmail').onclick = toggleEmailQuick;
 $('btnQuickDate').onclick = (e) => {
   e.stopPropagation();
@@ -1988,14 +2304,22 @@ document.addEventListener('click', e => {
 $('btnManualTask').onclick = focusManualAdd;
 
 $('btnEditMode').onclick = () => setEditMode(!editMode);
-$('btnDashSave').onclick = persistDashServer;
+$('btnResetLayout').onclick = () => resetLayout(false);
+$('btnDashReset').onclick = () => resetLayout(false);
+$('btnDashSave').onclick = () => commitDash();
 $('btnDashClose').onclick = () => setEditMode(false);
+$('btnDashUndo').onclick = undoDash;
+$('btnDashRedo').onclick = redoDash;
 $('btnDashProps').onclick = openProps;
 $('btnDashEditComp').onclick = openProps;
 $('btnAddSection').onclick = addSection;
 $('btnAddTab').onclick = addTab;
 document.querySelectorAll('#paRibbon [data-add]').forEach(b => b.onclick = () => placeType(b.getAttribute('data-add')));
-$('dashName').addEventListener('input', () => { dash.name = $('dashName').value; persistDash(); });
+document.querySelectorAll('#paRibbon [data-toggle-mod]').forEach(b => b.onclick = (e) => {
+  e.preventDefault(); e.stopPropagation();
+  toggleModVisible(b.getAttribute('data-toggle-mod'));
+});
+$('dashName').addEventListener('input', () => { dash.name = $('dashName').value; dashDirty = true; refreshPalette(); });
 $('propApply').onclick = applyProps;
 $('propClose').onclick = () => $('propsPanel').classList.remove('on');
 $('btnNoteNew').onclick = newDashNote;
@@ -2003,9 +2327,11 @@ $('btnNoteModSave').onclick = saveDashNote;
 $('btnNoteModCancel').onclick = () => { $('notesEditor').hidden = true; editingNoteId=null; };
 $('btnNoteModDel').onclick = delDashNote;
 
+consumeLayoutReset();
 bindDrops();
 bindCanvasUi();
 bindModuleDrag();
+bindSplitter();
 loadFilters();
 loadLayout();
 setFilterMode(filterMode);
