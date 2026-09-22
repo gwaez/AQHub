@@ -18,6 +18,7 @@ pub fn run() {
             window_ctl::set_settings_layout,
             window_ctl::set_always_on_top,
             aqhub::open_aqhub,
+            aqhub::open_aqhub_path,
             settings::load_settings_file,
             settings::save_settings_file,
         ])

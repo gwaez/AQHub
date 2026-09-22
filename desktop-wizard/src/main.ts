@@ -53,6 +53,10 @@ function browserWindowPort(): CharacterWindowPort {
     async openAqHub() {
       window.open("http://127.0.0.1:8766/board.html", "_blank");
     },
+    async openAqHubPath(path: string) {
+      const p = path.startsWith("/") ? path : `/${path}`;
+      window.open(`http://127.0.0.1:8766${p}`, "_blank");
+    },
     async exit() {
       /* browser preview has no process to exit */
     },
@@ -101,6 +105,9 @@ function tauriWindowPort(): CharacterWindowPort {
     },
     async openAqHub() {
       await invoke("open_aqhub");
+    },
+    async openAqHubPath(path: string) {
+      await invoke("open_aqhub_path", { path });
     },
     async exit() {
       await invoke("exit_app");
@@ -322,6 +329,10 @@ async function main() {
     await ports.window.setSettingsLayout(true);
   }
 
+  async function openAqHubEisenhower() {
+    await ports.window.openAqHubPath("/eisenhower.html");
+  }
+
   async function run(action: WizardAction) {
     const result = await dispatch(action, ports, machine);
     idle.animationLevel = settings.current.animationLevel;
@@ -476,7 +487,7 @@ async function main() {
     if (act === "SLEEP") await run({ type: "SLEEP" });
     if (act === "THINK") await run({ type: "THINK" });
     if (act === "ALERT") await run({ type: "ALERT", text: "تنبيه تجريبي" });
-    if (act === "MATRIX") await run({ type: "OPEN_MATRIX" });
+    if (act === "MATRIX") await openAqHubEisenhower();
     if (act === "MAIL") await run({ type: "MAIL_POLL", prompt: true });
     if (act === "SETTINGS") await openSettings();
     if (act === "OPEN_AQHUB") await run({ type: "OPEN_AQHUB" });
@@ -563,7 +574,7 @@ async function main() {
     closeOverlays();
     if (key === "NEW_TASK") openComposer("task");
     if (key === "QUICK_NOTE") openComposer("note");
-    if (key === "MATRIX") await run({ type: "OPEN_MATRIX" });
+    if (key === "MATRIX") await openAqHubEisenhower();
     if (key === "OPEN_AQHUB") await run({ type: "OPEN_AQHUB" });
     if (key === "ASK") speak("thought", ui.askLater);
     if (key === "SETTINGS") await openSettings();
@@ -582,7 +593,7 @@ async function main() {
     const body = composerBody.value.trim();
     closeOverlays();
     if (title === "/matrix" || body === "/matrix" || title.startsWith("/matrix")) {
-      await run({ type: "OPEN_MATRIX" });
+      await openAqHubEisenhower();
     } else if (mode === "task") await run({ type: "CREATE_TASK", title: title || body, notes: body });
     else if (mode === "note") await run({ type: "CREATE_NOTE", note: body || title });
     else if (mode === "reminder") {

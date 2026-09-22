@@ -45,7 +45,7 @@ export const en: UiCopy = {
   matrix: "Eisenhower",
   matrixClose: "Close",
   undo: "Undo",
-  composerMatrixHint: "Type /matrix to open the matrix",
+  composerMatrixHint: "Type /matrix to open Eisenhower in the browser",
   general: "General",
   character: "Character",
   behaviour: "Behaviour",

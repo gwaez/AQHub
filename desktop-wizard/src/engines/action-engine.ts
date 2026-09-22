@@ -24,6 +24,7 @@ export interface CharacterWindowPort {
   show(): Promise<void>;
   hide(): Promise<void>;
   openAqHub(): Promise<void>;
+  openAqHubPath(path: string): Promise<void>;
   exit(): Promise<void>;
   setPosition(x: number, y: number): Promise<void>;
   getPlacement(): Promise<WindowPlacement>;

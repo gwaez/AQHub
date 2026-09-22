@@ -90,6 +90,7 @@ function mockPorts() {
       openAqHub: async () => {
         store.opened = true;
       },
+      openAqHubPath: async () => {},
       exit: async () => {},
       setPosition: async () => {},
       getPlacement: async () => ({

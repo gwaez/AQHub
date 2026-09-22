@@ -43,7 +43,7 @@ export const ar = {
   matrix: "أيزنهاور",
   matrixClose: "إغلاق",
   undo: "تراجع",
-  composerMatrixHint: "اكتب /matrix لفتح المصفوفة",
+  composerMatrixHint: "اكتب /matrix لفتح أيزنهاور في المتصفح",
   general: "عام",
   character: "الشخصية",
   behaviour: "سلوك",
