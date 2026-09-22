@@ -22,3 +22,9 @@ test("thought kind is stored for CSS", () => {
   const b = new BubbleEngine();
   assert.equal(b.show({ kind: "thought", text: "همم" }).kind, "thought");
 });
+
+test("ms 0 stays visible (confirm bubble)", () => {
+  const b = new BubbleEngine();
+  b.show({ kind: "alert", text: "تأكيد؟", ms: 0 }, 0);
+  assert.equal(b.tick(60_000)?.visible, true);
+});

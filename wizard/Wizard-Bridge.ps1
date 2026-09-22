@@ -2,11 +2,74 @@
 # Dotted from Start-Board.ps1. Owns ONLY data/wizard-settings.json.
 # Never reads or writes tasks.json, eisenhower.json, crm-config, or tokens.
 
-$script:WizardBridgeVersion = '0.2.0-p2'
+$script:WizardBridgeVersion = '0.3.0-p9'
 
 function Get-WizardSettingsPath {
   param([string]$DataDir)
   return (Join-Path $DataDir 'wizard-settings.json')
+}
+
+function Get-WizardDefaultPermissions {
+  return [ordered]@{
+    'character.window' = 'allow'
+    'aqhub.open' = 'allow'
+    'settings.local' = 'allow'
+    'board.create_task' = 'allow'
+    'board.create_note' = 'allow'
+    'board.reminder' = 'allow'
+    'eisenhower.move' = 'allow'
+    'eisenhower.trash' = 'ask'
+    'outlook.send' = 'never'
+    'delete.external' = 'never'
+    'uia.magic_wand' = 'never'
+    'crm.tokens' = 'never'
+  }
+}
+
+function Get-WizardCapabilityCatalog {
+  return @(
+    [ordered]@{ id = 'character.window'; defaultMode = 'allow'; modes = @('allow','ask','never'); implemented = $true; alwaysConfirmOrDeny = $false }
+    [ordered]@{ id = 'aqhub.open'; defaultMode = 'allow'; modes = @('allow','ask','never'); implemented = $true; alwaysConfirmOrDeny = $false }
+    [ordered]@{ id = 'settings.local'; defaultMode = 'allow'; modes = @('allow'); implemented = $true; alwaysConfirmOrDeny = $false }
+    [ordered]@{ id = 'board.create_task'; defaultMode = 'allow'; modes = @('allow','ask','never'); implemented = $true; alwaysConfirmOrDeny = $false }
+    [ordered]@{ id = 'board.create_note'; defaultMode = 'allow'; modes = @('allow','ask','never'); implemented = $true; alwaysConfirmOrDeny = $false }
+    [ordered]@{ id = 'board.reminder'; defaultMode = 'allow'; modes = @('allow','ask','never'); implemented = $true; alwaysConfirmOrDeny = $false }
+    [ordered]@{ id = 'eisenhower.move'; defaultMode = 'allow'; modes = @('allow','ask','never'); implemented = $true; alwaysConfirmOrDeny = $false }
+    [ordered]@{ id = 'eisenhower.trash'; defaultMode = 'ask'; modes = @('allow','ask','never'); implemented = $true; alwaysConfirmOrDeny = $false }
+    [ordered]@{ id = 'outlook.send'; defaultMode = 'never'; modes = @('ask','never'); implemented = $true; alwaysConfirmOrDeny = $true }
+    [ordered]@{ id = 'delete.external'; defaultMode = 'never'; modes = @('ask','never'); implemented = $true; alwaysConfirmOrDeny = $true }
+    [ordered]@{ id = 'uia.magic_wand'; defaultMode = 'never'; modes = @('never'); implemented = $false; alwaysConfirmOrDeny = $false }
+    [ordered]@{ id = 'crm.tokens'; defaultMode = 'never'; modes = @('never'); implemented = $false; alwaysConfirmOrDeny = $false }
+  )
+}
+
+function ConvertTo-WizardPermissionMap {
+  param($Incoming, $Base)
+  $perms = Get-WizardDefaultPermissions
+  foreach ($src in @($Base, $Incoming)) {
+    if ($null -eq $src) { continue }
+    $props = @()
+    if ($src -is [hashtable] -or $src -is [System.Collections.IDictionary]) {
+      foreach ($k in $src.Keys) {
+        $props += [pscustomobject]@{ Name = [string]$k; Value = $src[$k] }
+      }
+    } else {
+      $props = @($src.PSObject.Properties)
+    }
+    foreach ($p in $props) {
+      $name = [string]$p.Name
+      $val = [string]$p.Value
+      if ($val -notin @('allow','ask','never')) { continue }
+      if (-not $perms.Contains($name)) { continue }
+      $perms[$name] = $val
+    }
+  }
+  if ($perms['outlook.send'] -eq 'allow') { $perms['outlook.send'] = 'ask' }
+  if ($perms['delete.external'] -eq 'allow') { $perms['delete.external'] = 'ask' }
+  $perms['settings.local'] = 'allow'
+  $perms['uia.magic_wand'] = 'never'
+  $perms['crm.tokens'] = 'never'
+  return $perms
 }
 
 function Get-WizardDefaultSettings {
@@ -25,6 +88,17 @@ function Get-WizardDefaultSettings {
     idleSleepMs = 90000
     reminders = @()
     updatedAt = ''
+    language = 'ar'
+    startMinimized = $false
+    alwaysOnTop = $true
+    opacity = 1
+    followPointer = $true
+    preferredCorner = 'bottom-end'
+    proactiveBubbles = 'normal'
+    bubbleScale = 1
+    bubbleFontSize = 13
+    closeAction = 'hide'
+    permissions = Get-WizardDefaultPermissions
   }
 }
 
@@ -56,9 +130,44 @@ function Read-WizardSettings {
     if ($null -ne $obj.idleSleepMs) {
       $ms = [int]$obj.idleSleepMs
       if ($ms -lt 5000) { $ms = 5000 }
+      if ($ms -gt 600000) { $ms = 600000 }
       $defaults.idleSleepMs = $ms
     }
     if ($null -ne $obj.reminders) { $defaults.reminders = @($obj.reminders) }
+    if ($obj.language -and ([string]$obj.language -in @('ar','en'))) { $defaults.language = [string]$obj.language }
+    if ($obj.PSObject.Properties['startMinimized']) { $defaults.startMinimized = [bool]$obj.startMinimized }
+    if ($obj.PSObject.Properties['alwaysOnTop']) { $defaults.alwaysOnTop = [bool]$obj.alwaysOnTop }
+    if ($null -ne $obj.opacity) {
+      $op = [double]$obj.opacity
+      if ($op -lt 0.35) { $op = 0.35 }
+      if ($op -gt 1) { $op = 1 }
+      $defaults.opacity = $op
+    }
+    if ($obj.PSObject.Properties['followPointer']) { $defaults.followPointer = [bool]$obj.followPointer }
+    if ($obj.preferredCorner -and ([string]$obj.preferredCorner -in @('bottom-end','bottom-start','top-end','top-start'))) {
+      $defaults.preferredCorner = [string]$obj.preferredCorner
+    }
+    if ($obj.proactiveBubbles -and ([string]$obj.proactiveBubbles -in @('high','normal','low','off'))) {
+      $defaults.proactiveBubbles = [string]$obj.proactiveBubbles
+    }
+    if ($null -ne $obj.bubbleScale) {
+      $bs = [double]$obj.bubbleScale
+      if ($bs -lt 0.7) { $bs = 0.7 }
+      if ($bs -gt 1.8) { $bs = 1.8 }
+      $defaults.bubbleScale = $bs
+    }
+    if ($null -ne $obj.bubbleFontSize) {
+      $bf = [int]$obj.bubbleFontSize
+      if ($bf -lt 11) { $bf = 11 }
+      if ($bf -gt 22) { $bf = 22 }
+      $defaults.bubbleFontSize = $bf
+    }
+    if ($obj.closeAction -and ([string]$obj.closeAction -in @('hide','exit'))) {
+      $defaults.closeAction = [string]$obj.closeAction
+    }
+    if ($obj.PSObject.Properties['permissions']) {
+      $defaults.permissions = ConvertTo-WizardPermissionMap -Incoming $obj.permissions
+    }
     return $defaults
   } catch {
     return $defaults
@@ -80,7 +189,7 @@ function Save-WizardSettings {
     New-Item -ItemType Directory -Force -Path $dir | Out-Null
   }
   $Settings.updatedAt = (Get-Date).ToUniversalTime().ToString('o')
-  $json = ($Settings | ConvertTo-Json -Depth 6 -Compress)
+  $json = ($Settings | ConvertTo-Json -Depth 8 -Compress)
   [IO.File]::WriteAllText($path, $json, [Text.UTF8Encoding]::new($false))
   return $Settings
 }
@@ -125,6 +234,52 @@ function Merge-WizardSettings {
   }
   if ($Incoming.PSObject.Properties['reminders'] -and $null -ne $Incoming.reminders) {
     $Current.reminders = @($Incoming.reminders)
+  }
+  if ($Incoming.PSObject.Properties['language'] -and $Incoming.language) {
+    $lang = [string]$Incoming.language
+    if ($lang -in @('ar','en')) { $Current.language = $lang }
+  }
+  if ($Incoming.PSObject.Properties['startMinimized'] -and $null -ne $Incoming.startMinimized) {
+    $Current.startMinimized = [bool]$Incoming.startMinimized
+  }
+  if ($Incoming.PSObject.Properties['alwaysOnTop'] -and $null -ne $Incoming.alwaysOnTop) {
+    $Current.alwaysOnTop = [bool]$Incoming.alwaysOnTop
+  }
+  if ($Incoming.PSObject.Properties['opacity'] -and $null -ne $Incoming.opacity) {
+    $op = [double]$Incoming.opacity
+    if ($op -lt 0.35) { $op = 0.35 }
+    if ($op -gt 1) { $op = 1 }
+    $Current.opacity = $op
+  }
+  if ($Incoming.PSObject.Properties['followPointer'] -and $null -ne $Incoming.followPointer) {
+    $Current.followPointer = [bool]$Incoming.followPointer
+  }
+  if ($Incoming.PSObject.Properties['preferredCorner'] -and $Incoming.preferredCorner) {
+    $c = [string]$Incoming.preferredCorner
+    if ($c -in @('bottom-end','bottom-start','top-end','top-start')) { $Current.preferredCorner = $c }
+  }
+  if ($Incoming.PSObject.Properties['proactiveBubbles'] -and $Incoming.proactiveBubbles) {
+    $p = [string]$Incoming.proactiveBubbles
+    if ($p -in @('high','normal','low','off')) { $Current.proactiveBubbles = $p }
+  }
+  if ($Incoming.PSObject.Properties['bubbleScale'] -and $null -ne $Incoming.bubbleScale) {
+    $bs = [double]$Incoming.bubbleScale
+    if ($bs -lt 0.7) { $bs = 0.7 }
+    if ($bs -gt 1.8) { $bs = 1.8 }
+    $Current.bubbleScale = $bs
+  }
+  if ($Incoming.PSObject.Properties['bubbleFontSize'] -and $null -ne $Incoming.bubbleFontSize) {
+    $bf = [int]$Incoming.bubbleFontSize
+    if ($bf -lt 11) { $bf = 11 }
+    if ($bf -gt 22) { $bf = 22 }
+    $Current.bubbleFontSize = $bf
+  }
+  if ($Incoming.PSObject.Properties['closeAction'] -and $Incoming.closeAction) {
+    $ca = [string]$Incoming.closeAction
+    if ($ca -in @('hide','exit')) { $Current.closeAction = $ca }
+  }
+  if ($Incoming.PSObject.Properties['permissions'] -and $null -ne $Incoming.permissions) {
+    $Current.permissions = ConvertTo-WizardPermissionMap -Incoming $Incoming.permissions -Base $Current.permissions
   }
   return $Current
 }
@@ -171,6 +326,17 @@ function Invoke-WizardBridge {
     $merged = Merge-WizardSettings -Current $current -Incoming $payload
     $saved = Save-WizardSettings -DataDir $DataDir -Settings $merged
     Write-Json $Res @{ ok = $true; settings = $saved }
+    return $true
+  }
+
+  if ($Path -eq '/api/v1/wizard/permissions' -and $Req.HttpMethod -eq 'GET') {
+    $settings = Read-WizardSettings -DataDir $DataDir
+    Write-Json $Res @{
+      ok = $true
+      permissions = $settings.permissions
+      capabilities = Get-WizardCapabilityCatalog
+      version = $script:WizardBridgeVersion
+    }
     return $true
   }
 

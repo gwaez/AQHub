@@ -30,13 +30,15 @@
 | `crm-ops.html` + `crm-*.html` | غرفة عمليات المبيعات/الوحدات/الناس |
 | `data/signing-platforms.json` | digiapi (SPA/عقود) + digisign (إلغاء/ريفند/داخلي) |
 | `desktop-wizard/` | AQWizard (Tauri 2) — رفيق ويندوز؛ **لا** يكتب `tasks.json` مباشرة |
-| `wizard/Wizard-Bridge.ps1` | جسر رفيع: `GET /api/v1/wizard/health` و `GET/PUT /api/v1/wizard/settings` |
+| `wizard/Wizard-Bridge.ps1` | جسر رفيع: health + settings + permissions catalog |
 
-## AQWizard (P5 matrix)
+## AQWizard (P9 settings + P11 permissions)
 - فرع العمل: `feat/aqhub-wizard-companion`. التشغيل بجانب اللوحة: `desktop-wizard/README.md`.
 - الاسم الظاهر قابل للتغيير؛ المعرّف التقني `AQWizard` / حزمة `old-wizard`.
 - تاسك/نوت عبر HTTP + مصفوفة أيزنهاور `GET/POST /api/eisenhower` (سحب بين الأرباع). تراش ناعم + تراجع. لا كتابة `eisenhower.json` من Tauri.
-- Magic Wand / UIA / فقاعات الإيميل: مراحل لاحقة.
+- إعدادات حيّة عبر `GET/PUT /api/v1/wizard/settings` (لغة، شخصية، سلوك، فقاعات، صينية). صلاحيات Allow/Ask/Never في الإعدادات. Outlook Send والحذف الخارجي تأكيد أو رفض فقط.
+- سجل التدقيق: `GET/POST /api/audit` بدون أسرار.
+- Magic Wand / UIA / فقاعات الإيميل: مراحل لاحقة (ويندوز سطح مكتب).
 
 
 ## قواعد أعمال مهمة (CRM / أهلية)

@@ -8,4 +8,6 @@ export { MAGIC_WAND_PHASE } from "./engines/magic-wand.ts";
 export { FOLLOW_MY_WORK_PHASE } from "./engines/follow-my-work.ts";
 export { VOICE_PHASE } from "./engines/voice.ts";
 export { EisenhowerPanel, EISENHOWER_PANEL_PHASE } from "./ui/eisenhower-panel.ts";
-export { allowAction } from "./ui/permissions.ts";
+export { allowAction, decidePermission, CAPABILITIES } from "./ui/permissions.ts";
+export { SettingsPanel, SETTINGS_PANEL_PHASE } from "./ui/settings-panel.ts";
+export { parseAuditLog, stripSecrets } from "./api/audit.ts";

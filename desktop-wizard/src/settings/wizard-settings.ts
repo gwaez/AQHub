@@ -41,6 +41,10 @@ export class WizardSettingsStore {
       technicalId: this.current.technicalId,
       window: { ...this.current.window, ...(partial.window || {}) },
       reminders: partial.reminders ?? this.current.reminders,
+      permissions: {
+        ...this.current.permissions,
+        ...(partial.permissions || {}),
+      },
     });
     if (partial.displayName !== undefined) {
       next.displayName = partial.displayName.trim().slice(0, 80) || this.current.displayName;

@@ -27,6 +27,7 @@ function mockPorts(): {
     docs: [{ version: 1, title: "Aqaar Command", tasks: [{ id: "T-001", title: "existing" }] }] as BoardDoc[],
     notes: [] as { taskId: string; note: string }[],
     audits: 0,
+    auditLines: [] as Record<string, unknown>[],
     eis: [
       {
         items: [
@@ -52,9 +53,11 @@ function mockPorts(): {
       postBoxNote: async (taskId, note) => {
         store.notes.push({ taskId, note });
       },
-      postAudit: async () => {
+      postAudit: async (entry) => {
         store.audits += 1;
+        store.auditLines.push(entry);
       },
+      getAudit: async () => [],
       getEisDoc: async () => store.eis[store.eis.length - 1],
       putEisDoc: async (doc) => {
         store.eis.push(doc);
@@ -75,6 +78,7 @@ function mockPorts(): {
       setMatrixLayout: async (open) => {
         store.matrixOpen = open;
       },
+      setAlwaysOnTop: async () => {},
     },
   };
   return { ports, store };
@@ -178,14 +182,102 @@ test("MOVE_EIS_ITEM GET-merge-POST keeps other items and linkage", async () => {
   }
 });
 
-test("TRASH_EIS_ITEM is soft-delete with undo, not purge", async () => {
+test("TRASH_EIS_ITEM defaults to Ask then confirm executes soft-delete", async () => {
   const { ports, store } = mockPorts();
   const sm = new WizardStateMachine();
-  const trashed = await dispatch({ type: "TRASH_EIS_ITEM", id: "E-2" }, ports, sm);
+  const asked = await dispatch({ type: "TRASH_EIS_ITEM", id: "E-2" }, ports, sm);
+  assert.equal(asked.ok, false);
+  if (!asked.ok) {
+    assert.equal(asked.error, "needs_confirm");
+    assert.equal(asked.needsConfirm, true);
+  }
+  assert.equal(store.eis.length, 1);
+  const trashed = await dispatch({ type: "CONFIRM", pending: { type: "TRASH_EIS_ITEM", id: "E-2" } }, ports, sm);
   assert.equal(trashed.ok, true);
   assert.equal(store.eis.at(-1)?.items?.find((i) => i.id === "E-2")?.quad, "trash");
   assert.equal(store.eis.at(-1)?.items?.length, 2);
   if (trashed.ok) assert.equal(trashed.undo?.prevQuad, "do");
   await dispatch({ type: "UNDO_TRASH", id: "E-2", prevQuad: "do" }, ports, sm);
   assert.equal(store.eis.at(-1)?.items?.find((i) => i.id === "E-2")?.quad, "do");
+});
+
+test("Never CREATE_TASK blocks HTTP", async () => {
+  const { ports, store } = mockPorts();
+  const sm = new WizardStateMachine();
+  await dispatch({ type: "SET_PERMISSION", capabilityId: "board.create_task", mode: "never" }, ports, sm);
+  const result = await dispatch({ type: "CREATE_TASK", title: "ممنوع" }, ports, sm);
+  assert.equal(result.ok, false);
+  if (!result.ok) assert.equal(result.error, "permission_denied");
+  assert.equal(store.docs.length, 1);
+});
+
+test("Ask CREATE_TASK then CONFIRM posts once", async () => {
+  const { ports, store } = mockPorts();
+  const sm = new WizardStateMachine();
+  await dispatch({ type: "SET_PERMISSION", capabilityId: "board.create_task", mode: "ask" }, ports, sm);
+  const asked = await dispatch({ type: "CREATE_TASK", title: "بعد التأكيد" }, ports, sm);
+  assert.equal(asked.ok, false);
+  assert.equal(store.docs.length, 1);
+  const done = await dispatch({ type: "CONFIRM", pending: { type: "CREATE_TASK", title: "بعد التأكيد" } }, ports, sm);
+  assert.equal(done.ok, true);
+  assert.equal(store.docs.length, 2);
+});
+
+test("DENY leaves the board unchanged", async () => {
+  const { ports, store } = mockPorts();
+  const sm = new WizardStateMachine();
+  await dispatch({ type: "SET_PERMISSION", capabilityId: "board.create_task", mode: "ask" }, ports, sm);
+  await dispatch({ type: "CREATE_TASK", title: "لا" }, ports, sm);
+  const denied = await dispatch({ type: "DENY", pending: { type: "CREATE_TASK", title: "لا" } }, ports, sm);
+  assert.equal(denied.ok, false);
+  assert.equal(store.docs.length, 1);
+});
+
+test("APPROVE_SEND stays denied even after confirm — no auto-send", async () => {
+  const { ports } = mockPorts();
+  const sm = new WizardStateMachine();
+  await dispatch({ type: "SET_PERMISSION", capabilityId: "outlook.send", mode: "ask" }, ports, sm);
+  const asked = await dispatch({ type: "APPROVE_SEND", taskId: "T-001" }, ports, sm);
+  assert.equal(asked.ok, false);
+  if (!asked.ok) assert.equal(asked.needsConfirm, true);
+  const confirmed = await dispatch({ type: "CONFIRM", pending: { type: "APPROVE_SEND", taskId: "T-001" } }, ports, sm);
+  assert.equal(confirmed.ok, false);
+  if (!confirmed.ok) assert.equal(confirmed.error, "send_not_from_wizard");
+});
+
+test("DELETE_EXTERNAL Never blocks; Ask+confirm is a no-op stub", async () => {
+  const { ports, store } = mockPorts();
+  const sm = new WizardStateMachine();
+  const blocked = await dispatch({ type: "DELETE_EXTERNAL", target: "mail" }, ports, sm);
+  assert.equal(blocked.ok, false);
+  await dispatch({ type: "SET_PERMISSION", capabilityId: "delete.external", mode: "ask" }, ports, sm);
+  const asked = await dispatch({ type: "DELETE_EXTERNAL", target: "mail" }, ports, sm);
+  assert.equal(asked.ok, false);
+  const done = await dispatch({ type: "CONFIRM", pending: { type: "DELETE_EXTERNAL", target: "mail" } }, ports, sm);
+  assert.equal(done.ok, true);
+  assert.equal(store.docs.length, 1);
+});
+
+test("PATCH_SETTINGS persists P9 fields on wizard settings, not tasks", async () => {
+  const { ports, store } = mockPorts();
+  const sm = new WizardStateMachine();
+  await dispatch(
+    {
+      type: "PATCH_SETTINGS",
+      patch: { language: "en", opacity: 0.7, closeAction: "exit", proactiveBubbles: "low" },
+    },
+    ports,
+    sm,
+  );
+  assert.equal(store.settings.language, "en");
+  assert.equal(store.settings.opacity, 0.7);
+  assert.equal(store.settings.closeAction, "exit");
+  assert.equal(store.docs.length, 1);
+});
+
+test("SET_PERMISSION cannot Allow outlook.send", async () => {
+  const { ports, store } = mockPorts();
+  const sm = new WizardStateMachine();
+  await dispatch({ type: "SET_PERMISSION", capabilityId: "outlook.send", mode: "allow" }, ports, sm);
+  assert.equal(store.settings.permissions["outlook.send"], "ask");
 });

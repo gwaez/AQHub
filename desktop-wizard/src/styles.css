@@ -300,6 +300,108 @@ body[data-anim="reduced"] .character .lid {
 .bubble[hidden] {
   display: none;
 }
+.bubble-confirm {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+.bubble-confirm[hidden] {
+  display: none;
+}
+.bubble-confirm button {
+  flex: 1;
+  border: 1px solid rgba(125, 211, 252, 0.35);
+  background: rgba(15, 32, 51, 0.95);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 4px 8px;
+  font: inherit;
+  cursor: pointer;
+}
+#bubbleYes {
+  background: linear-gradient(135deg, var(--cyan), #60a5fa);
+  color: #04131a;
+  border: 0;
+  font-weight: 700;
+}
+
+.settings-panel {
+  max-height: min(78vh, 520px);
+  overflow: hidden;
+  z-index: 9;
+  display: grid;
+  grid-template-rows: auto auto 1fr auto;
+}
+.settings-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.settings-tabs button {
+  padding: 4px 8px;
+  font-size: 0.72rem;
+}
+.settings-tabs button.active {
+  background: linear-gradient(135deg, var(--cyan), #60a5fa);
+  color: #04131a;
+  border: 0;
+  font-weight: 700;
+}
+.settings-body {
+  overflow: auto;
+  min-height: 0;
+  display: grid;
+  gap: 8px;
+  padding-inline-end: 4px;
+}
+.settings-panel label.check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.settings-panel label.check input {
+  width: auto;
+}
+.hotkey-list,
+.audit-list {
+  margin: 0;
+  padding: 0 1.1rem;
+  color: var(--muted);
+  font-size: 0.75rem;
+  display: grid;
+  gap: 6px;
+}
+.hotkey-list kbd {
+  color: var(--gold);
+  font-family: inherit;
+}
+.perm-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.72rem;
+}
+.perm-table td,
+.perm-table th {
+  text-align: start;
+  vertical-align: top;
+  padding: 6px 4px;
+  border-bottom: 1px solid rgba(125, 211, 252, 0.12);
+}
+.perm-table small {
+  display: block;
+  color: var(--muted);
+  font-weight: 400;
+}
+.perm-mode {
+  color: var(--gold);
+  font-family: ui-monospace, monospace;
+  white-space: nowrap;
+}
+
+#stage.corner-bottom-end { align-items: flex-end; justify-content: flex-end; }
+#stage.corner-bottom-start { align-items: flex-end; justify-content: flex-start; }
+#stage.corner-top-end { align-items: flex-start; justify-content: flex-end; }
+#stage.corner-top-start { align-items: flex-start; justify-content: flex-start; }
 
 .nameplate {
   display: flex;

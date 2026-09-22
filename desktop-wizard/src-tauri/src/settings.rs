@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 use tauri::{AppHandle, Manager};
@@ -26,6 +27,28 @@ pub struct WizardSettings {
     #[serde(default)]
     pub reminders: Option<Vec<Reminder>>,
     pub updated_at: Option<String>,
+    #[serde(default)]
+    pub language: Option<String>,
+    #[serde(default)]
+    pub start_minimized: Option<bool>,
+    #[serde(default)]
+    pub always_on_top: Option<bool>,
+    #[serde(default)]
+    pub opacity: Option<f64>,
+    #[serde(default)]
+    pub follow_pointer: Option<bool>,
+    #[serde(default)]
+    pub preferred_corner: Option<String>,
+    #[serde(default)]
+    pub proactive_bubbles: Option<String>,
+    #[serde(default)]
+    pub bubble_scale: Option<f64>,
+    #[serde(default)]
+    pub bubble_font_size: Option<f64>,
+    #[serde(default)]
+    pub close_action: Option<String>,
+    #[serde(default)]
+    pub permissions: Option<HashMap<String, String>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -105,6 +128,17 @@ fn read_settings() -> Result<WizardSettings, String> {
             idle_sleep_ms: Some(90_000),
             reminders: Some(Vec::new()),
             updated_at: Some(String::new()),
+            language: Some("ar".into()),
+            start_minimized: Some(false),
+            always_on_top: Some(true),
+            opacity: Some(1.0),
+            follow_pointer: Some(true),
+            preferred_corner: Some("bottom-end".into()),
+            proactive_bubbles: Some("normal".into()),
+            bubble_scale: Some(1.0),
+            bubble_font_size: Some(13.0),
+            close_action: Some("hide".into()),
+            permissions: None,
         });
     }
     let raw = fs::read_to_string(&path).map_err(|e| e.to_string())?;
@@ -143,12 +177,20 @@ pub fn restore_window(app: &AppHandle) -> tauri::Result<()> {
             let _ = w.set_position(tauri::Position::Physical(tauri::PhysicalPosition { x, y }));
         }
     }
-    if settings.visible == Some(false) {
+    if settings.start_minimized == Some(true) || settings.visible == Some(false) {
         let _ = w.hide();
     } else {
         let _ = w.show();
-        let _ = w.set_always_on_top(true);
+        let on_top = settings.always_on_top.unwrap_or(true);
+        let _ = w.set_always_on_top(on_top);
         let _ = w.set_skip_taskbar(true);
     }
     Ok(())
+}
+
+pub fn close_should_hide() -> bool {
+    match read_settings() {
+        Ok(s) => s.close_action.as_deref() != Some("exit"),
+        Err(_) => true,
+    }
 }

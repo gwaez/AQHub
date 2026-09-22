@@ -1,8 +1,18 @@
+import { parseAuditLog, type AuditLine, AUDIT_VIEW_LIMIT } from "./audit.ts";
 import { mergeTaskIntoDoc, nextTaskId, newWizardTask, type BoardDoc } from "./tasks.ts";
+import {
+  defaultPermissionMap,
+  normalizePermissionMap,
+  type PermissionMap,
+} from "../ui/permissions.ts";
 
 export const DEFAULT_AQHUB_URL = "http://127.0.0.1:8766";
 
 export type AnimationLevel = "normal" | "reduced" | "off";
+export type UiLanguage = "ar" | "en";
+export type ProactiveLevel = "high" | "normal" | "low" | "off";
+export type PreferredCorner = "bottom-end" | "bottom-start" | "top-end" | "top-start";
+export type CloseAction = "hide" | "exit";
 
 export interface WizardHealth {
   ok: boolean;
@@ -28,6 +38,17 @@ export interface WizardSettings {
   idleSleepMs: number;
   reminders: WizardReminder[];
   updatedAt: string;
+  language: UiLanguage;
+  startMinimized: boolean;
+  alwaysOnTop: boolean;
+  opacity: number;
+  followPointer: boolean;
+  preferredCorner: PreferredCorner;
+  proactiveBubbles: ProactiveLevel;
+  bubbleScale: number;
+  bubbleFontSize: number;
+  closeAction: CloseAction;
+  permissions: PermissionMap;
 }
 
 export function defaultSettings(displayName = "الساحر العتيق"): WizardSettings {
@@ -42,7 +63,23 @@ export function defaultSettings(displayName = "الساحر العتيق"): Wiza
     idleSleepMs: 90_000,
     reminders: [],
     updatedAt: "",
+    language: "ar",
+    startMinimized: false,
+    alwaysOnTop: true,
+    opacity: 1,
+    followPointer: true,
+    preferredCorner: "bottom-end",
+    proactiveBubbles: "normal",
+    bubbleScale: 1,
+    bubbleFontSize: 13,
+    closeAction: "hide",
+    permissions: defaultPermissionMap(),
   };
+}
+
+function clamp(n: number, min: number, max: number, fallback: number): number {
+  if (!Number.isFinite(n)) return fallback;
+  return Math.min(max, Math.max(min, n));
 }
 
 export function normalizeSettings(raw: Partial<WizardSettings> | Record<string, unknown>): WizardSettings {
@@ -51,15 +88,26 @@ export function normalizeSettings(raw: Partial<WizardSettings> | Record<string, 
   const level = s.animationLevel;
   const anim: AnimationLevel = level === "reduced" || level === "off" || level === "normal" ? level : "normal";
   const reminders = Array.isArray(s.reminders) ? s.reminders : [];
+  const lang: UiLanguage = s.language === "en" ? "en" : "ar";
+  const proactive: ProactiveLevel =
+    s.proactiveBubbles === "high" || s.proactiveBubbles === "low" || s.proactiveBubbles === "off"
+      ? s.proactiveBubbles
+      : "normal";
+  const corner: PreferredCorner =
+    s.preferredCorner === "bottom-start" || s.preferredCorner === "top-end" || s.preferredCorner === "top-start"
+      ? s.preferredCorner
+      : "bottom-end";
+  const closeAction: CloseAction = s.closeAction === "exit" ? "exit" : "hide";
+  const scale = clamp(Number(s.window?.scale ?? base.window.scale), 0.5, 3, 1);
   return {
     ...base,
     ...s,
     characterId: base.characterId,
     technicalId: base.technicalId,
     displayName: String(s.displayName || base.displayName),
-    window: { ...base.window, ...(s.window || {}) },
+    window: { ...base.window, ...(s.window || {}), scale },
     animationLevel: anim,
-    idleSleepMs: typeof s.idleSleepMs === "number" && s.idleSleepMs >= 5000 ? s.idleSleepMs : base.idleSleepMs,
+    idleSleepMs: clamp(Number(s.idleSleepMs ?? base.idleSleepMs), 5000, 600_000, base.idleSleepMs),
     reminders: reminders.map((r) => ({
       id: String(r.id || ""),
       text: String(r.text || ""),
@@ -67,6 +115,17 @@ export function normalizeSettings(raw: Partial<WizardSettings> | Record<string, 
       fired: Boolean(r.fired),
     })),
     visible: s.visible !== false,
+    language: lang,
+    startMinimized: s.startMinimized === true,
+    alwaysOnTop: s.alwaysOnTop !== false,
+    opacity: clamp(Number(s.opacity ?? base.opacity), 0.35, 1, 1),
+    followPointer: s.followPointer !== false,
+    preferredCorner: corner,
+    proactiveBubbles: proactive,
+    bubbleScale: clamp(Number(s.bubbleScale ?? base.bubbleScale), 0.7, 1.8, 1),
+    bubbleFontSize: clamp(Number(s.bubbleFontSize ?? base.bubbleFontSize), 11, 22, 13),
+    closeAction,
+    permissions: normalizePermissionMap(s.permissions),
   };
 }
 
@@ -78,6 +137,7 @@ export interface AqHubApi {
   putTasksDoc(doc: BoardDoc): Promise<void>;
   postBoxNote(taskId: string, note: string): Promise<void>;
   postAudit(entry: Record<string, unknown>): Promise<void>;
+  getAudit(limit?: number): Promise<AuditLine[]>;
   getEisDoc(): Promise<import("./eisenhower.ts").EisDoc>;
   putEisDoc(doc: import("./eisenhower.ts").EisDoc): Promise<void>;
 }
@@ -150,6 +210,15 @@ export function createAqHubClient(baseUrl = DEFAULT_AQHUB_URL): AqHubApi {
         });
       } catch {
         /* audit is best-effort */
+      }
+    },
+    async getAudit(limit = AUDIT_VIEW_LIMIT) {
+      try {
+        const res = await fetch(baseUrl + "/api/audit");
+        const text = await res.text();
+        return parseAuditLog(text, limit);
+      } catch {
+        return [];
       }
     },
     async getEisDoc() {

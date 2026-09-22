@@ -11,6 +11,10 @@
       <div class="drag-strip" data-tauri-drag-region></div>
       <div id="bubble" class="bubble" dir="rtl" lang="ar" hidden>
         <p id="bubbleText"></p>
+        <div id="bubbleConfirm" class="bubble-confirm" hidden>
+          <button type="button" id="bubbleYes">تأكيد</button>
+          <button type="button" id="bubbleNo">رفض</button>
+        </div>
       </div>
       <div id="character" class="character" data-state="IDLE" data-motion="breathe" data-tauri-drag-region="false"></div>
       <div class="nameplate" data-tauri-drag-region="false">
@@ -38,26 +42,7 @@
       <p class="hint">يُرسل عبر HTTP إلى AQHub — بدون كتابة tasks.json من هنا. الأمر <code>/matrix</code> يفتح أيزنهاور.</p>
     </form>
 
-    <div id="settingsPanel" class="settings-panel" hidden>
-      <p class="composer-title">إعدادات</p>
-      <label>اسم العرض
-        <input id="settingsName" type="text" maxlength="80" />
-      </label>
-      <label>مستوى الحركة
-        <select id="settingsAnim">
-          <option value="normal">عادي</option>
-          <option value="reduced">مخفف</option>
-          <option value="off">إيقاف</option>
-        </select>
-      </label>
-      <label>النوم بعد (ثوانٍ)
-        <input id="settingsSleep" type="number" min="5" max="600" step="5" />
-      </label>
-      <div class="composer-actions">
-        <button type="button" id="settingsSave" class="primary">حفظ</button>
-        <button type="button" id="settingsClose">إلغاء</button>
-      </div>
-    </div>
+    <div id="settingsPanel" class="settings-panel" hidden></div>
 
     <nav id="ctx" class="ctx-menu" hidden>
       <button type="button" data-ctx="NEW_TASK">تاسك جديد</button>
@@ -81,6 +66,7 @@
         <button type="button" data-act="THINK">يفكر</button>
         <button type="button" data-act="ALERT">تنبيه</button>
         <button type="button" data-act="MATRIX">مصفوفة</button>
+        <button type="button" data-act="SETTINGS">إعدادات</button>
         <button type="button" data-act="OPEN_AQHUB">فتح AQHub</button>
       </div>
       <label class="scale-label">الحجم

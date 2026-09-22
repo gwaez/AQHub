@@ -8,7 +8,8 @@ import {
   type StateContext,
   type WizardStateId,
 } from "../state/wizard-state-machine.ts";
-import { allowAction } from "../ui/permissions.ts";
+import { confirmLabel, decidePermission } from "../ui/permissions.ts";
+import { stripSecrets } from "../api/audit.ts";
 
 export interface CharacterWindowPort {
   show(): Promise<void>;
@@ -17,6 +18,7 @@ export interface CharacterWindowPort {
   exit(): Promise<void>;
   setPosition(x: number, y: number): Promise<void>;
   setMatrixLayout(open: boolean): Promise<void>;
+  setAlwaysOnTop(on: boolean): Promise<void>;
 }
 
 export interface WizardPorts {
@@ -40,7 +42,7 @@ async function audit(ports: WizardPorts, action: WizardAction, extra: Record<str
     at: new Date().toISOString(),
     actor: "AQWizard",
     action: "wizard." + action.type.toLowerCase(),
-    extra,
+    extra: stripSecrets(extra) as Record<string, unknown>,
   });
 }
 
@@ -50,20 +52,51 @@ function fail(action: WizardAction, error: string, machine: WizardStateMachine, 
 }
 
 /**
- * Action Engine — validate → permission stub → HTTP → audit stub → SUCCESS/ERROR.
+ * Action Engine — validate → permission (Allow / Ask / Never) → HTTP → audit → SUCCESS/ERROR.
  * Animations subscribe to the state machine after this returns.
  */
 export async function dispatch(
   action: WizardAction,
   ports: WizardPorts,
   machine: WizardStateMachine,
+  opts: { confirmed?: boolean } = {},
 ): Promise<WizardActionResult> {
   const settings = ports.settings ?? new WizardSettingsStore(ports.api);
   ports.settings = settings;
   const c = () => ctx(ports);
+  const lang = settings.current.language === "en" ? "en" : "ar";
 
-  if (!allowAction(action.type)) {
+  if (action.type === "CONFIRM") {
+    if (action.pending.type === "CONFIRM" || action.pending.type === "DENY") {
+      return fail(action, "bad_confirm", machine, ports);
+    }
+    await audit(ports, action, { pending: action.pending.type, decided: "confirm" });
+    return dispatch(action.pending, ports, machine, { confirmed: true });
+  }
+  if (action.type === "DENY") {
+    await audit(ports, action, { pending: action.pending.type, decided: "deny" });
+    return {
+      ok: false,
+      action,
+      error: "permission_denied",
+      bubble: { kind: "alert", text: lang === "en" ? "Denied" : "مرفوض" },
+    };
+  }
+
+  const decision = decidePermission(action.type, settings.current.permissions, opts.confirmed === true);
+  if (decision === "never") {
+    await audit(ports, action, { decision: "never" });
     return fail(action, "permission_denied", machine, ports);
+  }
+  if (decision === "ask") {
+    await audit(ports, action, { decision: "ask" });
+    return {
+      ok: false,
+      action,
+      error: "needs_confirm",
+      needsConfirm: true,
+      bubble: { kind: "alert", text: confirmLabel(action, lang) },
+    };
   }
 
   try {
@@ -118,6 +151,7 @@ export async function dispatch(
         if (loaded.window.x != null && loaded.window.y != null) {
           await ports.window.setPosition(loaded.window.x, loaded.window.y);
         }
+        await ports.window.setAlwaysOnTop(loaded.alwaysOnTop);
         return { ok: true, action };
       }
       case "WATCH": {
@@ -159,6 +193,24 @@ export async function dispatch(
       }
       case "SET_SLEEP_MS": {
         await settings.save({ idleSleepMs: action.ms });
+        return { ok: true, action };
+      }
+      case "PATCH_SETTINGS": {
+        const saved = await settings.save(action.patch);
+        if (action.patch.alwaysOnTop !== undefined) {
+          await ports.window.setAlwaysOnTop(saved.alwaysOnTop);
+        }
+        machine.update(c(), 0);
+        await audit(ports, action, { keys: Object.keys(action.patch) });
+        return { ok: true, action };
+      }
+      case "SET_PERMISSION": {
+        const next = {
+          ...settings.current.permissions,
+          [action.capabilityId]: action.mode,
+        };
+        await settings.save({ permissions: next });
+        await audit(ports, action, { capabilityId: action.capabilityId, mode: action.mode });
         return { ok: true, action };
       }
       case "CREATE_TASK": {
@@ -276,7 +328,20 @@ export async function dispatch(
         return { ok: true, action, bubble: { kind: "thought", text: `${action.state} لاحقًا` } };
       }
       case "APPROVE_SEND": {
-        return fail(action, "permission_denied", machine, ports);
+        await audit(ports, action, { decision: "send_not_from_wizard" });
+        return fail(action, "send_not_from_wizard", machine, ports);
+      }
+      case "DELETE_EXTERNAL": {
+        await audit(ports, action, { decision: "stub_no_delete", target: action.target || "" });
+        machine.enter("SUCCESS", c());
+        return {
+          ok: true,
+          action,
+          bubble: {
+            kind: "thought",
+            text: lang === "en" ? "External delete is not enabled" : "الحذف الخارجي غير مفعّل",
+          },
+        };
       }
       default: {
         const _never: never = action;

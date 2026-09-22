@@ -10,9 +10,11 @@ import { IdleDirector } from "./engines/idle-director.ts";
 import { BubbleEngine } from "./engines/bubble-engine.ts";
 import { injectWizardSvg, loadCharacterPack } from "./ui/character.ts";
 import { EisenhowerPanel } from "./ui/eisenhower-panel.ts";
-import { copy } from "./i18n/ar.ts";
+import { SettingsPanel } from "./ui/settings-panel.ts";
+import { applyDocumentLocale, localeCopy } from "./i18n/index.ts";
 import type { WizardAction } from "./actions/wizard-action.ts";
 import type { EisQuad } from "./api/eisenhower.ts";
+import type { AuditLine } from "./api/audit.ts";
 
 const isTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 
@@ -44,6 +46,7 @@ function browserWindowPort(): CharacterWindowPort {
     async setMatrixLayout(open: boolean) {
       document.body.classList.toggle("matrix-open", open);
     },
+    async setAlwaysOnTop() {},
   };
 }
 
@@ -68,6 +71,9 @@ function tauriWindowPort(): CharacterWindowPort {
       document.body.classList.toggle("matrix-open", open);
       await invoke("set_matrix_layout", { open });
     },
+    async setAlwaysOnTop(on: boolean) {
+      await invoke("set_always_on_top", { on });
+    },
   };
 }
 
@@ -86,11 +92,12 @@ async function main() {
   const composerBody = el<HTMLTextAreaElement>("composerBody");
   const composerDue = el<HTMLInputElement>("composerDue");
   const ctx = el("ctx");
-  const settingsPanel = el("settingsPanel");
-  const settingsName = el<HTMLInputElement>("settingsName");
-  const settingsAnim = el<HTMLSelectElement>("settingsAnim");
-  const settingsSleep = el<HTMLInputElement>("settingsSleep");
+  const settingsHost = el("settingsPanel");
   const matrixHost = el("matrixPanel");
+  const bubbleConfirm = el("bubbleConfirm");
+  const bubbleYes = el<HTMLButtonElement>("bubbleYes");
+  const bubbleNo = el<HTMLButtonElement>("bubbleNo");
+  const stage = el("stage");
 
   const pack = await loadCharacterPack("old-wizard");
   try {
@@ -122,6 +129,11 @@ async function main() {
   const look = { x: 0, y: 0 };
   let idleReturnTimer = 0;
   let lastUndo: { id: string; prevQuad: EisQuad } | null = null;
+  let pendingAsk: WizardAction | null = null;
+  let lastProactive = Date.now();
+  let auditLines: AuditLine[] = [];
+  let ui = localeCopy(settings.current.language);
+  let settingsUi: SettingsPanel;
 
   const ports = {
     api,
@@ -130,19 +142,37 @@ async function main() {
   };
 
   const paint = () => {
+    ui = localeCopy(settings.current.language);
+    applyDocumentLocale(settings.current.language);
     applyAnimation(character, machine.hint, look, settings.current.animationLevel);
     nameBtn.textContent = settings.current.displayName;
     techId.textContent = `${settings.current.technicalId} · ${settings.current.characterId}`;
     const s = Math.round((settings.current.window.scale || 1) * 100);
     scale.value = String(s);
     character.style.transform = `scale(${settings.current.window.scale || 1})`;
-    stateLabel.textContent = "الحالة: " + machine.state;
+    character.style.opacity = String((Number(character.style.opacity) || 1) * settings.current.opacity);
+    bubble.style.transform = `scale(${settings.current.bubbleScale})`;
+    bubble.style.fontSize = `${settings.current.bubbleFontSize}px`;
+    for (const corner of ["bottom-end", "bottom-start", "top-end", "top-start"] as const) {
+      stage.classList.toggle("corner-" + corner, settings.current.preferredCorner === corner);
+    }
+    stateLabel.textContent = (ui.idle.startsWith("Idle") ? "State: " : "الحالة: ") + machine.state;
+    bubbleYes.textContent = ui.confirm;
+    bubbleNo.textContent = ui.deny;
     bubbles.apply(bubble, bubbleText);
+    if (settingsUi.visible) settingsUi.sync(settings.current, auditLines);
   };
 
-  const speak = (kind: "speech" | "thought" | "alert", text: string) => {
+  const speak = (kind: "speech" | "thought" | "alert", text: string, ms?: number) => {
     if (!text) return;
-    bubbles.show({ kind, text, dir: pack.bubble.dir, lang: pack.bubble.lang });
+    const lang = settings.current.language === "en" ? "en" : "ar";
+    bubbles.show({
+      kind,
+      text,
+      dir: lang === "en" ? "ltr" : "rtl",
+      lang,
+      ms,
+    });
     paint();
   };
 
@@ -160,6 +190,38 @@ async function main() {
       void run({ type: "CLOSE_MATRIX" });
     },
   });
+
+  settingsUi = new SettingsPanel(
+    settingsHost,
+    {
+      onPatch(patch) {
+        void run({ type: "PATCH_SETTINGS", patch });
+      },
+      onPermission(id, mode) {
+        void run({ type: "SET_PERMISSION", capabilityId: id, mode });
+      },
+      onRefreshAudit() {
+        void refreshAudit();
+      },
+      onClose() {
+        closeOverlays();
+      },
+    },
+    ui,
+  );
+
+  async function refreshAudit() {
+    auditLines = await api.getAudit(40);
+    if (settingsUi.visible) settingsUi.sync(settings.current, auditLines);
+  }
+
+  async function openSettings() {
+    closeOverlays();
+    idle.pause();
+    settingsUi.setCopy(localeCopy(settings.current.language));
+    await refreshAudit();
+    settingsUi.show(settings.current, auditLines);
+  }
 
   async function run(action: WizardAction) {
     const result = await dispatch(action, ports, machine);
@@ -185,7 +247,15 @@ async function main() {
       lastUndo = null;
       idle.resume(Date.now());
     }
-    if (result.bubble?.text) speak(result.bubble.kind, result.bubble.text);
+    if (!result.ok && result.needsConfirm) {
+      pendingAsk = result.action;
+      bubbleConfirm.hidden = false;
+      speak(result.bubble?.kind || "alert", result.bubble?.text || ui.needsConfirm, 0);
+    } else {
+      pendingAsk = null;
+      bubbleConfirm.hidden = true;
+      if (result.bubble?.text) speak(result.bubble.kind, result.bubble.text);
+    }
     if (isTransientState(machine.state)) {
       window.clearTimeout(idleReturnTimer);
       const back = result.ok && "returnTo" in result && result.returnTo === "MATRIX" ? "MATRIX" : "IDLE";
@@ -204,10 +274,10 @@ async function main() {
     paint();
     if (action.type === "PING_HEALTH") {
       if (result.ok && "health" in result && result.health?.aqhub) {
-        hubStatus.textContent = `${copy.hubUp} · ${result.health.version}`;
+        hubStatus.textContent = `${ui.hubUp} · ${result.health.version}`;
         hubStatus.className = "hub up";
       } else {
-        hubStatus.textContent = copy.hubDown;
+        hubStatus.textContent = ui.hubDown;
         hubStatus.className = "hub down";
       }
     }
@@ -217,7 +287,7 @@ async function main() {
   const closeOverlays = () => {
     composer.hidden = true;
     ctx.hidden = true;
-    settingsPanel.hidden = true;
+    settingsUi.hide();
     if (!matrix.visible) idle.resume(Date.now());
   };
 
@@ -249,7 +319,7 @@ async function main() {
   paint();
 
   nameBtn.addEventListener("dblclick", async () => {
-    const next = window.prompt(copy.displayNameLabel, settings.current.displayName);
+    const next = window.prompt(ui.displayNameLabel, settings.current.displayName);
     if (next && next.trim()) await run({ type: "RENAME_DISPLAY", displayName: next });
   });
 
@@ -269,11 +339,18 @@ async function main() {
     if (act === "THINK") await run({ type: "THINK" });
     if (act === "ALERT") await run({ type: "ALERT", text: "تنبيه تجريبي" });
     if (act === "MATRIX") await run({ type: "OPEN_MATRIX" });
+    if (act === "SETTINGS") await openSettings();
     if (act === "OPEN_AQHUB") await run({ type: "OPEN_AQHUB" });
   });
 
   character.addEventListener("pointermove", (ev) => {
     idle.nudge(Date.now());
+    if (!settings.current.followPointer) {
+      look.x = 0;
+      look.y = 0;
+      paint();
+      return;
+    }
     const r = character.getBoundingClientRect();
     look.x = ((ev.clientX - r.left) / r.width - 0.5) * 6;
     look.y = ((ev.clientY - r.top) / r.height - 0.5) * 4;
@@ -307,14 +384,8 @@ async function main() {
     if (key === "QUICK_NOTE") openComposer("note");
     if (key === "MATRIX") await run({ type: "OPEN_MATRIX" });
     if (key === "OPEN_AQHUB") await run({ type: "OPEN_AQHUB" });
-    if (key === "ASK") speak("thought", copy.askLater);
-    if (key === "SETTINGS") {
-      idle.pause();
-      settingsName.value = settings.current.displayName;
-      settingsAnim.value = settings.current.animationLevel;
-      settingsSleep.value = String(Math.round(settings.current.idleSleepMs / 1000));
-      settingsPanel.hidden = false;
-    }
+    if (key === "ASK") speak("thought", ui.askLater);
+    if (key === "SETTINGS") await openSettings();
     if (key === "HIDE") await run({ type: "HIDE" });
     if (key === "EXIT") await run({ type: "EXIT" });
   });
@@ -342,13 +413,12 @@ async function main() {
   });
   el("composerCancel").addEventListener("click", closeOverlays);
 
-  el("settingsSave").addEventListener("click", async () => {
-    await run({ type: "RENAME_DISPLAY", displayName: settingsName.value });
-    await run({ type: "SET_ANIMATION_LEVEL", level: settingsAnim.value as "normal" | "reduced" | "off" });
-    await run({ type: "SET_SLEEP_MS", ms: Number(settingsSleep.value) * 1000 });
-    closeOverlays();
+  bubbleYes.addEventListener("click", () => {
+    if (pendingAsk) void run({ type: "CONFIRM", pending: pendingAsk });
   });
-  el("settingsClose").addEventListener("click", closeOverlays);
+  bubbleNo.addEventListener("click", () => {
+    if (pendingAsk) void run({ type: "DENY", pending: pendingAsk });
+  });
 
   document.addEventListener("pointerdown", (ev) => {
     idle.nudge(Date.now());
@@ -391,6 +461,28 @@ async function main() {
       250,
     );
     if (idle.shouldSleep(now, machine.state)) void run({ type: "SLEEP" });
+    const gap =
+      settings.current.proactiveBubbles === "high"
+        ? 20_000
+        : settings.current.proactiveBubbles === "low"
+          ? 180_000
+          : settings.current.proactiveBubbles === "off"
+            ? 0
+            : 60_000;
+    if (
+      gap > 0 &&
+      now - lastProactive >= gap &&
+      machine.state === "IDLE" &&
+      composer.hidden &&
+      !settingsUi.visible &&
+      !matrix.visible
+    ) {
+      lastProactive = now;
+      speak(
+        "thought",
+        settings.current.language === "en" ? "Ready for a task or the matrix." : "جاهز لتاسك جديد أو أيزنهاور.",
+      );
+    }
     bubbles.tick(now);
     paint();
   }, 250);

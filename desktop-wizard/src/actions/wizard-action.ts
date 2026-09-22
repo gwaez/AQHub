@@ -1,3 +1,6 @@
+import type { WizardSettings } from "../api/aqhub-client.ts";
+import type { PermissionMode } from "../ui/permissions.ts";
+
 export type WizardAction =
   | { type: "SHOW" }
   | { type: "HIDE" }
@@ -18,6 +21,8 @@ export type WizardAction =
   | { type: "DRAG_END" }
   | { type: "SET_ANIMATION_LEVEL"; level: "normal" | "reduced" | "off" }
   | { type: "SET_SLEEP_MS"; ms: number }
+  | { type: "PATCH_SETTINGS"; patch: Partial<WizardSettings> }
+  | { type: "SET_PERMISSION"; capabilityId: string; mode: PermissionMode }
   | { type: "CREATE_TASK"; title: string; notes?: string }
   | { type: "CREATE_NOTE"; note: string; taskId?: string }
   | { type: "SET_REMINDER"; text: string; dueAt: string }
@@ -27,7 +32,10 @@ export type WizardAction =
   | { type: "TRASH_EIS_ITEM"; id: string }
   | { type: "UNDO_TRASH"; id: string; prevQuad: import("../api/eisenhower.ts").EisQuad }
   | { type: "ENTER_STUB"; state: "WAND" | "NOTE" }
-  | { type: "APPROVE_SEND"; taskId: string };
+  | { type: "APPROVE_SEND"; taskId: string }
+  | { type: "DELETE_EXTERNAL"; target?: string }
+  | { type: "CONFIRM"; pending: WizardAction }
+  | { type: "DENY"; pending: WizardAction };
 
 export type BubbleKind = "speech" | "thought" | "alert";
 
@@ -43,7 +51,13 @@ export type WizardActionResult =
       undo?: { id: string; prevQuad: string };
       returnTo?: "MATRIX" | "IDLE";
     }
-  | { ok: false; action: WizardAction; error: string; bubble?: { kind: BubbleKind; text: string } };
+  | {
+      ok: false;
+      action: WizardAction;
+      error: string;
+      bubble?: { kind: BubbleKind; text: string };
+      needsConfirm?: boolean;
+    };
 
 const TYPES: WizardAction["type"][] = [
   "SHOW",
@@ -65,6 +79,8 @@ const TYPES: WizardAction["type"][] = [
   "DRAG_END",
   "SET_ANIMATION_LEVEL",
   "SET_SLEEP_MS",
+  "PATCH_SETTINGS",
+  "SET_PERMISSION",
   "CREATE_TASK",
   "CREATE_NOTE",
   "SET_REMINDER",
@@ -75,6 +91,9 @@ const TYPES: WizardAction["type"][] = [
   "UNDO_TRASH",
   "ENTER_STUB",
   "APPROVE_SEND",
+  "DELETE_EXTERNAL",
+  "CONFIRM",
+  "DENY",
 ];
 
 export function isWizardActionType(value: string): value is WizardAction["type"] {

@@ -33,7 +33,7 @@ export class BubbleEngine {
       lang: req.lang || "ar",
       visible: text.length > 0,
     };
-    const life = req.ms ?? (req.kind === "alert" ? 8000 : 5000);
+    const life = req.ms === 0 ? Number.POSITIVE_INFINITY : (req.ms ?? (req.kind === "alert" ? 8000 : 5000));
     this.hideAt = nowMs + life;
     return this.current;
   }

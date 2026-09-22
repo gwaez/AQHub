@@ -15,6 +15,7 @@ pub fn run() {
             window_ctl::set_character_position,
             window_ctl::exit_app,
             window_ctl::set_matrix_layout,
+            window_ctl::set_always_on_top,
             aqhub::open_aqhub,
             settings::load_settings_file,
             settings::save_settings_file,
@@ -25,11 +26,23 @@ pub fn run() {
             }
             let _ = settings::restore_window(app.handle());
             if let Some(w) = app.get_webview_window("wizard") {
-                let _ = w.set_always_on_top(true);
+                let on_top = settings::load_settings_file()
+                    .ok()
+                    .and_then(|s| s.always_on_top)
+                    .unwrap_or(true);
+                let _ = w.set_always_on_top(on_top);
                 let _ = w.set_skip_taskbar(true);
                 let _ = w.set_decorations(false);
             }
             Ok(())
+        })
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                if window.label() == "wizard" && settings::close_should_hide() {
+                    api.prevent_close();
+                    let _ = window.hide();
+                }
+            }
         })
         .run(tauri::generate_context!())
         .expect("error while running AQWizard");

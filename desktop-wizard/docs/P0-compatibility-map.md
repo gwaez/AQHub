@@ -66,33 +66,51 @@ Keep AQHub core routes stable. Add a **thin optional module** `wizard/Wizard-Bri
 | Method | Path | Body / result | Why new (not adapter) |
 |--------|------|----------------|------------------------|
 | GET | `/api/v1/wizard/health` | `{ ok, aqhub: true, version }` | No existing health route. |
-| GET | `/api/v1/wizard/settings` | Settings JSON including `animationLevel`, `idleSleepMs`, `reminders[]` | Character UX + local reminder list. |
+| GET | `/api/v1/wizard/settings` | Settings JSON including P9 fields + `permissions` | Character UX + local reminder list. |
 | PUT | `/api/v1/wizard/settings` | Same schema; merge known keys | Live writes. Reminders are **not** tasks.json. |
+| GET | `/api/v1/wizard/permissions` | Capability catalog + current modes | P11 dashboard. Do not overload CRM config. |
 
-### P4–P5 adapters (companion, reuse AQHub)
+### P4–P11 adapters (companion, reuse AQHub)
 
 | Method | Path | Wizard use |
 |--------|------|------------|
 | GET then POST | `/api/tasks` | Quick Task: GET document → prepend one task → POST full board. Never empty the array. |
 | POST | `/api/task/box-note` | Quick Note after a task id exists. |
 | GET then POST | `/api/eisenhower` | P5 matrix: GET items → change one `quad` → POST `{ items, updatedAt }`. Never empty. Soft-delete = `quad: trash`. |
-| POST | `/api/audit` | Best-effort wizard action audit stub. |
+| POST | `/api/audit` | Best-effort wizard action audit stub (no secrets). |
+| GET | `/api/audit` | jsonl; Wizard shows last N sanitized lines. |
+
+### Permission table (P11 defaults)
+
+| Capability | Default | Modes | Notes |
+|------------|---------|-------|--------|
+| `character.window` | Allow | allow/ask/never | Show/hide companion |
+| `aqhub.open` | Allow | allow/ask/never | Open local board |
+| `settings.local` | Allow | allow only | Cannot lock yourself out |
+| `board.create_task` | Allow | allow/ask/never | GET-merge-POST `/api/tasks` |
+| `board.create_note` | Allow | allow/ask/never | `/api/task/box-note` |
+| `board.reminder` | Allow | allow/ask/never | `wizard-settings.json` only |
+| `eisenhower.move` | Allow | allow/ask/never | GET-merge-POST quadrants |
+| `eisenhower.trash` | Ask | allow/ask/never | Soft-delete; confirm bubble |
+| `outlook.send` | Never | ask/never | Always confirm or deny; Wizard never calls approve-send |
+| `delete.external` | Never | ask/never | Always confirm or deny; no-op stub |
+| `uia.magic_wand` | Never | never | Windows desktop later |
+| `crm.tokens` | Never | never | Tokens stay in AQHub |
+
+Action Engine: **Allow** executes, **Ask** returns `needs_confirm` + confirmation bubble, **Never** blocks. `CONFIRM` is a one-shot grant; `DENY` audits and stops.
 
 ### Planned later
 
-| Path | Role | vs adapter |
-|------|------|------------|
-| `GET /api/v1/wizard/permissions` | Capability flags (mail, CRM, UIA) | New. Do not overload CRM config. |
-| Watch board | **Adapter** poll `GET /api/tasks` + `GET /api/eisenhower` | |
-| Open mail/CRM | **Adapter** `POST /api/open`, never COM in Tauri | |
-| Approve send | **Never from Wizard idle/automation** | Permission stub denies `APPROVE_SEND`. |
+Watch board poll, Magic Wand / UIA on Windows, open mail/CRM via `POST /api/open`, real Outlook approve-send **from AQHub only**.
+
+Out of scope modules (folder stubs only): Magic Wand / UIA, Follow My Work, AI, voice, NSIS installer, email bubbles.
 
 ### Architecture seam
 
 ```
 UI (character / tray / Arabic copy / bubbles / composer)
   → WizardAction
-    → Action Engine (validate → permission stub → HTTP → audit)
+    → Action Engine (validate → Allow/Ask/Never → HTTP → audit)
       → AQHub HTTP client
         → result
           → WizardStateMachine (IDLE…HIDDEN + stub WAND/NOTE/MATRIX/TRASH)
@@ -112,6 +130,21 @@ Settings schema (`data/wizard-settings.json`, gitignored):
   "animationLevel": "normal",
   "idleSleepMs": 90000,
   "reminders": [],
+  "language": "ar",
+  "startMinimized": false,
+  "alwaysOnTop": true,
+  "opacity": 1,
+  "followPointer": true,
+  "preferredCorner": "bottom-end",
+  "proactiveBubbles": "normal",
+  "bubbleScale": 1,
+  "bubbleFontSize": 13,
+  "closeAction": "hide",
+  "permissions": {
+    "character.window": "allow",
+    "eisenhower.trash": "ask",
+    "outlook.send": "never"
+  },
   "updatedAt": "ISO-8601"
 }
 ```
@@ -119,17 +152,6 @@ Settings schema (`data/wizard-settings.json`, gitignored):
 - `characterId` / `technicalId` are **not** user-renamable.
 - `displayName` **is** user-renamable (Arabic UI copy).
 - P1 TypeScript settings module calls GET/PUT when the bridge is up; Rust may read/write this **same** file as fallback. Never `tasks.json`.
-
-### Still later (not this slice)
-
-| Path | Role | vs adapter |
-|------|------|------------|
-| `GET /api/v1/wizard/permissions` | Capability flags (mail, CRM, UIA) | New. Do not overload CRM config. |
-| Watch board | **Adapter** poll `GET /api/tasks` + `GET /api/eisenhower` | |
-| Open mail/CRM | **Adapter** `POST /api/open`, never COM in Tauri | |
-| Approve send | **Never from Wizard idle/automation** | Permission stub denies `APPROVE_SEND`. |
-
-Out of scope modules (folder stubs only): Magic Wand / UIA, Follow My Work, full Eisenhower panel, AI, voice, NSIS installer, email bubbles, full permission UI.
 
 ---
 
@@ -191,7 +213,7 @@ Out of scope modules (folder stubs only): Magic Wand / UIA, Follow My Work, full
 |------|-------|--------|
 | `desktop-wizard/` | **Wizard** | Tauri 2 app, UI engines, character packs, Wizard README. |
 | `desktop-wizard/characters/` | **Wizard** | Packs (`old-wizard/manifest.json` + assets). |
-| `wizard/Wizard-Bridge.ps1` | **Wizard** (hosted by AQHub process) | Optional; health + settings only. |
+| `wizard/Wizard-Bridge.ps1` | **Wizard** (hosted by AQHub process) | Health + settings + permission catalog. |
 | `data/wizard-settings.json` | **Wizard via API** | Gitignored live file. |
 | `data/wizard-settings.sample.json` | **Wizard** (safe to commit) | Seed / docs. |
 | `Start-Board.ps1` | **AQHub core** | Listener. Only a dot-source + 4-line dispatch + CORS PUT. |

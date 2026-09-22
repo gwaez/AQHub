@@ -55,3 +55,11 @@ pub fn set_matrix_layout(app: AppHandle, open: bool) -> Result<(), String> {
     let _ = w.set_always_on_top(true);
     Ok(())
 }
+
+#[tauri::command]
+pub fn set_always_on_top(app: AppHandle, on: bool) -> Result<(), String> {
+    if let Some(w) = app.get_webview_window("wizard") {
+        w.set_always_on_top(on).map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
