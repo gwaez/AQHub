@@ -121,7 +121,7 @@ Action Engine: **Allow** executes, **Ask** returns `needs_confirm` + confirmatio
 
 Watch board poll, Magic Wand / UIA on Windows, real Outlook approve-send **from AQHub only** (future explicit confirm model — still blocked in Wizard).
 
-Out of scope modules (folder stubs only): Magic Wand / UIA, Follow My Work, AI, voice, NSIS installer.
+Out of scope modules (folder stubs only): Magic Wand / UIA (P7), Follow My Work (P8), AI, voice. Signed NSIS/MSI is P13. P12 is `Setup-AQWizard.ps1` + `desktop-wizard/docs/WINDOWS-SETUP.md` (not a signed installer).
 
 ### Architecture seam
 
@@ -167,6 +167,7 @@ Settings schema (`data/wizard-settings.json`, gitignored):
   },
   "mailLastSyncAt": "",
   "mailIgnored": [],
+  "firstRunComplete": false,
   "updatedAt": "ISO-8601"
 }
 ```
@@ -236,6 +237,8 @@ Settings schema (`data/wizard-settings.json`, gitignored):
 | `desktop-wizard/` | **Wizard** | Tauri 2 app, UI engines, character packs, Wizard README. |
 | `desktop-wizard/characters/` | **Wizard** | Packs (`old-wizard/manifest.json` + assets). |
 | `wizard/Wizard-Bridge.ps1` | **Wizard** (hosted by AQHub process) | Health + settings + permission catalog + read-only Outlook status. |
+| `Setup-AQWizard.ps1` | **Wizard** | Clean-machine toolchain check + npm install + opt-in autostart. |
+| `desktop-wizard/docs/WINDOWS-SETUP.md` | **Wizard** | Windows admin runbook (Build Tools path explicit). |
 | `data/wizard-settings.json` | **Wizard via API** | Gitignored live file. |
 | `data/wizard-settings.sample.json` | **Wizard** (safe to commit) | Seed / docs. |
 | `Start-Board.ps1` | **AQHub core** | Listener. Only a dot-source + 4-line dispatch + CORS PUT. |

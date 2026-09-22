@@ -12,6 +12,7 @@ import { injectWizardSvg, loadCharacterPack } from "./ui/character.ts";
 import { EisenhowerPanel } from "./ui/eisenhower-panel.ts";
 import { SettingsPanel } from "./ui/settings-panel.ts";
 import { applyDocumentLocale, localeCopy } from "./i18n/index.ts";
+import { firstRunBubbleText, shouldMarkFirstRunQuiet, shouldShowFirstRun } from "./settings/first-run.ts";
 import type { WizardAction } from "./actions/wizard-action.ts";
 import type { EisQuad } from "./api/eisenhower.ts";
 import type { AuditLine } from "./api/audit.ts";
@@ -352,11 +353,22 @@ async function main() {
   }
 
   await run({ type: "LOAD_SETTINGS" });
+  const loadedSnapshot = {
+    firstRunComplete: settings.current.firstRunComplete,
+    updatedAt: settings.current.updatedAt,
+  };
   idle.sleepAfterMs = settings.current.idleSleepMs;
   idle.animationLevel = settings.current.animationLevel;
   idle.nudge(Date.now());
   if (!settings.current.displayName) {
     await run({ type: "RENAME_DISPLAY", displayName: pack.defaultDisplayName });
+  }
+  if (shouldShowFirstRun({ ...settings.current, ...loadedSnapshot })) {
+    ui = localeCopy(settings.current.language);
+    speak("speech", firstRunBubbleText(settings.current, ui), 12_000);
+    await run({ type: "PATCH_SETTINGS", patch: { firstRunComplete: true } });
+  } else if (shouldMarkFirstRunQuiet({ ...settings.current, ...loadedSnapshot })) {
+    await run({ type: "PATCH_SETTINGS", patch: { firstRunComplete: true } });
   }
   await run({ type: "PING_HEALTH" });
   paint();

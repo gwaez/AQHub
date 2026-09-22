@@ -60,6 +60,8 @@ First run creates `data/tasks.json` and `data/crm-config.json` from the sample f
 | `SETUP-AR.md` | Arabic step-by-step setup (copy-paste) |
 | `SETUP.md` | English setup twin |
 | `Setup-AQHub.ps1` | One-shot installer with visible progress |
+| `Setup-AQWizard.ps1` | Wizard toolchain check + `npm install` (autostart off by default) |
+| `desktop-wizard/` | AQWizard Tauri companion — [WINDOWS-SETUP.md](desktop-wizard/docs/WINDOWS-SETUP.md) |
 | `board.html` | Kanban / list / matrix / focus board |
 | `task.html` | Per-task room (timeline + agent chat) |
 | `index.html` / `panel.html` | Control panel |
@@ -70,4 +72,4 @@ First run creates `data/tasks.json` and `data/crm-config.json` from the sample f
 
 ## Another PC / جهاز تاني
 
-Clone → run `Setup-AQHub.ps1` or the bat → sign into Outlook on that PC → open the board URL. Live tasks are local files and are not in git.
+Clone → run `Setup-AQHub.ps1` or the bat → sign into Outlook on that PC → open the board URL. For the desktop companion, install Node/Rust/WebView2/Build Tools then `Setup-AQWizard.ps1` (see [desktop-wizard/docs/WINDOWS-SETUP.md](desktop-wizard/docs/WINDOWS-SETUP.md)). Live tasks are local files and are not in git.

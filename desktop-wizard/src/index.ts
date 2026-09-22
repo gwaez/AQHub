@@ -12,3 +12,4 @@ export { allowAction, decidePermission, CAPABILITIES } from "./ui/permissions.ts
 export { SettingsPanel, SETTINGS_PANEL_PHASE } from "./ui/settings-panel.ts";
 export { parseAuditLog, stripSecrets } from "./api/audit.ts";
 export { MAIL_ADAPTER_PHASE, pickRecentMail } from "./api/mail.ts";
+export { FIRST_RUN_PHASE, shouldShowFirstRun } from "./settings/first-run.ts";

@@ -53,6 +53,7 @@ export interface WizardSettings {
   permissions: PermissionMap;
   mailLastSyncAt: string;
   mailIgnored: string[];
+  firstRunComplete: boolean;
 }
 
 export function defaultSettings(displayName = "الساحر العتيق"): WizardSettings {
@@ -80,6 +81,7 @@ export function defaultSettings(displayName = "الساحر العتيق"): Wiza
     permissions: defaultPermissionMap(),
     mailLastSyncAt: "",
     mailIgnored: [],
+    firstRunComplete: false,
   };
 }
 
@@ -134,6 +136,7 @@ export function normalizeSettings(raw: Partial<WizardSettings> | Record<string, 
     permissions: normalizePermissionMap(s.permissions),
     mailLastSyncAt: String(s.mailLastSyncAt || ""),
     mailIgnored: Array.isArray(s.mailIgnored) ? s.mailIgnored.map(String).filter(Boolean).slice(0, 200) : [],
+    firstRunComplete: s.firstRunComplete === true,
   };
 }
 

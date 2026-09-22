@@ -3,7 +3,7 @@
 # Outlook status probe (GetActiveObject wrap). Never writes tasks.json / tokens.
 # Never starts Outlook. Never calls approve-send.
 
-$script:WizardBridgeVersion = '0.4.0-p10'
+$script:WizardBridgeVersion = '0.5.0-p12'
 
 function Get-WizardSettingsPath {
   param([string]$DataDir)
@@ -105,6 +105,7 @@ function Get-WizardDefaultSettings {
     closeAction = 'hide'
     mailLastSyncAt = ''
     mailIgnored = @()
+    firstRunComplete = $false
     permissions = Get-WizardDefaultPermissions
   }
 }
@@ -177,6 +178,7 @@ function Read-WizardSettings {
     }
     if ($obj.mailLastSyncAt) { $defaults.mailLastSyncAt = [string]$obj.mailLastSyncAt }
     if ($null -ne $obj.mailIgnored) { $defaults.mailIgnored = @($obj.mailIgnored | ForEach-Object { [string]$_ }) }
+    if ($obj.PSObject.Properties['firstRunComplete']) { $defaults.firstRunComplete = [bool]$obj.firstRunComplete }
     return $defaults
   } catch {
     return $defaults
@@ -295,6 +297,9 @@ function Merge-WizardSettings {
   }
   if ($Incoming.PSObject.Properties['mailIgnored'] -and $null -ne $Incoming.mailIgnored) {
     $Current.mailIgnored = @($Incoming.mailIgnored | ForEach-Object { [string]$_ })
+  }
+  if ($Incoming.PSObject.Properties['firstRunComplete'] -and $null -ne $Incoming.firstRunComplete) {
+    $Current.firstRunComplete = [bool]$Incoming.firstRunComplete
   }
   return $Current
 }

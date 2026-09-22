@@ -27,6 +27,7 @@ test("normalizeSettings fills P9 defaults and clamps", () => {
   assert.equal(s.permissions["board.create_task"], "allow");
   assert.equal(s.mailLastSyncAt, "");
   assert.deepEqual(s.mailIgnored, []);
+  assert.equal(s.firstRunComplete, false);
 });
 
 test("store save merges permissions without resetting others", async () => {

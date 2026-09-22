@@ -89,6 +89,8 @@ export const ar = {
   mailRemind: "ذكّرني",
   mailIgnore: "تجاهل",
   mailDraft: "مسودة",
+  firstRunWelcome:
+    "أول تشغيل: الاسم «{name}» (نقرة مزدوجة للتغيير). الحجم {scale}٪. الزاوية {corner}. صلاحيات البريد: قراءة/مسودة اسأل، إرسال أبدًا.",
 };
 
 export type UiCopy = typeof ar;

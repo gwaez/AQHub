@@ -91,4 +91,6 @@ export const en: UiCopy = {
   mailRemind: "Remind me",
   mailIgnore: "Ignore",
   mailDraft: "Draft",
+  firstRunWelcome:
+    "First run: name “{name}” (double-click to rename). Size {scale}%. Corner {corner}. Mail preset: Read/Draft Ask, Send Never.",
 };

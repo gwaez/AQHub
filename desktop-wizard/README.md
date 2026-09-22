@@ -3,9 +3,11 @@
 Native **Windows** companion (Tauri 2 + Rust + HTML/CSS/TypeScript).  
 AQHub يبقى محليًا: PowerShell `HttpListener` على `http://127.0.0.1:8766` + HTML.
 
-**المرحلة الحالية: P10 بريد عبر طبقة Outlook الموجودة في AQHub.** آلة حالات، فقاعات، تاسك/نوت، مصفوفة أيزنهاور، إعدادات، صلاحيات، وفقاعة بريد تقرأ من `/api/tasks` + `/api/mail/sync` — بدون رصة Outlook ثانية وبدون إرسال.
+**المرحلة الحالية: P12 أسس التثبيت (سكربت + توثيق).** P0–P6 وP9–P11 منجزة. P7 العصا/UIA وP8 Follow My Work وP13 حزمة NSIS موقّعة لاحقًا.
 
 لا يستخدم Electron. لا يكتب `tasks.json` / `eisenhower.json` / توكنات CRM من القرص.
+
+خريطة المراحل وتشغيل جهاز ويندوز نظيف: [`docs/WINDOWS-SETUP.md`](docs/WINDOWS-SETUP.md). السكربت: `Setup-AQWizard.ps1` في جذر AQHub.
 
 ## ماذا يعمل الآن
 
@@ -27,22 +29,32 @@ AQHub يبقى محليًا: PowerShell `HttpListener` على `http://127.0.0.1:
 - **إعدادات P9:** لغة AR/EN (stub)، بدء مصغّر، دائمًا فوق، حزمة `old-wizard`، اسم العرض، الحجم، الشفافية، الحركة، تتبع المؤشر، الزاوية، فقاعات استباقية، نوم الخمول، حجم/خط الفقاعة، اختصارات للعرض فقط، زر الإغلاق Hide vs Exit
 - **صلاحيات P11:** لوحة Allow / Ask / Never. Ask → فقاعة تأكيد. Never يمنع. Outlook Send والحذف الخارجي دائمًا تأكيد أو رفض (لا Allow صامت، ولا استدعاء approve-send)
 - **بريد P10:** فقاعة تنبيه لآخر مهمة مصدرها إيميل. القراءة عبر AQHub فقط. Outlook Read = Ask، Draft = Ask، Send = Never. المسودة `POST /api/task/chat` بالنص `draft` — **لا** `/api/task/approve-send`
+- **أول تشغيل P12:** فقاعة غير حاجبة لاسم العرض والحجم والزاوية وصلاحيات البريد — تُتخطى إذا كانت الإعدادات موجودة مسبقًا
 - **سجل:** `POST/GET /api/audit` بدون أسرار؛ آخر N سطور في الإعدادات
 - فتح AQHub: `http://127.0.0.1:8766/board.html`
 - لا إرسال إيميل تلقائي (`APPROVE_SEND` مرفوض حتى بعد التأكيد)
 
 ## التشغيل على ويندوز بجانب AQHub
 
-1. شغّل اللوحة: `Start-Board-KeepAlive.bat` → `http://127.0.0.1:8766/board.html`
-2. Node 20+ و **Rust stable ≥ 1.88** و WebView2 و MSVC tools
-3. من `desktop-wizard/`:
+دليل الجهاز النظيف: [`docs/WINDOWS-SETUP.md`](docs/WINDOWS-SETUP.md)
+
+1. شغّل اللوحة: `Setup-AQHub.ps1` أو `Start-Board-KeepAlive.bat` → `http://127.0.0.1:8766/board.html`
+2. **Node 20+** و **Rust stable ≥ 1.88** و **WebView2** و **VS 2022 Build Tools** (حمل عمل Desktop development with C++). المسار الشائع: `C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools`. السكربت لا يثبّت Build Tools تلقائيًا.
+3. من جذر AQHub:
 
 ```powershell
-npm install
+powershell -ExecutionPolicy Bypass -File .\Setup-AQWizard.ps1
+```
+
+ثم من `desktop-wizard/`:
+
+```powershell
 npm run tauri dev
 ```
 
-`$env:AQHUB_ROOT` اختياري.
+`$env:AQHUB_ROOT` اختياري. البناء على ويندوز: `npm run tauri build` → `src-tauri\target\release\aqwizard.exe` (بدون NSIS موقّع في P12).
+
+التشغيل مع ويندوز **مغلق افتراضيًا**. بعد البناء: `Setup-AQWizard.ps1 -Autostart`.
 
 ## أوامر التحقق
 
@@ -85,4 +97,4 @@ AQHub لا يعرّض GET لصندوق الوارد الحي. الساحر لذ�
 
 ## خارج النطاق بعد
 
-Magic Wand / UIA (ويندوز سطح مكتب + Build Tools)، Follow My Work الكامل، صوت، ذكاء سحابي، NSIS، موافقة إرسال حقيقية من الساحر، مسح نهائي للتراش، اختصارات عامة في Rust.
+**P7** Magic Wand / UIA (ويندوز سطح مكتب + Build Tools)، **P8** Follow My Work، صوت، ذكاء سحابي، **P13** NSIS/MSI موقّع، موافقة إرسال حقيقية من الساحر، مسح نهائي للتراش، اختصارات عامة في Rust.

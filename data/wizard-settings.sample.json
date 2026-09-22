@@ -36,5 +36,6 @@
     "crm.tokens": "never"
   },
   "mailLastSyncAt": "",
-  "mailIgnored": []
+  "mailIgnored": [],
+  "firstRunComplete": false
 }

@@ -53,6 +53,8 @@ pub struct WizardSettings {
     pub mail_last_sync_at: Option<String>,
     #[serde(default)]
     pub mail_ignored: Option<Vec<String>>,
+    #[serde(default)]
+    pub first_run_complete: Option<bool>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -145,6 +147,7 @@ fn read_settings() -> Result<WizardSettings, String> {
             permissions: None,
             mail_last_sync_at: Some(String::new()),
             mail_ignored: Some(Vec::new()),
+            first_run_complete: Some(false),
         });
     }
     let raw = fs::read_to_string(&path).map_err(|e| e.to_string())?;

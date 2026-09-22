@@ -151,6 +151,28 @@ http://127.0.0.1:8766/board.html
 
 ---
 
+## رفيق سطح المكتب AQWizard (اختياري)
+
+الساحر تطبيق ويندوز أصلي (Tauri 2) بجانب اللوحة — **ليس Electron**. يحتاج **Node 20+** و **Rust** و **WebView2** و **Visual Studio Build Tools** (حمل عمل Desktop development with C++). المسار الشائع:
+
+```text
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools
+```
+
+سكربت الإعداد **لا** يثبّت Build Tools تلقائيًا. الدليل الكامل: [desktop-wizard/docs/WINDOWS-SETUP.md](desktop-wizard/docs/WINDOWS-SETUP.md).
+
+بعد أن تعمل اللوحة على `8766`:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\Setup-AQWizard.ps1
+cd desktop-wizard
+npm run tauri dev
+```
+
+التشغيل مع بدء ويندوز **مغلق افتراضيًا** (`-Autostart` لاحقًا بعد `npm run tauri build`). لا إرسال بريد من الساحر. العصا السحرية / UIA لاحقًا.
+
+---
+
 ## ماذا يفعل النظام فعليًا؟
 
 | المكوّن | الدور |

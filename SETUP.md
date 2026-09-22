@@ -143,6 +143,28 @@ When that works, the system is ready locally.
 
 ---
 
+## Optional: AQWizard desktop companion
+
+Native Windows Tauri 2 app (not Electron). Needs **Node 20+**, **Rust**, **WebView2**, and **VS 2022 Build Tools** (Desktop development with C++). Typical path:
+
+```text
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools
+```
+
+`Setup-AQWizard.ps1` does **not** auto-install Build Tools. Full runbook: [desktop-wizard/docs/WINDOWS-SETUP.md](desktop-wizard/docs/WINDOWS-SETUP.md).
+
+After the board answers on port 8766:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\Setup-AQWizard.ps1
+cd desktop-wizard
+npm run tauri dev
+```
+
+Windows autostart stays **off** unless you later pass `-Autostart` (after `npm run tauri build`). The wizard never auto-sends mail.
+
+---
+
 ## What runs under the hood
 
 | Component | Role |
