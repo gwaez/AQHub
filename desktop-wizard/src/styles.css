@@ -423,6 +423,14 @@ body[data-anim="reduced"] .character .lid {
 .settings-panel label.check input {
   width: auto;
 }
+.ask-sheet label.check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ask-sheet label.check input[type="checkbox"] {
+  width: auto;
+}
 .hotkey-list,
 .audit-list {
   margin: 0;
