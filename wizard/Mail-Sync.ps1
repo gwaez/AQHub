@@ -306,7 +306,7 @@ function Read-OutlookUnreadMailDtos {
     } catch {
       return (New-MailSyncError -ErrorId 'outlook_restrict_failed' -Message ('Unread Restrict failed: ' + $_.Exception.Message) -Status 500)
     }
-    if (-not $gotRestrict) {
+    if (-not $gotRestrict -or $null -eq $restricted) {
       return (New-MailSyncError -ErrorId 'outlook_restrict_failed' -Message 'Unread Restrict returned no collection.' -Status 500)
     }
     $step = 'sort'
