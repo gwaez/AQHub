@@ -371,7 +371,7 @@ const $ = (id) => document.getElementById(id);
 function uid(){ return 'E-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2,7); }
 function clone(o){ return JSON.parse(JSON.stringify(o)); }
 function emptyFilter(){
-  return { q:'', sources:[], emails:[], quads:[], hasNote:'', hasTask:'', hasEmail:'', dateField:'created', dateFrom:'', dateTo:'', ageMin:0, ageMax:90, sort:'new' };
+  return { q:'', sources:[], emails:[], quads:[], hasNote:'', hasTask:'', hasEmail:'', dateField:'created', dateFrom:'', dateTo:'', ageMin:0, ageMax:null, sort:'new' };
 }
 function setBadge(mode, text){
   $('badge').className = 'badge ' + ({on:'on',wait:'wait',off:'off'}[mode]||'wait');
@@ -441,9 +441,9 @@ function matches(it, f){
     if (to && key > to) return false;
   }
   const age = ageDays(it);
-  const aMin = Number(f.ageMin||0), aMax = Number(f.ageMax);
+  const aMin = Number(f.ageMin||0), aMax = f.ageMax==null||f.ageMax==='' ? null : Number(f.ageMax);
   if (!isNaN(aMin) && age < aMin) return false;
-  if (!isNaN(aMax) && f.ageMax!=='' && f.ageMax!=null && age > aMax) return false;
+  if (aMax!=null && !isNaN(aMax) && aMax < sliderMax() && age > aMax) return false;
   const q = (f.q||'').trim().toLowerCase();
   if (q){
     const hay = [it.title,it.note,it.source,it.taskId,it.sourceRef,it.fromEmail,it.mailQuery].join(' ').toLowerCase();
@@ -610,7 +610,7 @@ function renderChips(){
   if (f.hasTask) chips.push({k:'hasTask', t:f.hasTask==='yes'?'بتاسك':'من غير تاسك'});
   if (f.hasEmail) chips.push({k:'hasEmail', t:f.hasEmail==='yes'?'فيه إيميل':'من غير إيميل'});
   if (f.dateFrom||f.dateTo) chips.push({k:'date', t:(f.dateFrom||'…')+' → '+(f.dateTo||'…')});
-  if (Number(f.ageMin)>0 || (Number(f.ageMax)<sliderMax())) chips.push({k:'age', t:f.ageMin+'–'+f.ageMax+' يوم'});
+  if (Number(f.ageMin)>0 || (f.ageMax!=null && f.ageMax!=='' && Number(f.ageMax)<sliderMax())) chips.push({k:'age', t:(f.ageMin||0)+'–'+f.ageMax+' يوم'});
   if (!chips.length){ box.innerHTML = '<span class="muted" style="font-size:.75rem">مفيش فلاتر متطبقة</span>'; return; }
   box.innerHTML = chips.map(c => '<span class="chip">'+escapeHtml(c.t)+'<button type="button" data-chip="'+escapeHtml(c.k)+'">×</button></span>').join('');
   box.querySelectorAll('[data-chip]').forEach(b => b.onclick = () => removeChip(b.getAttribute('data-chip')));
@@ -644,7 +644,8 @@ function readDraft(){
   draft.dateTo = $('fDateTo').value;
   let a = Number($('fAgeMin').value||0), b = Number($('fAgeMax').value||0);
   if (a>b){ const t=a; a=b; b=t; }
-  draft.ageMin = a; draft.ageMax = b;
+  draft.ageMin = a;
+  draft.ageMax = (b >= sliderMax()) ? null : b;
   draft.sort = $('fSort').value||'new';
   $('ageMinLab').textContent = String(a);
   $('ageMaxLab').textContent = String(b);
@@ -658,7 +659,7 @@ function writeFilterUi(){
   $('fDateFrom').value = draft.dateFrom||'';
   $('fDateTo').value = draft.dateTo||'';
   $('fAgeMin').value = String(draft.ageMin||0);
-  $('fAgeMax').value = String(draft.ageMax==null?sliderMax():draft.ageMax);
+  $('fAgeMax').value = String(draft.ageMax==null||draft.ageMax===''?sliderMax():draft.ageMax);
   $('fSort').value = draft.sort||'new';
   $('ageMinLab').textContent = $('fAgeMin').value;
   $('ageMaxLab').textContent = $('fAgeMax').value;
@@ -1047,8 +1048,10 @@ async function load(){
     } catch { setBadge('off','خطأ'); }
   }
   const mx = sliderMax();
-  if (committed.ageMax==null || Number(committed.ageMax)>mx) committed.ageMax = mx;
-  if (draft.ageMax==null || Number(draft.ageMax)>mx) draft.ageMax = mx;
+  if (committed.ageMax==null || committed.ageMax==='') committed.ageMax = null;
+  if (draft.ageMax==null || draft.ageMax==='') draft.ageMax = null;
+  ['fAgeMin','fAgeMax'].forEach(id => { $(id).max = String(mx); });
+  if (draft.ageMax==null) $('fAgeMax').value = String(mx);
   writeFilterUi();
   render();
 }
