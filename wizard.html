@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AQWizard — لوحة التحكم</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg0: #070b12; --bg1: #0c1220; --card: rgba(18, 28, 48, 0.72);
+    --stroke: rgba(148, 163, 184, 0.14); --stroke-strong: rgba(125, 211, 252, 0.28);
+    --text: #e8eef8; --muted: #8b9bb3; --faint: #5d6d86;
+    --accent: #5eead4; --accent-2: #38bdf8; --warn: #fbbf24; --danger: #fb7185; --ok: #34d399;
+    --shadow: 0 24px 80px rgba(0,0,0,.45); --radius: 22px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: "IBM Plex Sans Arabic", "Segoe UI", Tahoma, sans-serif; color: var(--text);
+    background:
+      radial-gradient(1200px 700px at 10% -10%, rgba(56,189,248,.16), transparent 55%),
+      radial-gradient(900px 600px at 100% 0%, rgba(167,139,250,.14), transparent 50%),
+      linear-gradient(180deg, var(--bg0), var(--bg1) 40%, #0a101a);
+    min-height: 100vh;
+  }
+  .shell { position: relative; max-width: 1280px; margin: 0 auto; padding: 28px 22px 80px; }
+  .top { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-end; justify-content: space-between; margin-bottom: 22px; }
+  .brand { display: flex; gap: 14px; align-items: center; }
+  .logo {
+    width: 48px; height: 48px; border-radius: 16px;
+    background: linear-gradient(135deg, rgba(94,234,212,.95), rgba(56,189,248,.75) 45%, rgba(167,139,250,.85));
+  }
+  .brand h1 { margin: 0; font-size: 1.45rem; }
+  .brand p { margin: 4px 0 0; color: var(--muted); font-size: .92rem; }
+  .btn {
+    appearance: none; border: 1px solid var(--stroke); background: rgba(255,255,255,.03);
+    color: var(--text); border-radius: 14px; padding: 10px 14px; font: inherit; font-weight: 500;
+    cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;
+  }
+  .btn:hover { border-color: var(--stroke-strong); background: rgba(255,255,255,.06); }
+  .btn.primary {
+    background: linear-gradient(135deg, rgba(94,234,212,.95), rgba(56,189,248,.88));
+    color: #062019; border-color: transparent; font-weight: 700;
+  }
+  .btn.ghost { color: var(--muted); }
+  .btn:disabled { opacity: .45; cursor: not-allowed; }
+  .glass {
+    background: var(--card); border: 1px solid var(--stroke); border-radius: var(--radius);
+    box-shadow: var(--shadow); backdrop-filter: blur(18px); padding: 22px;
+  }
+  .grid2 { display: grid; grid-template-columns: 1.1fr .9fr; gap: 16px; }
+  @media (max-width: 980px) { .grid2 { grid-template-columns: 1fr; } }
+  h2, h3 { margin: 0 0 8px; }
+  .lead { color: var(--muted); line-height: 1.7; margin: 0 0 16px; }
+  .hint { color: var(--faint); font-size: .85rem; line-height: 1.6; }
+  label { display: grid; gap: 6px; font-size: .88rem; margin-bottom: 12px; }
+  label.check { display: flex; align-items: center; gap: 8px; }
+  input, select {
+    border: 1px solid var(--stroke); background: rgba(7,11,18,.55); color: var(--text);
+    border-radius: 12px; padding: 9px 11px; font: inherit;
+  }
+  input[type=range] { width: 100%; }
+  .status { font-family: "JetBrains Mono", monospace; font-size: .82rem; }
+  .status.up { color: var(--ok); } .status.down { color: var(--danger); }
+  .pack-list { display: grid; gap: 10px; }
+  .pack {
+    display: flex; gap: 12px; align-items: center; justify-content: space-between;
+    border: 1px solid var(--stroke); border-radius: 16px; padding: 12px; background: rgba(255,255,255,.03);
+  }
+  .pack.active { border-color: rgba(94,234,212,.45); }
+  .pack img { width: 56px; height: 56px; object-fit: contain; background:
+    linear-gradient(45deg, #1a2436 25%, transparent 25%), linear-gradient(-45deg, #1a2436 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #1a2436 75%), linear-gradient(-45deg, transparent 75%, #1a2436 75%);
+    background-size: 12px 12px; background-position: 0 0, 0 6px, 6px -6px, -6px 0; border-radius: 12px; }
+  .badge { font-size: .72rem; padding: 4px 8px; border-radius: 999px; border: 1px solid var(--stroke); }
+  .badge.on { color: var(--ok); }
+  .poses { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  @media (max-width: 760px) { .poses { grid-template-columns: 1fr 1fr; } }
+  .slot {
+    border: 1px dashed rgba(148,163,184,.35); border-radius: 16px; padding: 12px; min-height: 170px;
+    display: flex; flex-direction: column; gap: 8px; cursor: pointer; background: rgba(255,255,255,.02);
+  }
+  .slot:hover, .slot.drag { border-color: var(--accent-2); background: rgba(56,189,248,.08); }
+  .slot.filled { border-style: solid; border-color: rgba(52,211,153,.4); }
+  .slot.required .req { color: var(--warn); font-size: .72rem; }
+  .slot img { width: 100%; height: 88px; object-fit: contain; }
+  .slot input { display: none; }
+  .toast {
+    position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: #132033; border: 1px solid var(--stroke-strong); color: var(--text);
+    padding: 12px 16px; border-radius: 14px; opacity: 0; pointer-events: none; transition: .25s ease;
+    box-shadow: var(--shadow); z-index: 50; max-width: min(520px, 92vw); text-align: center;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  code { font-family: "JetBrains Mono", monospace; font-size: .82rem; direction: ltr; }
+</style>
+</head>
+<body>
+  <div class="shell">
+    <div class="top">
+      <div class="brand">
+        <div class="logo" aria-hidden="true"></div>
+        <div>
+          <h1>AQWizard</h1>
+          <p>صفحة الساحر في لوحة التحكم — إعدادات + إنشاء شخصية PNG</p>
+        </div>
+      </div>
+      <div class="row">
+        <a class="btn ghost" href="./index.html">← لوحة التحكم</a>
+        <a class="btn" href="./eisenhower.html">أيزنهاور</a>
+        <a class="btn" href="./board.html">لوحة التاسكات</a>
+      </div>
+    </div>
+
+    <p class="status" id="hubStatus">جاري فحص AQHub…</p>
+
+    <div class="grid2">
+      <section class="glass">
+        <h2>الإعدادات</h2>
+        <p class="lead">نفس الحقول العملية في لوحة إعدادات الساحر. الحفظ عبر <code>PUT /api/v1/wizard/settings</code> فقط — بدون tasks.json أو توكن CRM أو إرسال بريد.</p>
+        <form id="settingsForm">
+          <label>اللغة
+            <select data-set="language">
+              <option value="ar">العربية</option>
+              <option value="en">English</option>
+            </select>
+          </label>
+          <label>اسم العرض
+            <input data-set="displayName" type="text" maxlength="80" />
+          </label>
+          <label>حزمة الشخصية النشطة
+            <select data-set="characterId" id="characterSelect"></select>
+          </label>
+          <label>الحجم <span id="scaleVal"></span>
+            <input data-set="scale" type="range" min="50" max="200" />
+          </label>
+          <label>الشفافية <span id="opacityVal"></span>
+            <input data-set="opacity" type="range" min="35" max="100" />
+          </label>
+          <label>مستوى الحركة
+            <select data-set="animationLevel">
+              <option value="normal">عادي</option>
+              <option value="reduced">مخفف</option>
+              <option value="off">إيقاف</option>
+            </select>
+          </label>
+          <label>الزاوية المفضّلة
+            <select data-set="preferredCorner">
+              <option value="bottom-end">أسفل اليمين / نهاية</option>
+              <option value="bottom-start">أسفل اليسار / بداية</option>
+              <option value="top-end">أعلى النهاية</option>
+              <option value="top-start">أعلى البداية</option>
+            </select>
+          </label>
+          <label>فقاعات استباقية
+            <select data-set="proactiveBubbles">
+              <option value="high">عالية</option>
+              <option value="normal">عادية</option>
+              <option value="low">منخفضة</option>
+              <option value="off">إيقاف</option>
+            </select>
+          </label>
+          <label>النوم بعد (ثوانٍ)
+            <input data-set="idleSleepMs" type="number" min="5" max="600" step="5" />
+          </label>
+          <label>حجم الفقاعة <span id="bubbleScaleVal"></span>
+            <input data-set="bubbleScale" type="range" min="70" max="180" />
+          </label>
+          <label>خط الفقاعة <span id="bubbleFontVal"></span>
+            <input data-set="bubbleFontSize" type="range" min="11" max="22" />
+          </label>
+          <label>زر الإغلاق
+            <select data-set="closeAction">
+              <option value="hide">إخفاء للصينية</option>
+              <option value="exit">خروج</option>
+            </select>
+          </label>
+          <label class="check"><input data-set="startMinimized" type="checkbox" /> البدء مصغّرًا</label>
+          <label class="check"><input data-set="alwaysOnTop" type="checkbox" /> دائمًا فوق</label>
+          <label class="check"><input data-set="followPointer" type="checkbox" /> يتبع المؤشر</label>
+          <label class="check"><input data-set="roamEnabled" type="checkbox" /> يتجوّل على سطح المكتب</label>
+          <div class="row">
+            <button class="btn primary" type="submit">حفظ الإعدادات</button>
+            <button class="btn" type="button" id="btnReload">تحديث</button>
+          </div>
+        </form>
+        <p class="hint">صلاحيات البريد والسجل التفصيلي تبقى داخل نافذة الساحر. هذه الصفحة لا ترسل إيميل ولا تلمس CRM.</p>
+      </section>
+
+      <section class="glass">
+        <h2>الشخصيات</h2>
+        <p class="lead">بدّل الحزمة النشطة، أو أنشئ شخصية بسيطة من صور PNG شفافة.</p>
+        <div class="pack-list" id="packList"></div>
+      </section>
+    </div>
+
+    <section class="glass" style="margin-top:16px">
+      <h2>إنشاء شخصية جديدة</h2>
+      <p class="lead">الاسم يصبح معرّف الحزمة تحت <code>desktop-wizard/characters/&lt;id&gt;/</code>. ارفع وضعيات PNG (الشفافية مفضّلة). المطلوب على الأقل: وقوف هادئ، تفكير، نوم — وباقي الوضعيات اختيارية وتسقط على الوقوف الهادئ إن ناقصت.</p>
+      <form id="createForm">
+        <label>اسم الشخصية
+          <input id="charName" type="text" maxlength="80" placeholder="مثلاً: ليلى أو luna" required />
+        </label>
+        <p class="hint">المعرّف التقني: <code id="charSlug">—</code></p>
+        <div class="poses" id="poseSlots"></div>
+        <label class="check"><input id="activateOnSave" type="checkbox" checked /> تفعيل هذه الشخصية بعد الحفظ</label>
+        <div class="row" style="margin-top:12px">
+          <button class="btn primary" type="submit" id="btnCreate">حفظ الحزمة</button>
+        </div>
+        <p class="hint" id="createHint">الملفات تُكتب في مجلد الشخصيات وتُنسخ إلى <code>public/characters</code> ليخدمها Vite. الساحر يحمّل الحزم الجديدة من جسر AQHub إن لم تكن داخل الحزمة المضمّنة.</p>
+      </form>
+    </section>
+  </div>
+  <div class="toast" id="toast"></div>
+<script>
+const POSES = [
+  { id: 'idle', file: 'idle.png', label: 'وقوف هادئ', hint: 'الوضع الافتراضي على المكتب', required: true },
+  { id: 'watch', file: 'watch.png', label: 'مراقبة', hint: 'لما يتابع المؤشر أو الشغل', required: false },
+  { id: 'think', file: 'think.png', label: 'تفكير', hint: 'وضع التفكير', required: true },
+  { id: 'speak', file: 'speak.png', label: 'كلام', hint: 'الفقاعة / التنبيه', required: false },
+  { id: 'work', file: 'work.png', label: 'يعمل', hint: 'شغل جاري', required: false },
+  { id: 'success', file: 'success.png', label: 'نجاح', hint: 'تم بنجاح', required: false },
+  { id: 'error', file: 'error.png', label: 'خطأ', hint: 'تعذّر الإجراء', required: false },
+  { id: 'drag', file: 'drag.png', label: 'سحب', hint: 'أثناء نقل النافذة', required: false },
+  { id: 'sleep', file: 'sleep.png', label: 'نوم', hint: 'خمول طويل', required: true }
+];
+const files = {};
+let settings = null;
+
+function toast(msg){
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(window.__t);
+  window.__t = setTimeout(()=>el.classList.remove('show'), 2800);
+}
+function slugify(name){
+  const raw = String(name || '').trim();
+  let slug = raw.toLowerCase().replace(/[\s_]+/g,'-').replace(/[^a-z0-9-]/g,'').replace(/-+/g,'-').replace(/^-+|-+$/g,'');
+  if(!slug){
+    let hash = 0;
+    for(let i=0;i<raw.length;i++) hash = (hash * 33 + raw.charCodeAt(i)) >>> 0;
+    slug = 'char-' + hash.toString(16).padStart(8,'0');
+  }
+  if(slug.length > 48) slug = slug.slice(0,48).replace(/-+$/g,'');
+  if(!/^[a-z]/.test(slug)) slug = ('c-' + slug).slice(0,48);
+  return slug;
+}
+async function api(path, init){
+  const res = await fetch(path, init);
+  const text = await res.text();
+  let body = null;
+  try { body = text ? JSON.parse(text) : null; } catch { body = { raw: text }; }
+  if(!res.ok) throw new Error((body && (body.error || body.message)) || ('HTTP ' + res.status));
+  return body;
+}
+function setHub(ok, extra){
+  const el = document.getElementById('hubStatus');
+  el.className = 'status ' + (ok ? 'up' : 'down');
+  el.textContent = ok ? ('AQHub متصل' + (extra ? ' · ' + extra : '')) : 'AQHub غير متصل — شغّل اللوحة على المنفذ 8766';
+}
+function fillSettings(s){
+  settings = s;
+  const form = document.getElementById('settingsForm');
+  const set = (key, value, checked) => {
+    const el = form.querySelector('[data-set="'+key+'"]');
+    if(!el) return;
+    if(el.type === 'checkbox') el.checked = !!checked;
+    else el.value = value;
+  };
+  set('language', s.language);
+  set('displayName', s.displayName || '');
+  set('characterId', s.characterId);
+  set('scale', String(Math.round((s.window && s.window.scale || 1) * 100)));
+  set('opacity', String(Math.round((s.opacity || 1) * 100)));
+  set('animationLevel', s.animationLevel || 'normal');
+  set('preferredCorner', s.preferredCorner || 'bottom-end');
+  set('proactiveBubbles', s.proactiveBubbles || 'normal');
+  set('idleSleepMs', String(Math.round((s.idleSleepMs || 90000) / 1000)));
+  set('bubbleScale', String(Math.round((s.bubbleScale || 1) * 100)));
+  set('bubbleFontSize', String(s.bubbleFontSize || 13));
+  set('closeAction', s.closeAction || 'hide');
+  set('startMinimized', null, s.startMinimized);
+  set('alwaysOnTop', null, s.alwaysOnTop !== false);
+  set('followPointer', null, s.followPointer !== false);
+  set('roamEnabled', null, s.roamEnabled !== false);
+  document.getElementById('scaleVal').textContent = Math.round((s.window && s.window.scale || 1) * 100) + '%';
+  document.getElementById('opacityVal').textContent = Math.round((s.opacity || 1) * 100) + '%';
+  document.getElementById('bubbleScaleVal').textContent = Math.round((s.bubbleScale || 1) * 100) + '%';
+  document.getElementById('bubbleFontVal').textContent = String(s.bubbleFontSize || 13);
+}
+function readPatch(){
+  const form = document.getElementById('settingsForm');
+  const val = (key) => form.querySelector('[data-set="'+key+'"]');
+  const num = (key) => Number(val(key).value);
+  const chk = (key) => val(key).checked;
+  return {
+    language: val('language').value === 'en' ? 'en' : 'ar',
+    displayName: val('displayName').value,
+    characterId: val('characterId').value,
+    window: { ...(settings && settings.window || { x:null, y:null, scale:1 }), scale: num('scale') / 100 },
+    opacity: num('opacity') / 100,
+    animationLevel: val('animationLevel').value,
+    preferredCorner: val('preferredCorner').value,
+    proactiveBubbles: val('proactiveBubbles').value,
+    idleSleepMs: num('idleSleepMs') * 1000,
+    bubbleScale: num('bubbleScale') / 100,
+    bubbleFontSize: num('bubbleFontSize'),
+    closeAction: val('closeAction').value === 'exit' ? 'exit' : 'hide',
+    startMinimized: chk('startMinimized'),
+    alwaysOnTop: chk('alwaysOnTop'),
+    followPointer: chk('followPointer'),
+    roamEnabled: chk('roamEnabled')
+  };
+}
+function renderPacks(chars, active){
+  const sel = document.getElementById('characterSelect');
+  sel.innerHTML = (chars || []).map(c => {
+    const label = (c.id || '') + ' — ' + (c.displayName || c.defaultDisplayName || c.id);
+    return '<option value="'+c.id+'" '+(c.id===active?'selected':'')+'>'+label+'</option>';
+  }).join('');
+  const list = document.getElementById('packList');
+  list.innerHTML = (chars || []).map(c => {
+    const on = c.id === active;
+    const preview = c.previewUrl || ('/api/v1/wizard/characters/'+c.id+'/idle.png');
+    return '<article class="pack '+(on?'active':'')+'">'+
+      '<img alt="" src="'+preview+'" />'+
+      '<div style="flex:1"><b>'+(c.displayName||c.id)+'</b><div class="hint"><code>'+c.id+'</code>'+(c.builtin?' · مضمّنة':'')+'</div></div>'+
+      (on ? '<span class="badge on">نشطة</span>' : '<button class="btn" type="button" data-activate="'+c.id+'">تفعيل</button>')+
+      '</article>';
+  }).join('') || '<p class="hint">لا توجد حزم.</p>';
+}
+function renderSlots(){
+  const host = document.getElementById('poseSlots');
+  host.innerHTML = POSES.map(p => `
+    <label class="slot ${p.required?'required':''}" data-pose="${p.id}">
+      <strong>${p.label}</strong>
+      <span class="hint">${p.hint}${p.required?' <span class="req">مطلوب</span>':''}</span>
+      <img hidden alt="" />
+      <small class="hint" data-file>PNG · ${p.file}</small>
+      <input type="file" accept="image/png" />
+    </label>
+  `).join('');
+}
+function readFilePng(file){
+  return new Promise((resolve, reject) => {
+    if(!file || file.type !== 'image/png' && !/\.png$/i.test(file.name)) {
+      reject(new Error('png_only'));
+      return;
+    }
+    if(file.size > 2 * 1024 * 1024) { reject(new Error('too_large')); return; }
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onerror = () => reject(new Error('read_failed'));
+    reader.readAsDataURL(file);
+  });
+}
+async function assignPose(id, file, slot){
+  const data = await readFilePng(file);
+  files[id] = data;
+  const img = slot.querySelector('img');
+  img.src = data;
+  img.hidden = false;
+  slot.classList.add('filled');
+  slot.querySelector('[data-file]').textContent = file.name;
+}
+async function reload(){
+  try {
+    const health = await api('/api/v1/wizard/health');
+    setHub(true, health.version || '');
+    const sBody = await api('/api/v1/wizard/settings');
+    const s = sBody.settings || sBody;
+    const cBody = await api('/api/v1/wizard/characters');
+    fillSettings(s);
+    renderPacks(cBody.characters || [], s.characterId);
+  } catch (err) {
+    setHub(false);
+    toast('تعذّر التحميل: ' + err.message);
+  }
+}
+
+renderSlots();
+document.getElementById('charName').addEventListener('input', (e) => {
+  document.getElementById('charSlug').textContent = slugify(e.target.value) || '—';
+});
+document.getElementById('poseSlots').addEventListener('change', async (e) => {
+  const input = e.target;
+  if(!(input instanceof HTMLInputElement) || input.type !== 'file') return;
+  const slot = input.closest('[data-pose]');
+  const id = slot && slot.getAttribute('data-pose');
+  if(!id || !input.files || !input.files[0]) return;
+  try { await assignPose(id, input.files[0], slot); }
+  catch (err) { toast(err.message === 'png_only' ? 'PNG فقط' : 'تعذّر قراءة الصورة'); }
+});
+document.getElementById('poseSlots').addEventListener('dragover', (e) => {
+  const slot = e.target.closest('[data-pose]');
+  if(!slot) return;
+  e.preventDefault();
+  slot.classList.add('drag');
+});
+document.getElementById('poseSlots').addEventListener('dragleave', (e) => {
+  const slot = e.target.closest('[data-pose]');
+  if(slot) slot.classList.remove('drag');
+});
+document.getElementById('poseSlots').addEventListener('drop', async (e) => {
+  const slot = e.target.closest('[data-pose]');
+  if(!slot) return;
+  e.preventDefault();
+  slot.classList.remove('drag');
+  const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+  const id = slot.getAttribute('data-pose');
+  if(!file || !id) return;
+  try { await assignPose(id, file, slot); }
+  catch (err) { toast(err.message === 'png_only' ? 'PNG فقط — الشفافية مفضّلة' : 'تعذّر رفع الصورة'); }
+});
+document.getElementById('settingsForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  try {
+    const body = await api('/api/v1/wizard/settings', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ settings: readPatch() })
+    });
+    fillSettings(body.settings || readPatch());
+    toast('اتحفظت إعدادات الساحر');
+    await reload();
+  } catch (err) {
+    toast('تعذّر الحفظ: ' + err.message);
+  }
+});
+document.getElementById('btnReload').addEventListener('click', () => reload());
+document.getElementById('packList').addEventListener('click', async (e) => {
+  const btn = e.target.closest('[data-activate]');
+  if(!btn) return;
+  const id = btn.getAttribute('data-activate');
+  try {
+    await api('/api/v1/wizard/settings', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ settings: { characterId: id } })
+    });
+    toast('اتفعّلت الشخصية: ' + id);
+    await reload();
+  } catch (err) {
+    toast('تعذّر التفعيل: ' + err.message);
+  }
+});
+document.getElementById('createForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const name = document.getElementById('charName').value.trim();
+  if(!name) { toast('اكتب اسم الشخصية'); return; }
+  if(!files.idle) { toast('ارفع صورة الوقوف الهادئ'); return; }
+  const poses = {};
+  Object.keys(files).forEach((k) => { poses[k] = { data: files[k] }; });
+  const btn = document.getElementById('btnCreate');
+  btn.disabled = true;
+  try {
+    const body = await api('/api/v1/wizard/characters', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name,
+        id: slugify(name),
+        activate: document.getElementById('activateOnSave').checked,
+        poses
+      })
+    });
+    toast('اتحفظت الحزمة ' + ((body.character && body.character.id) || slugify(name)));
+    Object.keys(files).forEach((k) => delete files[k]);
+    renderSlots();
+    document.getElementById('charName').value = '';
+    document.getElementById('charSlug').textContent = '—';
+    await reload();
+  } catch (err) {
+    const map = {
+      builtin_pack: 'لا يمكن استبدال secretary أو old-wizard',
+      idle_required: 'صورة الوقوف الهادئ مطلوبة',
+      png_only: 'ارفع PNG فقط',
+      not_png: 'الملف ليس PNG صالح',
+      too_large: 'الملف أكبر من 2MB'
+    };
+    toast(map[err.message] || ('تعذّر إنشاء الشخصية: ' + err.message));
+  } finally {
+    btn.disabled = false;
+  }
+});
+['scale','opacity','bubbleScale','bubbleFontSize'].forEach((key) => {
+  document.querySelector('[data-set="'+key+'"]').addEventListener('input', (e) => {
+    const map = { scale:'scaleVal', opacity:'opacityVal', bubbleScale:'bubbleScaleVal', bubbleFontSize:'bubbleFontVal' };
+    const suffix = key === 'bubbleFontSize' ? '' : '%';
+    document.getElementById(map[key]).textContent = e.target.value + suffix;
+  });
+});
+reload();
+</script>
+</body>
+</html>

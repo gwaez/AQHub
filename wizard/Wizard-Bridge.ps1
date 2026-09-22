@@ -3,11 +3,335 @@
 # Outlook status probe (GetActiveObject wrap). Never writes tasks.json / tokens.
 # Never starts Outlook. Never calls approve-send.
 
-$script:WizardBridgeVersion = '0.5.1-mail-sync'
+$script:WizardBridgeVersion = '0.6.0-characters'
 
 function Get-WizardSettingsPath {
   param([string]$DataDir)
   return (Join-Path $DataDir 'wizard-settings.json')
+}
+
+function Test-WizardSafeCharacterId {
+  param([string]$Id)
+  if (-not $Id) { return $false }
+  if ($Id -notmatch '^[a-z][a-z0-9-]{0,47}$') { return $false }
+  if ($Id.Contains('..') -or $Id.Contains('/') -or $Id.Contains('\')) { return $false }
+  if ($Id -in @('con','prn','aux','nul','com1','lpt1')) { return $false }
+  return $true
+}
+
+function ConvertTo-WizardCharacterSlug {
+  param([string]$Name)
+  $raw = if ($null -eq $Name) { '' } else { [string]$Name }
+  $s = $raw.Trim().ToLowerInvariant()
+  $s = [regex]::Replace($s, '[\s_]+', '-')
+  $s = [regex]::Replace($s, '[^a-z0-9-]', '')
+  $s = [regex]::Replace($s, '-+', '-')
+  $s = $s.Trim('-')
+  if (-not $s) {
+    $sha = [Security.Cryptography.SHA256]::Create()
+    try {
+      $bytes = $sha.ComputeHash([Text.Encoding]::UTF8.GetBytes($raw))
+      $hex = ([BitConverter]::ToString($bytes)).Replace('-', '').ToLowerInvariant()
+      $s = 'char-' + $hex.Substring(0, 8)
+    } finally {
+      $sha.Dispose()
+    }
+  }
+  if ($s.Length -gt 48) { $s = $s.Substring(0, 48).Trim('-') }
+  if ($s -notmatch '^[a-z]') { $s = ('c-' + $s) }
+  if ($s.Length -gt 48) { $s = $s.Substring(0, 48).Trim('-') }
+  if (-not (Test-WizardSafeCharacterId $s)) { $s = 'char-pack' }
+  return $s
+}
+
+function Get-WizardRepoRoot {
+  param(
+    [string]$Root,
+    [string]$DataDir
+  )
+  if ($Root) { return [IO.Path]::GetFullPath($Root) }
+  if ($DataDir) { return [IO.Path]::GetFullPath((Split-Path $DataDir -Parent)) }
+  return $null
+}
+
+function Get-WizardCharactersRoot {
+  param(
+    [string]$Root,
+    [string]$DataDir
+  )
+  $repo = Get-WizardRepoRoot -Root $Root -DataDir $DataDir
+  if (-not $repo) { return $null }
+  return [IO.Path]::GetFullPath((Join-Path $repo (Join-Path 'desktop-wizard' 'characters')))
+}
+
+function Test-WizardPathUnder {
+  param(
+    [string]$Child,
+    [string]$Parent
+  )
+  if (-not $Child -or -not $Parent) { return $false }
+  $parentFull = [IO.Path]::GetFullPath($Parent)
+  $sep = [string][IO.Path]::DirectorySeparatorChar
+  if (-not $parentFull.EndsWith($sep)) { $parentFull = $parentFull + $sep }
+  $childFull = [IO.Path]::GetFullPath($Child)
+  return $childFull.StartsWith($parentFull, [StringComparison]::OrdinalIgnoreCase)
+}
+
+function Get-WizardPoseCatalog {
+  return @(
+    [ordered]@{ id = 'idle'; file = 'idle.png'; state = 'IDLE'; required = $true; motion = 'breathe'; loop = $true }
+    [ordered]@{ id = 'watch'; file = 'watch.png'; state = 'WATCHING'; required = $false; motion = 'glance'; loop = $true }
+    [ordered]@{ id = 'think'; file = 'think.png'; state = 'THINKING'; required = $true; motion = 'ponder'; loop = $true }
+    [ordered]@{ id = 'speak'; file = 'speak.png'; state = 'SPEAKING'; required = $false; motion = 'speak'; loop = $true }
+    [ordered]@{ id = 'work'; file = 'work.png'; state = 'WORKING'; required = $false; motion = 'work'; loop = $true }
+    [ordered]@{ id = 'success'; file = 'success.png'; state = 'SUCCESS'; required = $false; motion = 'success'; loop = $false }
+    [ordered]@{ id = 'error'; file = 'error.png'; state = 'ERROR'; required = $false; motion = 'error'; loop = $false }
+    [ordered]@{ id = 'drag'; file = 'drag.png'; state = 'DRAGGING'; required = $false; motion = 'lift'; loop = $false }
+    [ordered]@{ id = 'sleep'; file = 'sleep.png'; state = 'SLEEPING'; required = $true; motion = 'sleep'; loop = $true }
+  )
+}
+
+function Test-WizardPngBytes {
+  param([byte[]]$Bytes)
+  if ($null -eq $Bytes -or $Bytes.Length -lt 24) { return $false }
+  if ($Bytes.Length -gt 2097152) { return $false }
+  return (
+    $Bytes[0] -eq 0x89 -and $Bytes[1] -eq 0x50 -and $Bytes[2] -eq 0x4E -and $Bytes[3] -eq 0x47 -and
+    $Bytes[4] -eq 0x0D -and $Bytes[5] -eq 0x0A -and $Bytes[6] -eq 0x1A -and $Bytes[7] -eq 0x0A
+  )
+}
+
+function ConvertFrom-WizardPngData {
+  param([string]$Data)
+  if (-not $Data) { throw 'empty_png' }
+  $raw = $Data.Trim()
+  if ($raw -match '^data:image/png;base64,(.+)$') {
+    $raw = $Matches[1]
+  } elseif ($raw -match '^data:image/') {
+    throw 'png_only'
+  }
+  try {
+    $bytes = [Convert]::FromBase64String($raw)
+  } catch {
+    throw 'bad_base64'
+  }
+  if (-not (Test-WizardPngBytes $bytes)) { throw 'not_png' }
+  return $bytes
+}
+
+function Get-WizardPackDir {
+  param(
+    [string]$Root,
+    [string]$DataDir,
+    [string]$Id
+  )
+  if (-not (Test-WizardSafeCharacterId $Id)) { return $null }
+  $chars = Get-WizardCharactersRoot -Root $Root -DataDir $DataDir
+  if (-not $chars) { return $null }
+  $pack = [IO.Path]::GetFullPath((Join-Path $chars $Id))
+  if (-not (Test-WizardPathUnder -Child $pack -Parent $chars)) { return $null }
+  return $pack
+}
+
+function Copy-WizardCharacterToPublic {
+  param(
+    [string]$Root,
+    [string]$DataDir,
+    [string]$Id
+  )
+  $src = Get-WizardPackDir -Root $Root -DataDir $DataDir -Id $Id
+  $repo = Get-WizardRepoRoot -Root $Root -DataDir $DataDir
+  if (-not $src -or -not (Test-Path $src) -or -not $repo) { return }
+  $pubRoot = [IO.Path]::GetFullPath((Join-Path $repo (Join-Path 'desktop-wizard' (Join-Path 'public' 'characters'))))
+  if (-not (Test-Path $pubRoot)) {
+    New-Item -ItemType Directory -Force -Path $pubRoot | Out-Null
+  }
+  if (-not (Test-WizardPathUnder -Child $pubRoot -Parent (Join-Path $repo 'desktop-wizard'))) { return }
+  $dest = [IO.Path]::GetFullPath((Join-Path $pubRoot $Id))
+  if (-not (Test-WizardPathUnder -Child $dest -Parent $pubRoot)) { return }
+  if (Test-Path $dest) {
+    Remove-Item -Recurse -Force -LiteralPath $dest
+  }
+  Copy-Item -Recurse -Force -LiteralPath $src -Destination $dest
+}
+
+function New-WizardPackManifest {
+  param(
+    [string]$Id,
+    [string]$DisplayName,
+    $Have
+  )
+  $haveSet = @{}
+  foreach ($k in @($Have)) { if ($k) { $haveSet[[string]$k] = $true } }
+  function PoseFile([string]$Key) {
+    if ($haveSet.ContainsKey($Key)) {
+      switch ($Key) {
+        'idle' { return 'idle.png' }
+        'watch' { return 'watch.png' }
+        'think' { return 'think.png' }
+        'speak' { return 'speak.png' }
+        'work' { return 'work.png' }
+        'success' { return 'success.png' }
+        'error' { return 'error.png' }
+        'drag' { return 'drag.png' }
+        'sleep' { return 'sleep.png' }
+      }
+    }
+    return 'idle.png'
+  }
+  $speakFile = if ($haveSet.ContainsKey('speak')) { 'speak.png' } else { (PoseFile 'idle') }
+  $workFile = if ($haveSet.ContainsKey('work')) { 'work.png' } else { (PoseFile 'idle') }
+  $name = if ($DisplayName) { [string]$DisplayName } else { $Id }
+  return [ordered]@{
+    id = $Id
+    technicalId = 'AQWizard'
+    version = '0.1.0'
+    defaultDisplayName = $name
+    displayNameAr = $name
+    displayNameEn = $name
+    license = 'user-upload'
+    tone = 'custom'
+    states = [ordered]@{
+      IDLE = [ordered]@{ asset = (PoseFile 'idle'); loop = $true; motion = 'breathe' }
+      WATCHING = [ordered]@{ asset = (PoseFile 'watch'); loop = $true; motion = 'glance' }
+      THINKING = [ordered]@{ asset = (PoseFile 'think'); loop = $true; motion = 'ponder' }
+      SPEAKING = [ordered]@{ asset = (PoseFile 'speak'); loop = $true; motion = 'speak' }
+      ALERT = [ordered]@{ asset = $speakFile; loop = $false; motion = 'alert' }
+      WORKING = [ordered]@{ asset = (PoseFile 'work'); loop = $true; motion = 'work' }
+      SUCCESS = [ordered]@{ asset = (PoseFile 'success'); loop = $false; motion = 'success' }
+      ERROR = [ordered]@{ asset = (PoseFile 'error'); loop = $false; motion = 'error' }
+      DRAGGING = [ordered]@{ asset = (PoseFile 'drag'); loop = $false; motion = 'lift' }
+      SLEEPING = [ordered]@{ asset = (PoseFile 'sleep'); loop = $true; motion = 'sleep' }
+      HIDDEN = [ordered]@{ asset = $null; loop = $false; motion = 'fade-out' }
+      WAND = [ordered]@{ asset = $workFile; stub = $true }
+      NOTE = [ordered]@{ asset = $workFile; stub = $true }
+      MATRIX = [ordered]@{ asset = $workFile; loop = $true; motion = 'work' }
+      TRASH = [ordered]@{ asset = $workFile; loop = $false; motion = 'work' }
+    }
+    anchors = [ordered]@{
+      bubble = [ordered]@{ x = 430; y = 210; dir = 'rtl' }
+      wand = [ordered]@{ x = 780; y = 620 }
+    }
+    bubble = [ordered]@{
+      dir = 'rtl'
+      lang = 'ar'
+      side = 'start'
+    }
+  }
+}
+
+function Get-WizardCharacterSummary {
+  param(
+    [string]$Root,
+    [string]$DataDir,
+    [string]$Id
+  )
+  $pack = Get-WizardPackDir -Root $Root -DataDir $DataDir -Id $Id
+  if (-not $pack -or -not (Test-Path $pack)) { return $null }
+  $manifestPath = Join-Path $pack 'manifest.json'
+  $display = $Id
+  $builtin = $Id -in @('secretary','old-wizard')
+  $poses = @()
+  foreach ($slot in Get-WizardPoseCatalog) {
+    if (Test-Path (Join-Path $pack $slot.file)) { $poses += $slot.id }
+  }
+  if (Test-Path $manifestPath) {
+    try {
+      $m = [IO.File]::ReadAllText($manifestPath, [Text.Encoding]::UTF8) | ConvertFrom-Json
+      if ($m.defaultDisplayName) { $display = [string]$m.defaultDisplayName }
+      elseif ($m.displayNameAr) { $display = [string]$m.displayNameAr }
+      if ($m.id) { $Id = [string]$m.id }
+    } catch {}
+  }
+  return [ordered]@{
+    id = $Id
+    displayName = $display
+    defaultDisplayName = $display
+    builtin = $builtin
+    poses = $poses
+    previewUrl = "/api/v1/wizard/characters/$Id/idle.png"
+  }
+}
+
+function Get-WizardCharacterList {
+  param(
+    [string]$Root,
+    [string]$DataDir
+  )
+  $chars = Get-WizardCharactersRoot -Root $Root -DataDir $DataDir
+  $out = @()
+  $seen = @{}
+  foreach ($id in @('secretary','old-wizard')) {
+    $row = Get-WizardCharacterSummary -Root $Root -DataDir $DataDir -Id $id
+    if ($row) { $out += $row; $seen[$id] = $true }
+  }
+  if ($chars -and (Test-Path $chars)) {
+    Get-ChildItem -LiteralPath $chars -Directory -ErrorAction SilentlyContinue | Sort-Object Name | ForEach-Object {
+      $id = $_.Name
+      if ($seen.ContainsKey($id)) { return }
+      if (-not (Test-WizardSafeCharacterId $id)) { return }
+      $row = Get-WizardCharacterSummary -Root $Root -DataDir $DataDir -Id $id
+      if ($row) { $out += $row; $seen[$id] = $true }
+    }
+  }
+  return $out
+}
+
+function Save-WizardUploadedPack {
+  param(
+    [string]$Root,
+    [string]$DataDir,
+    $Payload
+  )
+  $name = [string]$Payload.name
+  $id = [string]$Payload.id
+  if (-not $id) { $id = ConvertTo-WizardCharacterSlug $name }
+  $id = $id.Trim().ToLowerInvariant()
+  if (-not (Test-WizardSafeCharacterId $id)) { throw 'bad_id' }
+  if ($id -in @('secretary','old-wizard')) { throw 'builtin_pack' }
+  $posesObj = $Payload.poses
+  if ($null -eq $posesObj) { throw 'idle_required' }
+  $have = @()
+  $files = @{}
+  foreach ($slot in Get-WizardPoseCatalog) {
+    $entry = $null
+    if ($posesObj.PSObject.Properties[$slot.id]) { $entry = $posesObj.($slot.id) }
+    if ($null -eq $entry) { continue }
+    $data = $null
+    if ($entry -is [string]) { $data = [string]$entry }
+    elseif ($entry.PSObject.Properties['data']) { $data = [string]$entry.data }
+    elseif ($entry.PSObject.Properties['png']) { $data = [string]$entry.png }
+    if (-not $data) { continue }
+    $bytes = ConvertFrom-WizardPngData $data
+    $files[$slot.id] = @{ file = $slot.file; bytes = $bytes }
+    $have += $slot.id
+  }
+  if (-not ($have -contains 'idle')) { throw 'idle_required' }
+  $pack = Get-WizardPackDir -Root $Root -DataDir $DataDir -Id $id
+  if (-not $pack) { throw 'bad_path' }
+  $chars = Get-WizardCharactersRoot -Root $Root -DataDir $DataDir
+  if (-not (Test-Path $chars)) {
+    New-Item -ItemType Directory -Force -Path $chars | Out-Null
+  }
+  if (-not (Test-Path $pack)) {
+    New-Item -ItemType Directory -Force -Path $pack | Out-Null
+  }
+  if (-not (Test-WizardPathUnder -Child $pack -Parent $chars)) { throw 'bad_path' }
+  foreach ($key in $files.Keys) {
+    $row = $files[$key]
+    $dest = Join-Path $pack $row.file
+    if (-not (Test-WizardPathUnder -Child $dest -Parent $pack)) { throw 'bad_path' }
+    [IO.File]::WriteAllBytes($dest, $row.bytes)
+  }
+  $display = if ($name) { $name.Trim() } else { $id }
+  if ($display.Length -gt 80) { $display = $display.Substring(0, 80) }
+  $manifest = New-WizardPackManifest -Id $id -DisplayName $display -Have $have
+  $manifestPath = Join-Path $pack 'manifest.json'
+  if ([IO.Path]::GetFileName($manifestPath) -ne 'manifest.json') { throw 'bad_path' }
+  $json = ($manifest | ConvertTo-Json -Depth 8)
+  [IO.File]::WriteAllText($manifestPath, $json, [Text.UTF8Encoding]::new($false))
+  Copy-WizardCharacterToPublic -Root $Root -DataDir $DataDir -Id $id
+  return Get-WizardCharacterSummary -Root $Root -DataDir $DataDir -Id $id
 }
 
 function Get-WizardDefaultPermissions {
@@ -125,7 +449,7 @@ function Read-WizardSettings {
     if ($obj.displayName) { $defaults.displayName = [string]$obj.displayName }
     if ($obj.characterId) {
       $cid = [string]$obj.characterId
-      if ($cid -in @('secretary','old-wizard')) { $defaults.characterId = $cid }
+      if (Test-WizardSafeCharacterId $cid) { $defaults.characterId = $cid }
     }
     if ($obj.technicalId) { $defaults.technicalId = [string]$obj.technicalId }
     if ($obj.PSObject.Properties['visible']) { $defaults.visible = [bool]$obj.visible }
@@ -221,7 +545,7 @@ function Merge-WizardSettings {
   # technicalId stays the app id. characterId may switch among known packs.
   if ($Incoming.PSObject.Properties['characterId'] -and $null -ne $Incoming.characterId) {
     $cid = [string]$Incoming.characterId
-    if ($cid -in @('secretary','old-wizard')) { $Current.characterId = $cid }
+    if (Test-WizardSafeCharacterId $cid) { $Current.characterId = $cid }
   }
   if ($Incoming.PSObject.Properties['visible'] -and $null -ne $Incoming.visible) {
     $Current.visible = [bool]$Incoming.visible
@@ -321,7 +645,8 @@ function Invoke-WizardBridge {
     $Req,
     $Res,
     [string]$Path,
-    [string]$DataDir
+    [string]$DataDir,
+    [string]$Root = ''
   )
   $Path = [string]$Path
   if ($Path.EndsWith('/') -and $Path.Length -gt 1) { $Path = $Path.TrimEnd('/') }
@@ -402,6 +727,96 @@ function Invoke-WizardBridge {
       adapter = 'GetActiveObject'
       note = 'Unread import remains POST /api/mail/sync. Recent mail is email-sourced tasks via GET /api/tasks. Wizard never calls /api/task/approve-send.'
     }
+    return $true
+  }
+
+  if ($Path -eq '/api/v1/wizard/characters' -and $Req.HttpMethod -eq 'GET') {
+    $settings = Read-WizardSettings -DataDir $DataDir
+    $list = @(Get-WizardCharacterList -Root $Root -DataDir $DataDir)
+    Write-Json $Res @{
+      ok = $true
+      characters = $list
+      activeCharacterId = $settings.characterId
+      poses = Get-WizardPoseCatalog
+    }
+    return $true
+  }
+
+  if ($Path -eq '/api/v1/wizard/characters' -and $Req.HttpMethod -eq 'POST') {
+    $bodyRaw = Read-Body $Req
+    $incoming = $null
+    try { $incoming = $bodyRaw | ConvertFrom-Json } catch {
+      Write-Json $Res @{ ok = $false; error = 'bad_json' } 400
+      return $true
+    }
+    $payload = $incoming
+    if ($incoming.PSObject.Properties['character'] -and $incoming.character) {
+      $payload = $incoming.character
+    }
+    try {
+      $savedPack = Save-WizardUploadedPack -Root $Root -DataDir $DataDir -Payload $payload
+      $activate = $false
+      if ($payload.PSObject.Properties['activate'] -and $payload.activate) { $activate = [bool]$payload.activate }
+      $settings = Read-WizardSettings -DataDir $DataDir
+      if ($activate -and $savedPack) {
+        $settings = Merge-WizardSettings -Current $settings -Incoming ([pscustomobject]@{
+          characterId = $savedPack.id
+          displayName = $savedPack.displayName
+        })
+        $settings = Save-WizardSettings -DataDir $DataDir -Settings $settings
+      }
+      Write-Json $Res @{
+        ok = $true
+        character = $savedPack
+        settings = $settings
+      }
+    } catch {
+      $err = [string]$_.Exception.Message
+      $code = 400
+      if ($err -eq 'builtin_pack') { $code = 409 }
+      Write-Json $Res @{ ok = $false; error = $err } $code
+    }
+    return $true
+  }
+
+  if ($Path -match '^/api/v1/wizard/characters/([a-z][a-z0-9-]{0,47})$' -and $Req.HttpMethod -eq 'GET') {
+    $id = $Matches[1]
+    if (-not (Test-WizardSafeCharacterId $id)) {
+      Write-Json $Res @{ ok = $false; error = 'bad_id' } 400
+      return $true
+    }
+    $row = Get-WizardCharacterSummary -Root $Root -DataDir $DataDir -Id $id
+    if (-not $row) {
+      Write-Json $Res @{ ok = $false; error = 'not_found' } 404
+      return $true
+    }
+    Write-Json $Res @{ ok = $true; character = $row }
+    return $true
+  }
+
+  if ($Path -match '^/api/v1/wizard/characters/([a-z][a-z0-9-]{0,47})/([a-z0-9][a-z0-9._-]*\.(png|svg|json))$' -and $Req.HttpMethod -eq 'GET') {
+    $id = $Matches[1]
+    $file = $Matches[2]
+    $pack = Get-WizardPackDir -Root $Root -DataDir $DataDir -Id $id
+    if (-not $pack) {
+      Write-Json $Res @{ ok = $false; error = 'bad_id' } 400
+      return $true
+    }
+    $full = [IO.Path]::GetFullPath((Join-Path $pack $file))
+    if (-not (Test-WizardPathUnder -Child $full -Parent $pack)) {
+      Write-Json $Res @{ ok = $false; error = 'bad_path' } 400
+      return $true
+    }
+    if (-not (Test-Path $full -PathType Leaf)) {
+      Write-Json $Res @{ ok = $false; error = 'not_found' } 404
+      return $true
+    }
+    if ($file -eq 'manifest.json') {
+      $raw = [IO.File]::ReadAllText($full, [Text.Encoding]::UTF8)
+      Write-Text $Res 200 'application/json; charset=utf-8' $raw
+      return $true
+    }
+    Write-FileResp $Res $full
     return $true
   }
 

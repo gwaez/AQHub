@@ -30,3 +30,22 @@ test("tray Open AQHub uses open_aqhub, not the removed open_in_browser", () => {
   assert.match(tray, /aqhub::open_aqhub\(app\.clone\(\)\)/);
   assert.doesNotMatch(tray, /open_in_browser/);
 });
+
+test("tray menu includes Settings and Eisenhower with the same actions as the wizard", () => {
+  const tray = read("src-tauri/src/tray.rs");
+  const main = read("src/main.ts");
+  assert.match(tray, /with_id\(app, "settings", "الإعدادات"/);
+  assert.match(tray, /with_id\(app, "eisenhower", "أيزنهاور"/);
+  assert.match(tray, /with_id\(app, "show", "إظهار"/);
+  assert.match(tray, /with_id\(app, "hide", "إخفاء"/);
+  assert.match(tray, /with_id\(app, "open", "فتح AQHub"/);
+  assert.match(tray, /with_id\(app, "exit", "خروج"/);
+  assert.doesNotMatch(tray, /Oppenheimer|oppenheimer/);
+  assert.match(tray, /emit_action\(app, "SETTINGS"\)/);
+  assert.match(tray, /show_character\(app\.clone\(\)\)/);
+  assert.match(tray, /open_aqhub_path\(app\.clone\(\), "\/eisenhower\.html"/);
+  assert.doesNotMatch(tray, /eisenhower[\s\S]{0,120}emit_action/);
+  assert.match(main, /t === "SETTINGS"/);
+  assert.match(main, /openSettings\(\)/);
+  assert.match(main, /t === "MATRIX" \|\| t === "EISENHOWER"\) await openAqHubEisenhower/);
+});

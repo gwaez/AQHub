@@ -8,6 +8,10 @@ import {
 } from "../ui/permissions.ts";
 import type { MailItem, MailStatus, MailSyncResult } from "./mail.ts";
 import { taskToMailItem } from "./mail.ts";
+import { DEFAULT_CHARACTER_ID, normalizeCharacterId } from "../settings/character-id.ts";
+
+export { DEFAULT_CHARACTER_ID, KNOWN_CHARACTER_IDS, normalizeCharacterId } from "../settings/character-id.ts";
+export { BUILTIN_CHARACTER_IDS } from "../settings/character-id.ts";
 
 export const DEFAULT_AQHUB_URL = "http://127.0.0.1:8766";
 
@@ -56,14 +60,6 @@ export interface WizardSettings {
   mailLastSyncAt: string;
   mailIgnored: string[];
   firstRunComplete: boolean;
-}
-
-export const DEFAULT_CHARACTER_ID = "secretary";
-export const KNOWN_CHARACTER_IDS = ["secretary", "old-wizard"] as const;
-
-export function normalizeCharacterId(id: unknown): string {
-  if (id === "old-wizard" || id === "secretary") return id;
-  return DEFAULT_CHARACTER_ID;
 }
 
 export function defaultSettings(displayName = "السكرتيرة"): WizardSettings {

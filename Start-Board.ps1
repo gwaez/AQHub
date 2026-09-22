@@ -2796,7 +2796,7 @@ while ($listener.IsListening) {
       $handled = $false
       if (Get-Command Invoke-WizardBridge -ErrorAction SilentlyContinue) {
         try {
-          $handled = Invoke-WizardBridge -Req $req -Res $res -Path $pathNorm -DataDir $dataDir
+          $handled = Invoke-WizardBridge -Req $req -Res $res -Path $pathNorm -DataDir $dataDir -Root $Root
         } catch {
           Write-JsonError $res 'wizard_bridge_failed' ([string]$_.Exception.Message) 500
           continue

@@ -16,7 +16,9 @@ test("normalizeSettings fills P9 defaults and clamps", () => {
   assert.equal(s.characterId, "secretary");
   assert.equal(s.technicalId, "AQWizard");
   assert.equal(normalizeSettings({ characterId: "old-wizard" }).characterId, "old-wizard");
-  assert.equal(normalizeSettings({ characterId: "not-a-pack" }).characterId, "secretary");
+  assert.equal(normalizeSettings({ characterId: "luna-bot" }).characterId, "luna-bot");
+  assert.equal(normalizeSettings({ characterId: "../x" }).characterId, "secretary");
+  assert.equal(normalizeSettings({ characterId: "Nope" }).characterId, "secretary");
   assert.equal(s.opacity, 1);
   assert.equal(s.bubbleScale, 0.7);
   assert.equal(s.idleSleepMs, 5000);

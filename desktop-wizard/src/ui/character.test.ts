@@ -106,7 +106,9 @@ test("isRasterAsset / resolveStateAsset map PNG packs and keep SVG as non-raster
   assert.equal(isRasterAsset(resolveStateAsset(wizard, "IDLE") || ""), false);
   assert.equal(resolveStateAsset(wizard, "WORKING"), "wizard.svg");
   assert.equal(normalizeCharacterId("old-wizard"), "old-wizard");
-  assert.equal(normalizeCharacterId("nope"), DEFAULT_CHARACTER_ID);
+  assert.equal(normalizeCharacterId("luna-bot"), "luna-bot");
+  assert.equal(normalizeCharacterId("Nope"), DEFAULT_CHARACTER_ID);
+  assert.equal(normalizeCharacterId("../x"), DEFAULT_CHARACTER_ID);
   assert.equal(DEFAULT_CHARACTER_ID, "secretary");
 });
 
@@ -126,6 +128,17 @@ test("loadCharacterPack reads PNG state table from the secretary manifest", asyn
         headers: { "Content-Type": "application/json" },
       });
     }
+    if (url.includes("/api/v1/wizard/characters/luna-bot/manifest.json")) {
+      return new Response(
+        JSON.stringify({
+          id: "luna-bot",
+          technicalId: "AQWizard",
+          defaultDisplayName: "Luna",
+          states: { IDLE: { asset: "idle.png" }, THINKING: { asset: "think.png" } },
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    }
     return new Response("missing", { status: 404 });
   }) as typeof fetch;
   try {
@@ -138,6 +151,10 @@ test("loadCharacterPack reads PNG state table from the secretary manifest", asyn
     assert.equal(wizard.id, "old-wizard");
     assert.equal(wizard.states.IDLE.asset, "wizard.svg");
     assert.equal(isRasterAsset(wizard.states.IDLE.asset || ""), false);
+    const custom = await loadCharacterPack("luna-bot");
+    assert.equal(custom.id, "luna-bot");
+    assert.equal(custom.baseUrl.endsWith("/api/v1/wizard/characters/luna-bot"), true);
+    assert.equal(custom.states.IDLE.asset, "idle.png");
   } finally {
     globalThis.fetch = orig;
   }
@@ -159,6 +176,7 @@ test("copy-characters copies every pack folder including secretary; UI swaps ass
   assert.doesNotMatch(main, /loadCharacterPack\("old-wizard"\)/);
   const settingsPanel = readFileSync(join(root, "src", "ui", "settings-panel.ts"), "utf8");
   assert.match(settingsPanel, /data-set="characterId"/);
-  assert.match(settingsPanel, /value="secretary"/);
-  assert.match(settingsPanel, /value="old-wizard"/);
+  assert.match(settingsPanel, /id: "secretary"/);
+  assert.match(settingsPanel, /id: "old-wizard"/);
+  assert.match(settingsPanel, /\/api\/v1\/wizard\/characters/);
 });
