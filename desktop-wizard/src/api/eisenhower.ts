@@ -74,6 +74,33 @@ export function itemTitle(it: EisItem | null | undefined): string {
   return s;
 }
 
+/** CRM tasks stay out of Eisenhower inbox (source=crm, CRM Unit, md_units, …). */
+export function isEisCrmSource(obj: EisItem | Record<string, unknown> | null | undefined): boolean {
+  if (!obj) return false;
+  const rec = obj as Record<string, unknown>;
+  const src = String(rec.source ?? "").trim().toLowerCase();
+  if (src === "crm") return true;
+  if (String(rec.crmEntity ?? "").trim()) return true;
+  if (String(rec.createdBy ?? "").trim() === "CRM Sync") return true;
+  if (String(rec.crmId ?? "").trim()) return true;
+  const sref = String(rec.sourceRef ?? "");
+  if (/(md_units|md_unit|md_offers|md_approvaltransactions|aqr_legalcases|leads|opportunities|accounts)[:/]/i.test(sref)) {
+    return true;
+  }
+  const tags = rec.tags;
+  if (Array.isArray(tags) && tags.some((t) => String(t).trim().toLowerCase() === "crm")) return true;
+  if (/crm\s*unit/i.test(String(rec.title ?? ""))) return true;
+  return false;
+}
+
+export function rejectInboxCrm(items: EisItem[]): EisItem[] {
+  return items.filter((it) => {
+    const q = String(it.quad || "inbox").trim().toLowerCase();
+    if ((!q || q === "inbox") && isEisCrmSource(it)) return false;
+    return true;
+  });
+}
+
 /**
  * Unwrap ConvertTo-Json corruption:
  * {items:{value:[...]}}, {items:[{value:[...]}]}, or value as whitespace string.

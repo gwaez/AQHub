@@ -245,7 +245,7 @@ function ConvertTo-EisObjectJson {
 
 function ConvertTo-EisJson {
   param($Payload)
-  $items = @(Get-EisNormalizedItems $Payload)
+  $items = @(Get-EisItemsWithoutInboxCrm (Get-EisNormalizedItems $Payload))
   $parts = New-EisArrayList
   foreach ($it in $items) {
     $h = ConvertTo-EisItemHashtable $it
@@ -328,6 +328,23 @@ function Test-EisCrmSource {
   $title = [string](Get-EisProp $Obj 'title')
   if ($title -match '(?i)crm\s*unit') { return $true }
   return $false
+}
+
+function Test-EisInboxQuad {
+  param($Item)
+  $q = ([string](Get-EisProp $Item 'quad')).Trim().ToLowerInvariant()
+  return (-not $q -or $q -eq 'inbox')
+}
+
+function Get-EisItemsWithoutInboxCrm {
+  param($Items)
+  $out = New-EisArrayList
+  foreach ($it in @($Items)) {
+    if (-not (Test-EisRealItem $it)) { continue }
+    if ((Test-EisInboxQuad $it) -and (Test-EisCrmSource $it)) { continue }
+    [void]$out.Add($it)
+  }
+  return @($out)
 }
 
 function Test-EisWouldWipeOrganization {

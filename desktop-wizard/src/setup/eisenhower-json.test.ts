@@ -29,6 +29,8 @@ test("Eis-Json.ps1 encodes items as a JSON array of objects", () => {
   assertAscii("Eis-Json.ps1", helper);
   assert.equal(braceBalance(helper), 0);
   assert.match(helper, /function Test-EisCrmSource/);
+  assert.match(helper, /function Test-EisInboxQuad/);
+  assert.match(helper, /function Get-EisItemsWithoutInboxCrm/);
   assert.match(helper, /function Test-EisWouldWipeOrganization/);
   assert.match(helper, /eis_refuse_overwrite/);
   assert.match(helper, /function Get-EisNormalizedItems/);
@@ -38,8 +40,10 @@ test("Eis-Json.ps1 encodes items as a JSON array of objects", () => {
   assert.match(helper, /System\.Collections\.ArrayList/);
   assert.match(helper, /function ConvertTo-EisJsonString/);
   assert.match(helper, /function ConvertTo-EisObjectJson/);
+  assert.match(helper, /Get-EisItemsWithoutInboxCrm \(Get-EisNormalizedItems \$Payload\)/);
   assert.match(helper, /New-Object System\.Text\.UTF8Encoding \$false/);
   assert.match(helper, /\$Path \+ '\.tmp'/);
+  assert.match(helper, /\[IO\.File\]::WriteAllText\(\$tmp, \$json, \$utf8\)/);
   assert.doesNotMatch(helper, /ConvertTo-Json/);
 });
 
@@ -56,6 +60,8 @@ test("Start-Board Eisenhower GET/POST/feed use Save-EisDoc not ConvertTo-Json wr
   assert.match(src, /Read-EisDoc \$eisenhowerPath/);
   assert.match(src, /Get-EisNormalizedItems/);
   assert.match(src, /Test-EisCrmSource/);
+  assert.match(src, /Test-EisInboxQuad/);
+  assert.match(src, /incomingCrmInbox/);
   assert.match(src, /existing_quads_preserved/);
   assert.match(src, /never reset existing quads/);
   assert.doesNotMatch(src, /if \(\$real\.Count -eq 0\)/);
@@ -69,10 +75,13 @@ test("eisenhower.html import skips CRM and never renders title undefined", () =>
   const eis = read("eisenhower.html");
   assert.match(eis, /function itemTitle/);
   assert.match(eis, /function normalizeEisItems/);
+  assert.match(eis, /function isEisCrmSource/);
+  assert.match(eis, /function rejectInboxCrm/);
   assert.match(eis, /بدون عنوان/);
-  assert.match(eis, /normalizeEisItems\(j\.items\)/);
+  assert.match(eis, /rejectInboxCrm\(normalizeEisItems\(j\.items\)\)/);
   assert.match(eis, /escapeHtml\(itemTitle\(it\)\)/);
-  assert.match(eis, /src === 'crm'/);
+  assert.match(eis, /isEisCrmSource\(t\)/);
+  assert.match(eis, /md_units\|md_unit\|md_offers/);
   assert.doesNotMatch(eis, /escapeHtml\(it\.title\|\|''\)/);
 });
 
@@ -86,4 +95,22 @@ test("wrapped sample fixture unwraps to three titled items and keeps quads", () 
   assert.equal(items.find((i) => i.id === "E-sample-do")?.quad, "do");
   assert.equal(items.find((i) => i.id === "E-sample-sched")?.quad, "sched");
   assert.equal(items.find((i) => i.id === "E-sample-inbox")?.quad, "inbox");
+  const saved = JSON.stringify({ items });
+  assert.match(saved, /"items":\[\{"id"/);
+  assert.doesNotMatch(saved, /"items":\[\{"value"/);
+});
+
+test("UTF-8 JSON save keeps Arabic titles and a real items array", () => {
+  const items = [
+    { id: "E-ar", title: "عقد تجاري", source: "task", quad: "do" },
+    { id: "E-crm", title: "CRM Unit", source: "crm", quad: "inbox" },
+  ];
+  const cleaned = items.filter((it) => !(String(it.quad) === "inbox" && String(it.source) === "crm"));
+  const json = JSON.stringify({ items: cleaned });
+  const round = JSON.parse(Buffer.from(json, "utf8").toString("utf8")) as { items: Array<{ title: string; quad: string }> };
+  assert.equal(round.items.length, 1);
+  assert.equal(round.items[0].title, "عقد تجاري");
+  assert.equal(round.items[0].quad, "do");
+  assert.match(json, /"items":\[\{/);
+  assert.doesNotMatch(json, /"value":\[/);
 });

@@ -672,6 +672,28 @@ function itemTitle(it){
   if (!s || s === 'undefined' || s === 'null') return 'بدون عنوان';
   return s;
 }
+function isEisCrmSource(obj){
+  if (!obj) return false;
+  const src = String(obj.source || '').trim().toLowerCase();
+  if (src === 'crm') return true;
+  if (String(obj.crmEntity || '').trim()) return true;
+  if (String(obj.createdBy || '').trim() === 'CRM Sync') return true;
+  if (String(obj.crmId || '').trim()) return true;
+  const sref = String(obj.sourceRef || '');
+  if (/(md_units|md_unit|md_offers|md_approvaltransactions|aqr_legalcases|leads|opportunities|accounts)[:/]/i.test(sref)) return true;
+  const tags = Array.isArray(obj.tags) ? obj.tags : [];
+  if (tags.some(t => String(t).trim().toLowerCase() === 'crm')) return true;
+  if (/crm\s*unit/i.test(String(obj.title || ''))) return true;
+  return false;
+}
+function rejectInboxCrm(list){
+  return (Array.isArray(list) ? list : []).filter(it => {
+    if (!it) return false;
+    const q = String(it.quad || 'inbox').trim().toLowerCase();
+    if ((!q || q === 'inbox') && isEisCrmSource(it)) return false;
+    return true;
+  });
+}
 function isEisWrapper(it){
   if (!it || typeof it !== 'object') return true;
   if (it.id || it.taskId) return false;
@@ -2433,7 +2455,7 @@ async function load(){
     const r = await fetch('/api/eisenhower');
     if (!r.ok) throw new Error('HTTP '+r.status);
     const j = await r.json();
-    items = normalizeEisItems(j.items);
+    items = rejectInboxCrm(normalizeEisItems(j.items));
     const localById = {};
     localItems.forEach(x => { if (x && x.id) localById[x.id]=x; });
     items.forEach(it => {
@@ -2445,13 +2467,13 @@ async function load(){
     setBadge('on','أونلاين · محفوظ');
   } catch {
     try {
-      items = normalizeEisItems(localItems);
+      items = rejectInboxCrm(normalizeEisItems(localItems));
       if (items.length) setBadge('wait','أوفلاين · من الجهاز');
       else {
         const raw = localStorage.getItem('aqaar-eisenhower');
         if (raw) {
           const j = JSON.parse(raw);
-          items = normalizeEisItems(j.items||[]);
+          items = rejectInboxCrm(normalizeEisItems(j.items||[]));
           window.__savedAt = j.updatedAt||'';
           setBadge('wait','أوفلاين · من الجهاز');
         } else setBadge('off','فارغ');
@@ -2468,7 +2490,7 @@ async function load(){
 }
 
 async function save(){
-  items = normalizeEisItems(items);
+  items = rejectInboxCrm(normalizeEisItems(items));
   const payload = { items, updatedAt: new Date().toISOString() };
   try { localStorage.setItem('aqaar-eisenhower', JSON.stringify(payload)); } catch {}
   try {
@@ -2499,9 +2521,7 @@ async function importOpenTasks(){
     list.forEach(t => {
       const st = String(t.status||t.state||'').toLowerCase();
       if (st.includes('done')||st.includes('closed')||st.includes('مكتمل')) return;
-      const src = String(t.source||t.crmEntity||'').toLowerCase();
-      const hay = [t.sourceRef, t.crmEntity, t.title, t.createdBy, (t.tags||[]).join(' ')].join(' ');
-      if (src === 'crm' || /md_units|md_unit|crm\s*unit|CRM Sync/i.test(hay)) return;
+      if (isEisCrmSource(t)) return;
       const title = t.title||t.subject||t.id;
       if (!title) return;
       if (items.some(i => (t.id && i.taskId===t.id) || i.title===String(title))) return;

@@ -2685,10 +2685,10 @@ function Enrich-EisPayload($payload) {
     if (-not (Test-EisRealItem $it)) { continue }
     $keepQuad = [string](Get-EisProp $it 'quad')
     $tid = [string]$(if ($it.taskId) { $it.taskId } elseif ($it.PSObject.Properties['taskId']) { $it.taskId } else { '' })
-    $quadNorm = $keepQuad.Trim().ToLowerInvariant()
-    $isInbox = (-not $quadNorm -or $quadNorm -eq 'inbox')
-    $skipInboxCrm = $isInbox -and ((Test-EisCrmSource $it) -or ($tid -and $map.ContainsKey($tid) -and (Test-EisCrmSource $map[$tid])))
-    if ($tid -and $map.ContainsKey($tid) -and -not $skipInboxCrm) {
+    $isInbox = Test-EisInboxQuad $it
+    $linkedCrm = $tid -and $map.ContainsKey($tid) -and (Test-EisCrmSource $map[$tid])
+    if ($isInbox -and ((Test-EisCrmSource $it) -or $linkedCrm)) { continue }
+    if ($tid -and $map.ContainsKey($tid)) {
       $it = Merge-EisItemWithTask $it $map[$tid]
     }
     if ($keepQuad) {
@@ -2705,8 +2705,11 @@ function Invoke-EisAutoFeed([bool]$force = $false) {
   $null = $force
   $payload = Read-EisDoc $eisenhowerPath
   $items = New-EisArrayList
+  $skippedCrm = 0
   foreach ($it in @(Get-EisNormalizedItems $payload)) {
-    if (Test-EisRealItem $it) { [void]$items.Add($it) }
+    if (-not (Test-EisRealItem $it)) { continue }
+    if ((Test-EisInboxQuad $it) -and (Test-EisCrmSource $it)) { $skippedCrm++; continue }
+    [void]$items.Add($it)
   }
 
   $existingTask = @{}
@@ -2720,10 +2723,9 @@ function Invoke-EisAutoFeed([bool]$force = $false) {
   }
 
   $added = 0
-  $skippedCrm = 0
   $tasksPath = Join-Path $dataDir 'tasks.json'
   if (-not (Test-Path $tasksPath)) {
-    return @{ ok = $true; added = 0; total = $items.Count; skippedCrm = 0; message = 'no_tasks' }
+    return @{ ok = $true; added = 0; total = $items.Count; skippedCrm = $skippedCrm; message = 'no_tasks' }
   }
   $tj = [IO.File]::ReadAllText($tasksPath, [Text.Encoding]::UTF8) | ConvertFrom-Json
   foreach ($t in @($tj.tasks)) {
@@ -2899,6 +2901,11 @@ while ($listener.IsListening) {
               else { try { $it | Add-Member -NotePropertyName $k -NotePropertyValue $prv -Force } catch {} }
             }
           }
+        }
+        $incomingCrmInbox = (Test-EisInboxQuad $it) -and ((Test-EisCrmSource $it) -or ($old -and (Test-EisCrmSource $old)))
+        if ($incomingCrmInbox) {
+          if ($old -and -not (Test-EisInboxQuad $old)) { [void]$merged.Add($old) }
+          continue
         }
         [void]$merged.Add($it)
       }
