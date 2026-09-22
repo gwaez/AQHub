@@ -246,7 +246,7 @@ Settings schema (`data/wizard-settings.json`, gitignored):
 | `board.html` `task.html` `eisenhower.html` `index.html` `panel.html` `crm*.html` | **AQHub core** | Do not migrate into Tauri. |
 | `data/tasks.json` `data/eisenhower.json` `data/crm-config.json` `data/jobs/` `data/audit.jsonl` | **AQHub core** | Wizard HTTP only. |
 | `data/*.sample.json` `data/signing-platforms.json` | **AQHub core** | Samples / public signing URLs. |
-| `Setup-AQHub.ps1` `Watch-Board.ps1` `Start-Board*.bat` | **AQHub core** | Board startup. Wizard has its own Windows runbook. |
+| `Setup-AQHub.ps1` `Watch-Board.ps1` `Start-Board-Background.bat` | **AQHub core** | Hidden board startup. Wizard has its own Windows runbook. |
 | `bots/` | **AQHub core** | Unrelated job notes. |
 | `.gitignore` | **shared** | Keep live data + `node_modules` / `target` ignored. |
 

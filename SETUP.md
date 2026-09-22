@@ -117,13 +117,15 @@ The script prints stages such as checking Git, preparing data files, starting th
 In File Explorer inside `AQHub`, double-click:
 
 ```text
-Start-Board-KeepAlive.bat
+Start-Board-Background.bat
 ```
+
+(The server runs hidden. `Start-Board-KeepAlive.bat` still works; it now calls the same hidden launcher.)
 
 Or from PowerShell:
 
 ```powershell
-.\Start-Board-KeepAlive.bat
+.\Start-Board-Background.bat
 ```
 
 ---
@@ -170,7 +172,8 @@ Windows autostart stays **off** unless you later pass `-Autostart` (after `npm r
 | Component | Role |
 |-----------|------|
 | `Start-Board.ps1` | Local HttpListener + Outlook COM |
-| `Watch-Board.ps1` | Keepalive watchdog |
+| `Watch-Board.ps1` | Keepalive watchdog (hidden via Background launcher) |
+| `Start-Board-Background.bat` | Daily start — no leftover PowerShell window |
 | `board.html` | Board UI |
 | `data/tasks.json` | Local tasks (seeded from sample if missing) — **not committed** |
 | `data/crm-config.json` | Local CRM settings — **do not commit secrets** |
@@ -192,7 +195,7 @@ Windows autostart stays **off** unless you later pass `-Autostart` (after `npm r
 |-------|-----|
 | `git` not recognized after install | Close and reopen PowerShell, then `git --version` |
 | `git clone` fails / asks for login | Sign in to GitHub in the popup/browser; confirm repo access |
-| Board does not open | Re-run `Start-Board-KeepAlive.bat`; close old board PowerShell windows |
+| Board does not open | Re-run `Start-Board-Background.bat`; close leftover board PowerShell windows if any |
 | Mail features fail | Open Outlook desktop and sign in on this PC |
 | ExecutionPolicy warning | Use the Step 5 command with `-ExecutionPolicy Bypass` as written |
 

@@ -342,7 +342,7 @@ if ($Autostart) {
 
 Write-Step 'How to run'
 Write-Host '    1. Start AQHub first:  powershell -ExecutionPolicy Bypass -File .\Setup-AQHub.ps1' -ForegroundColor Green
-Write-Host "       or double-click Start-Board-KeepAlive.bat  -> $BoardUrl" -ForegroundColor Green
+Write-Host "       or double-click Start-Board-Background.bat  -> $BoardUrl" -ForegroundColor Green
 Write-Host '    2. Dev companion:     cd desktop-wizard ; npm run tauri dev' -ForegroundColor Green
 Write-Host '    3. Windows exe:       cd desktop-wizard ; npm run tauri build' -ForegroundColor Green
 Write-Host '       Output (unsigned): desktop-wizard\src-tauri\target\release\aqwizard.exe' -ForegroundColor DarkGray

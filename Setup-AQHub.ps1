@@ -211,12 +211,19 @@ function Ensure-DataFiles {
 function Start-BoardKeepAlive {
   param([string]$Root)
 
-  Write-Step 'Starting board (keepalive watchdog)...'
-  Write-Host '    Starting board... Outlook/Windows may show a COM security prompt later - Allow if you trust this run.' -ForegroundColor Yellow
+  Write-Step 'Starting board (hidden keepalive watchdog)...'
+  Write-Host '    Starting board in the background (no PowerShell window). Outlook/Windows may show a COM security prompt later - Allow if you trust this run.' -ForegroundColor Yellow
 
+  $bgVbs = Join-Path $Root 'Start-Board-Background.vbs'
   $keepAliveBat = Join-Path $Root 'Start-Board-KeepAlive.bat'
   $watchPs1 = Join-Path $Root 'Watch-Board.ps1'
   $startPs1 = Join-Path $Root 'Start-Board.ps1'
+
+  if (Test-Path $bgVbs) {
+    Start-Process -FilePath 'wscript.exe' -ArgumentList @('//nologo', $bgVbs) -WorkingDirectory $Root | Out-Null
+    Write-Ok 'Launched Start-Board-Background.vbs (hidden Watch-Board)'
+    return
+  }
 
   if (Test-Path $keepAliveBat) {
     Start-Process -FilePath $keepAliveBat -WorkingDirectory $Root | Out-Null
@@ -226,21 +233,21 @@ function Start-BoardKeepAlive {
 
   if (Test-Path $watchPs1) {
     Start-Process -FilePath 'powershell.exe' -ArgumentList @(
-      '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $watchPs1
-    ) -WorkingDirectory $Root -WindowStyle Minimized | Out-Null
-    Write-Ok 'Launched Watch-Board.ps1'
+      '-NoProfile', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden', '-File', $watchPs1
+    ) -WorkingDirectory $Root -WindowStyle Hidden | Out-Null
+    Write-Ok 'Launched Watch-Board.ps1 hidden'
     return
   }
 
   if (Test-Path $startPs1) {
     Start-Process -FilePath 'powershell.exe' -ArgumentList @(
-      '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $startPs1
-    ) -WorkingDirectory $Root -WindowStyle Minimized | Out-Null
-    Write-Ok 'Launched Start-Board.ps1'
+      '-NoProfile', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden', '-File', $startPs1, '-NoBrowser'
+    ) -WorkingDirectory $Root -WindowStyle Hidden | Out-Null
+    Write-Ok 'Launched Start-Board.ps1 hidden'
     return
   }
 
-  Write-Fail 'Could not find Start-Board-KeepAlive.bat, Watch-Board.ps1, or Start-Board.ps1'
+  Write-Fail 'Could not find Start-Board-Background.vbs, Watch-Board.ps1, or Start-Board.ps1'
 }
 
 function Wait-And-OpenBrowser {
@@ -271,7 +278,7 @@ function Wait-And-OpenBrowser {
   if ($ready) {
     Write-Ok ("Board is responding at $BoardUrl")
   } else {
-    Write-WarnLine "Board did not answer yet. Open $BoardUrl in a few seconds, or re-run Start-Board-KeepAlive.bat"
+    Write-WarnLine "Board did not answer yet. Open $BoardUrl in a few seconds, or re-run Start-Board-Background.bat"
   }
 }
 

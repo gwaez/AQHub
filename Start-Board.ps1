@@ -51,7 +51,12 @@ try { $listener.Start() } catch {
   throw
 }
 Write-Host "Aqaar Command: http://127.0.0.1:$Port/board.html"
-Start-Process "http://127.0.0.1:$Port/board.html"
+$openBrowser = $true
+if ($args -contains '-NoBrowser') { $openBrowser = $false }
+if ($env:AQHUB_NO_BROWSER -eq '1') { $openBrowser = $false }
+if ($openBrowser) {
+  Start-Process "http://127.0.0.1:$Port/board.html"
+}
 
 function Get-Mime($path) {
   switch ([IO.Path]::GetExtension($path).ToLowerInvariant()) {

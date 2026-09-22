@@ -28,13 +28,19 @@ function Stop-BoardProcs {
 }
 
 function Start-BoardServer {
-  Write-Log 'Starting Start-Board.ps1'
+  Write-Log 'Starting Start-Board.ps1 (hidden, no browser)'
   Start-Process -FilePath 'powershell.exe' -ArgumentList @(
-    '-NoProfile','-ExecutionPolicy','Bypass','-File', $BoardPs1
-  ) -WorkingDirectory $Root -WindowStyle Minimized | Out-Null
+    '-NoProfile','-ExecutionPolicy','Bypass','-WindowStyle','Hidden','-File', $BoardPs1, '-NoBrowser'
+  ) -WorkingDirectory $Root -WindowStyle Hidden | Out-Null
 }
 
 Write-Log 'Watchdog started'
+$dup = Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" -ErrorAction SilentlyContinue |
+  Where-Object { $_.CommandLine -and ($_.CommandLine -match 'Watch-Board\.ps1') -and $_.ProcessId -ne $PID }
+if ($dup) {
+  Write-Log 'Another watchdog already running - exiting'
+  exit 0
+}
 Start-BoardServer
 Start-Sleep -Seconds 4
 

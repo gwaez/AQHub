@@ -39,7 +39,7 @@ Do these **on the user PC**, not on a Linux cloud agent.
 | **WebView2 runtime** | Tauri window | Usually already on Windows 10/11. If the window is blank: [WebView2](https://developer.microsoft.com/microsoft-edge/webview2/) |
 | **VS 2022 Build Tools — Desktop development with C++** | `link.exe` for `aqwizard.exe`. Also required later for Magic Wand/UIA | See **Build Tools path** below |
 | Outlook desktop (signed in) | Mail sync/open via AQHub COM | Optional for the companion UI; required for real mail |
-| AQHub board | Wizard talks to `http://127.0.0.1:8766` | `Setup-AQHub.ps1` / `Start-Board-KeepAlive.bat` |
+| AQHub board | Wizard talks to `http://127.0.0.1:8766` | `Setup-AQHub.ps1` / `Start-Board-Background.bat` |
 
 ### Build Tools path (explicit)
 
@@ -73,7 +73,7 @@ From the AQHub clone:
 powershell -ExecutionPolicy Bypass -File .\Setup-AQHub.ps1
 ```
 
-Wait for `http://127.0.0.1:8766/board.html`. Details: [SETUP.md](../../SETUP.md) / [SETUP-AR.md](../../SETUP-AR.md).
+Wait for `http://127.0.0.1:8766/board.html`. Daily start: double-click `Start-Board-Background.bat` (hidden watchdog, no leftover PowerShell window). Details: [SETUP.md](../../SETUP.md) / [SETUP-AR.md](../../SETUP-AR.md).
 
 ### 2) Wizard toolchain + npm
 
@@ -162,7 +162,7 @@ Do not commit the live `wizard-settings.json`.
 | `node` / `cargo` not recognized | Reopen PowerShell after winget; confirm `node -v` / `cargo -v` |
 | `link.exe not found` / LNK errors | Install Build Tools C++ workload; use VS Native Tools prompt |
 | Blank Tauri window | Install WebView2 runtime |
-| Companion cannot reach the board | Start `Start-Board-KeepAlive.bat`; open `http://127.0.0.1:8766/board.html` |
+| Companion cannot reach the board | Start `Start-Board-Background.bat`; open `http://127.0.0.1:8766/board.html` |
 | Mail bubble “unavailable” | Outlook desktop not running / not signed in — expected; no crash |
 
 ---

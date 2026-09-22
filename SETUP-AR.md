@@ -125,13 +125,15 @@ powershell -ExecutionPolicy Bypass -File .\Setup-AQHub.ps1
 من مستكشف الملفات داخل مجلد `AQHub`، انقر نقرًا مزدوجًا على:
 
 ```text
-Start-Board-KeepAlive.bat
+Start-Board-Background.bat
 ```
+
+(الخادم يعمل مخفيًا بدون نافذة PowerShell. `Start-Board-KeepAlive.bat` ما زال يعمل ويستدعي نفس المشغّل المخفي.)
 
 أو من PowerShell:
 
 ```powershell
-.\Start-Board-KeepAlive.bat
+.\Start-Board-Background.bat
 ```
 
 ---
@@ -178,7 +180,8 @@ npm run tauri dev
 | المكوّن | الدور |
 |---------|--------|
 | `Start-Board.ps1` | خادم محلي بسيط (HttpListener) + ربط Outlook COM |
-| `Watch-Board.ps1` | يراقب اللوحة ويعيد تشغيلها إن توقفت |
+| `Watch-Board.ps1` | يراقب اللوحة ويعيد تشغيلها إن توقفت (مخفي) |
+| `Start-Board-Background.bat` | التشغيل اليومي — بدون نافذة PowerShell متبقية |
 | `board.html` | واجهة اللوحة (كانبان / قائمة / تركيز) |
 | `data/tasks.json` | مهامك المحلية (تُنشأ من العينة إن نقصت) — **لا تُرفع إلى git** |
 | `data/crm-config.json` | إعدادات CRM محلية — **لا ترفع أسرارًا** |
@@ -200,7 +203,7 @@ npm run tauri dev
 |---------|-----------|
 | `git` غير معروف بعد التثبيت | أغلق PowerShell وافتحه من جديد، ثم `git --version` |
 | فشل `git clone` / طلب دخول | سجّل دخول GitHub في النافذة/المتصفح، أو تأكد أن لديك صلاحية على المستودع |
-| المنفذ مشغول / اللوحة لا تفتح | أعد تشغيل `Start-Board-KeepAlive.bat` أو أغلق نوافذ PowerShell القديمة للوحة |
+| المنفذ مشغول / اللوحة لا تفتح | أعد تشغيل `Start-Board-Background.bat` أو أغلق نوافذ PowerShell القديمة للوحة إن وُجدت |
 | البريد لا يعمل | تأكد أن Outlook للكمبيوتر مفتوح ومسجّل الدخول على نفس الجهاز |
 | تحذير ExecutionPolicy | استخدم أمر الخطوة 5 مع `-ExecutionPolicy Bypass` كما هو مكتوب |
 

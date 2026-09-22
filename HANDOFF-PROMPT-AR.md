@@ -16,7 +16,7 @@
 - المسموح: سورس HTML/PS1، `*.sample.json`، `SETUP-AR.md` / `SETUP.md` / `Setup-AQHub.ps1` / `Setup-AQWizard.ps1`.
 
 ## التشغيل المحلي
-1. من مجلد اللوحة: `Start-Board-KeepAlive.bat` أو `.\Start-Board.ps1`
+1. من مجلد اللوحة: `Start-Board-Background.bat` (مخفي) أو `.\Start-Board.ps1`
 2. افتح `http://127.0.0.1:8766/` — البورد، التاسكات، CRM، صندوق أيزنهاور.
 3. CRM login عند الحاجة: سكربتات `Interactive-CrmToken.ps1` / `Login-Crm-Now.bat` (توكن ساعة تقريبًا؛ لا ترفع التوكن).
 

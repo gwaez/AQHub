@@ -41,7 +41,7 @@ cd AQHub
 powershell -ExecutionPolicy Bypass -File .\Setup-AQHub.ps1
 ```
 
-Or double-click `Start-Board-KeepAlive.bat`.
+Or double-click `Start-Board-Background.bat` (hidden server; no leftover PowerShell window).
 
 5. Browser opens http://127.0.0.1:8766/board.html — allow any Outlook/Windows COM prompts if you started AQHub.
 
@@ -67,7 +67,8 @@ First run creates `data/tasks.json` and `data/crm-config.json` from the sample f
 | `index.html` / `panel.html` | Control panel |
 | `crm.html` | Dynamics CRM connector UI |
 | `Start-Board.ps1` | Local HttpListener + Outlook COM |
-| `Watch-Board.ps1` | Keepalive watchdog |
+| `Watch-Board.ps1` | Hidden keepalive watchdog |
+| `Start-Board-Background.vbs` / `.bat` | Daily launcher — no leftover console |
 | `data/tasks.sample.json` | Empty sample board |
 
 ## Another PC / جهاز تاني
