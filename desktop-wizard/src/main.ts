@@ -62,14 +62,22 @@ function browserWindowPort(): CharacterWindowPort {
       stage.style.top = `${Math.round(y)}px`;
     },
     async getPlacement() {
-      const stage = el("stage");
-      const r = stage.getBoundingClientRect();
+      const hit = document.getElementById("petHit") || el("character");
+      const host = el("stage");
+      const roaming = host.classList.contains("is-roaming");
+      const origin = (roaming ? host : hit).getBoundingClientRect();
+      const size = hit.getBoundingClientRect();
       return {
-        x: Math.round(r.left),
-        y: Math.round(r.top),
-        width: Math.round(r.width) || 200,
-        height: Math.round(r.height) || 250,
-        workArea: { x: 8, y: 88, width: Math.max(240, window.innerWidth - 16), height: Math.max(280, window.innerHeight - 96) },
+        x: Math.round(origin.left),
+        y: Math.round(origin.top),
+        width: Math.max(160, Math.round(size.width) || 200),
+        height: Math.max(220, Math.round(size.height) || 280),
+        workArea: {
+          x: 8,
+          y: 88,
+          width: Math.max(280, window.innerWidth - 16),
+          height: Math.max(300, window.innerHeight - 96),
+        },
       };
     },
     async setMatrixLayout(open: boolean) {
