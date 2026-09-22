@@ -1,5 +1,5 @@
 # ASCII-only Eisenhower JSON helper.
-# Dotted from Start-Board.ps1. Windows PowerShell 5.1 ConvertTo-Json wraps
+# Dotted from Start-Board.ps1. Windows PowerShell 5.1 JSON conversion wraps
 # object[] / List[object] as {"value":[...],"Count":N} or [{"value":[...]}].
 # This module always writes items as a JSON array of item objects.
 
@@ -190,6 +190,32 @@ function ConvertTo-EisItemHashtable {
   return $h
 }
 
+function ConvertTo-EisJsonString {
+  param($Val)
+  $s = ''
+  if ($null -ne $Val) { $s = [string]$Val }
+  $sb = New-Object System.Text.StringBuilder (($s.Length * 2) + 2)
+  [void]$sb.Append([char]34)
+  $chars = $s.ToCharArray()
+  for ($i = 0; $i -lt $chars.Length; $i++) {
+    $ch = $chars[$i]
+    $code = [int]$ch
+    if ($code -eq 34) { [void]$sb.Append('\'); [void]$sb.Append([char]34); continue }
+    if ($code -eq 92) { [void]$sb.Append('\\'); continue }
+    if ($code -eq 10) { [void]$sb.Append('\n'); continue }
+    if ($code -eq 13) { [void]$sb.Append('\r'); continue }
+    if ($code -eq 9) { [void]$sb.Append('\t'); continue }
+    if ($code -lt 32) {
+      [void]$sb.Append('\u')
+      [void]$sb.Append($code.ToString('x4'))
+      continue
+    }
+    [void]$sb.Append($ch)
+  }
+  [void]$sb.Append([char]34)
+  return $sb.ToString()
+}
+
 function ConvertTo-EisJsonScalar {
   param($Val)
   if ($null -eq $Val) { return 'null' }
@@ -204,7 +230,17 @@ function ConvertTo-EisJsonScalar {
   if ($Val -is [byte] -or $Val -is [int16] -or $Val -is [uint16] -or $Val -is [int] -or $Val -is [uint32] -or $Val -is [long] -or $Val -is [uint64] -or $Val -is [decimal] -or $Val -is [double] -or $Val -is [float] -or $Val -is [single]) {
     return ([string]$Val)
   }
-  return ([string]$Val | ConvertTo-Json -Compress)
+  return (ConvertTo-EisJsonString $Val)
+}
+
+function ConvertTo-EisObjectJson {
+  param($Hash)
+  if ($null -eq $Hash) { return '{}' }
+  $parts = New-EisArrayList
+  foreach ($k in @($Hash.Keys)) {
+    [void]$parts.Add((ConvertTo-EisJsonString ([string]$k)) + ':' + (ConvertTo-EisJsonScalar $Hash[$k]))
+  }
+  return ('{' + (@($parts) -join ',') + '}')
 }
 
 function ConvertTo-EisJson {
@@ -214,7 +250,7 @@ function ConvertTo-EisJson {
   foreach ($it in $items) {
     $h = ConvertTo-EisItemHashtable $it
     if ($null -eq $h) { continue }
-    [void]$parts.Add(($h | ConvertTo-Json -Compress -Depth 8))
+    [void]$parts.Add((ConvertTo-EisObjectJson $h))
   }
   $itemsJson = '[' + (@($parts) -join ',') + ']'
   $chunks = New-EisArrayList
@@ -281,8 +317,10 @@ function Test-EisCrmSource {
   if ($ent) { return $true }
   $createdBy = ([string](Get-EisProp $Obj 'createdBy')).Trim()
   if ($createdBy -eq 'CRM Sync') { return $true }
+  $crmId = [string](Get-EisProp $Obj 'crmId')
+  if ($crmId) { return $true }
   $sref = [string](Get-EisProp $Obj 'sourceRef')
-  if ($sref -match '(?i)(md_units|md_unit|md_offers|md_approvaltransactions|aqr_legalcases)\b') { return $true }
+  if ($sref -match '(?i)(md_units|md_unit|md_offers|md_approvaltransactions|aqr_legalcases|leads|opportunities|accounts)[:/]') { return $true }
   $tags = Get-EisProp $Obj 'tags'
   foreach ($tg in @($tags)) {
     if (([string]$tg).Trim().ToLowerInvariant() -eq 'crm') { return $true }
@@ -336,7 +374,14 @@ function Save-EisDoc {
     }
     $json = ConvertTo-EisJson $clean
   }
-  [IO.File]::WriteAllText($Path, $json, [Text.UTF8Encoding]::new($false))
+  $utf8 = New-Object System.Text.UTF8Encoding $false
+  $tmp = $Path + '.tmp'
+  [IO.File]::WriteAllText($tmp, $json, $utf8)
+  try {
+    [IO.File]::Copy($tmp, $Path, $true)
+  } finally {
+    try { [IO.File]::Delete($tmp) } catch {}
+  }
   return $json
 }
 

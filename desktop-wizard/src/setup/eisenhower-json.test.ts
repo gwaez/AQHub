@@ -36,8 +36,11 @@ test("Eis-Json.ps1 encodes items as a JSON array of objects", () => {
   assert.match(helper, /function Save-EisDoc/);
   assert.match(helper, /function Read-EisDoc/);
   assert.match(helper, /System\.Collections\.ArrayList/);
-  assert.match(helper, /'"items":' \+ \$itemsJson/);
-  assert.doesNotMatch(helper, /ConvertTo-Json -Depth 10 -Compress/);
+  assert.match(helper, /function ConvertTo-EisJsonString/);
+  assert.match(helper, /function ConvertTo-EisObjectJson/);
+  assert.match(helper, /New-Object System\.Text\.UTF8Encoding \$false/);
+  assert.match(helper, /\$Path \+ '\.tmp'/);
+  assert.doesNotMatch(helper, /ConvertTo-Json/);
 });
 
 test("Start-Board Eisenhower GET/POST/feed use Save-EisDoc not ConvertTo-Json wrap", () => {
