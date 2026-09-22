@@ -22,9 +22,13 @@ function browserWindowPort(): CharacterWindowPort {
   return {
     async show() {
       el("character").style.visibility = "visible";
+      const plate = document.querySelector(".nameplate");
+      if (plate instanceof HTMLElement) plate.style.visibility = "visible";
     },
     async hide() {
       el("character").style.visibility = "hidden";
+      const plate = document.querySelector(".nameplate");
+      if (plate instanceof HTMLElement) plate.style.visibility = "hidden";
     },
     async openAqHub() {
       window.open("http://127.0.0.1:8766/board.html", "_blank");

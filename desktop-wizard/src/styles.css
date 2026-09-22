@@ -64,6 +64,12 @@ body.browser-preview {
   visibility: hidden;
 }
 
+#stage.is-hidden .character,
+#stage.is-hidden .nameplate {
+  visibility: hidden;
+  pointer-events: none;
+}
+
 @keyframes bob {
   0%,
   100% {
