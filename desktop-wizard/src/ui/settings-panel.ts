@@ -2,6 +2,7 @@
 
 import type { AuditLine } from "../api/audit.ts";
 import { formatAuditLine } from "../api/audit.ts";
+import type { MailStatus } from "../api/mail.ts";
 import type { WizardSettings } from "../api/aqhub-client.ts";
 import type { UiCopy } from "../i18n/ar.ts";
 import {
@@ -10,12 +11,14 @@ import {
   type PermissionMode,
 } from "./permissions.ts";
 
-export const SETTINGS_PANEL_PHASE = "p9";
+export const SETTINGS_PANEL_PHASE = "p10";
 
 export interface SettingsHandlers {
   onPatch(patch: Partial<WizardSettings>): void;
   onPermission(id: CapabilityId, mode: PermissionMode): void;
   onRefreshAudit(): void;
+  onMailSync(): void;
+  onJumpPermissions(): void;
   onClose(): void;
 }
 
@@ -26,6 +29,7 @@ export class SettingsPanel {
   private tab = "general";
   private last: WizardSettings | null = null;
   private debounce = 0;
+  private mailStatus: MailStatus | null = null;
 
   constructor(host: HTMLElement, handlers: SettingsHandlers, copy: UiCopy) {
     this.host = host;
@@ -42,6 +46,14 @@ export class SettingsPanel {
       if (close) this.handlers.onClose();
       const refresh = (ev.target as HTMLElement).closest("[data-settings=audit-refresh]");
       if (refresh) this.handlers.onRefreshAudit();
+      const sync = (ev.target as HTMLElement).closest("[data-settings=mail-sync]");
+      if (sync) this.handlers.onMailSync();
+      const jump = (ev.target as HTMLElement).closest("[data-settings=mail-perms]");
+      if (jump) {
+        this.tab = "permissions";
+        this.handlers.onJumpPermissions();
+        this.paintTabs();
+      }
     });
     this.host.addEventListener("change", (ev) => {
       const t = ev.target as HTMLElement;
@@ -62,9 +74,9 @@ export class SettingsPanel {
     this.copy = copy;
   }
 
-  show(settings: WizardSettings, audit: AuditLine[]): void {
+  show(settings: WizardSettings, audit: AuditLine[], mail?: MailStatus | null): void {
     this.host.hidden = false;
-    this.sync(settings, audit);
+    this.sync(settings, audit, mail);
   }
 
   hide(): void {
@@ -75,7 +87,8 @@ export class SettingsPanel {
     return !this.host.hidden;
   }
 
-  sync(settings: WizardSettings, audit: AuditLine[]): void {
+  sync(settings: WizardSettings, audit: AuditLine[], mail?: MailStatus | null): void {
+    if (mail) this.mailStatus = mail;
     const localeChanged = this.last && this.last.language !== settings.language;
     this.last = settings;
     if (!this.host.querySelector(".settings-tabs") || localeChanged) {
@@ -85,6 +98,7 @@ export class SettingsPanel {
     this.fillValues(settings);
     this.fillPermissions(settings);
     this.fillAudit(audit);
+    this.fillEmail(settings);
     this.paintTabs();
   }
 
@@ -217,6 +231,20 @@ export class SettingsPanel {
     ul.innerHTML = audit.map((line) => `<li>${esc(formatAuditLine(line))}</li>`).join("");
   }
 
+  private fillEmail(settings: WizardSettings): void {
+    const c = this.copy;
+    const st = this.mailStatus;
+    const statusEl = this.host.querySelector("[data-email-status]");
+    if (statusEl) {
+      statusEl.textContent = st?.outlook ? c.emailConnected : c.emailUnavailable;
+      statusEl.className = st?.outlook ? "hub up" : "hub down";
+    }
+    const reason = this.host.querySelector("[data-email-reason]");
+    if (reason) reason.textContent = st?.reason || "";
+    const sync = this.host.querySelector("[data-email-sync]");
+    if (sync) sync.textContent = settings.mailLastSyncAt || st?.lastSyncAt || "—";
+  }
+
   private render(settings: WizardSettings, audit: AuditLine[]): void {
     const c = this.copy;
     const lang = settings.language === "en" ? "en" : "ar";
@@ -229,6 +257,7 @@ export class SettingsPanel {
         ${tabBtn("bubbles", c.bubbles)}
         ${tabBtn("hotkeys", c.hotkeys)}
         ${tabBtn("tray", c.tray)}
+        ${tabBtn("email", c.email)}
         ${tabBtn("permissions", c.permissions)}
         ${tabBtn("audit", c.audit)}
       </nav>
@@ -312,6 +341,16 @@ export class SettingsPanel {
               <option value="exit" ${sel(settings.closeAction === "exit")}>${esc(c.closeExit)}</option>
             </select>
           </label>
+        </section>
+        <section data-settings-section="email">
+          <p class="hint">${esc(c.emailHint)}</p>
+          <p>${esc(c.emailStatus)}: <span data-email-status class="${this.mailStatus?.outlook ? "hub up" : "hub down"}">${esc(this.mailStatus?.outlook ? c.emailConnected : c.emailUnavailable)}</span></p>
+          <p class="hint" data-email-reason>${esc(this.mailStatus?.reason || "")}</p>
+          <p>${esc(c.emailLastSync)}: <span data-email-sync>${esc(settings.mailLastSyncAt || this.mailStatus?.lastSyncAt || "—")}</span></p>
+          <div class="composer-actions">
+            <button type="button" data-settings="mail-sync">${esc(c.emailSyncNow)}</button>
+            <button type="button" data-settings="mail-perms">${esc(c.emailPerms)}</button>
+          </div>
         </section>
         <section data-settings-section="permissions">
           <table class="perm-table">

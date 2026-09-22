@@ -1,7 +1,7 @@
 import type { WizardAction } from "../actions/wizard-action.ts";
 
 /** Local companion permissions. Never stores CRM tokens. No auto-send. */
-export const PERMISSIONS_PHASE = "p11";
+export const PERMISSIONS_PHASE = "p10";
 
 export type PermissionMode = "allow" | "ask" | "never";
 
@@ -14,6 +14,8 @@ export type CapabilityId =
   | "board.reminder"
   | "eisenhower.move"
   | "eisenhower.trash"
+  | "outlook.read"
+  | "outlook.draft"
   | "outlook.send"
   | "delete.external"
   | "uia.magic_wand"
@@ -83,7 +85,7 @@ export const CAPABILITIES: Capability[] = [
     hintEn: "GET then POST /api/tasks — never writes tasks.json.",
     defaultMode: "allow",
     modes: ["allow", "ask", "never"],
-    actions: ["CREATE_TASK"],
+    actions: ["CREATE_TASK", "MAIL_CREATE_TASK"],
     implemented: true,
   },
   {
@@ -105,7 +107,7 @@ export const CAPABILITIES: Capability[] = [
     hintEn: "Stored only in wizard-settings.json.",
     defaultMode: "allow",
     modes: ["allow", "ask", "never"],
-    actions: ["SET_REMINDER"],
+    actions: ["SET_REMINDER", "MAIL_REMIND"],
     implemented: true,
   },
   {
@@ -128,6 +130,28 @@ export const CAPABILITIES: Capability[] = [
     defaultMode: "ask",
     modes: ["allow", "ask", "never"],
     actions: ["TRASH_EIS_ITEM"],
+    implemented: true,
+  },
+  {
+    id: "outlook.read",
+    labelAr: "قراءة Outlook",
+    labelEn: "Outlook Read",
+    hintAr: "مزامنة/عرض بريد عبر AQHub (GET tasks أو POST /api/mail/sync). افتراضي اسأل.",
+    hintEn: "Sync/show mail via AQHub (GET tasks or POST /api/mail/sync). Default Ask.",
+    defaultMode: "ask",
+    modes: ["allow", "ask", "never"],
+    actions: ["MAIL_POLL", "MAIL_SYNC", "MAIL_OPEN", "MAIL_IGNORE"],
+    implemented: true,
+  },
+  {
+    id: "outlook.draft",
+    labelAr: "مسودة Outlook",
+    labelEn: "Outlook Draft",
+    hintAr: "يحضّر suggestedReply عبر /api/task/chat — بدون إرسال.",
+    hintEn: "Prepares suggestedReply via /api/task/chat — never sends.",
+    defaultMode: "ask",
+    modes: ["allow", "ask", "never"],
+    actions: ["MAIL_DRAFT"],
     implemented: true,
   },
   {

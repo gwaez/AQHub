@@ -15,6 +15,7 @@ import { applyDocumentLocale, localeCopy } from "./i18n/index.ts";
 import type { WizardAction } from "./actions/wizard-action.ts";
 import type { EisQuad } from "./api/eisenhower.ts";
 import type { AuditLine } from "./api/audit.ts";
+import type { MailItem, MailStatus } from "./api/mail.ts";
 
 const isTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 
@@ -97,6 +98,7 @@ async function main() {
   const bubbleConfirm = el("bubbleConfirm");
   const bubbleYes = el<HTMLButtonElement>("bubbleYes");
   const bubbleNo = el<HTMLButtonElement>("bubbleNo");
+  const bubbleMail = el("bubbleMail");
   const stage = el("stage");
 
   const pack = await loadCharacterPack("old-wizard");
@@ -130,6 +132,8 @@ async function main() {
   let idleReturnTimer = 0;
   let lastUndo: { id: string; prevQuad: EisQuad } | null = null;
   let pendingAsk: WizardAction | null = null;
+  let pendingMail: MailItem | null = null;
+  let lastMailStatus: MailStatus | null = null;
   let lastProactive = Date.now();
   let auditLines: AuditLine[] = [];
   let ui = localeCopy(settings.current.language);
@@ -160,8 +164,21 @@ async function main() {
     stateLabel.textContent = (ui.idle.startsWith("Idle") ? "State: " : "الحالة: ") + machine.state;
     bubbleYes.textContent = ui.confirm;
     bubbleNo.textContent = ui.deny;
+    const mailLabels: Record<string, string> = {
+      open: ui.mailOpen,
+      task: ui.mailTask,
+      remind: ui.mailRemind,
+      ignore: ui.mailIgnore,
+      draft: ui.mailDraft,
+    };
+    bubbleMail.querySelectorAll("[data-mail]").forEach((btn) => {
+      const key = btn.getAttribute("data-mail") || "";
+      if (mailLabels[key]) btn.textContent = mailLabels[key];
+    });
     bubbles.apply(bubble, bubbleText);
-    if (settingsUi.visible) settingsUi.sync(settings.current, auditLines);
+    const mailVisible = Boolean(pendingMail && bubbles.current?.visible && !pendingAsk);
+    bubbleMail.hidden = !mailVisible;
+    if (settingsUi.visible) settingsUi.sync(settings.current, auditLines, lastMailStatus);
   };
 
   const speak = (kind: "speech" | "thought" | "alert", text: string, ms?: number) => {
@@ -204,6 +221,12 @@ async function main() {
       onRefreshAudit() {
         void refreshAudit();
       },
+      onMailSync() {
+        void run({ type: "MAIL_SYNC" });
+      },
+      onJumpPermissions() {
+        /* SettingsPanel already switches to the permissions tab */
+      },
       onClose() {
         closeOverlays();
       },
@@ -221,7 +244,12 @@ async function main() {
     idle.pause();
     settingsUi.setCopy(localeCopy(settings.current.language));
     await refreshAudit();
-    settingsUi.show(settings.current, auditLines);
+    try {
+      lastMailStatus = await api.getMailStatus();
+    } catch {
+      lastMailStatus = { outlook: false, aqhub: false, reason: "unavailable", lastSyncAt: settings.current.mailLastSyncAt };
+    }
+    settingsUi.show(settings.current, auditLines, lastMailStatus);
   }
 
   async function run(action: WizardAction) {
@@ -248,14 +276,28 @@ async function main() {
       lastUndo = null;
       idle.resume(Date.now());
     }
+    if (result.mailStatus) lastMailStatus = result.mailStatus;
+    if (result.ok && "mail" in result && result.mail) {
+      pendingMail = result.mail;
+    } else if (
+      action.type === "MAIL_IGNORE" ||
+      action.type === "MAIL_OPEN" ||
+      action.type === "MAIL_CREATE_TASK" ||
+      action.type === "MAIL_REMIND" ||
+      action.type === "MAIL_DRAFT"
+    ) {
+      pendingMail = null;
+    }
     if (!result.ok && result.needsConfirm) {
       pendingAsk = result.action;
       bubbleConfirm.hidden = false;
+      bubbleMail.hidden = true;
       speak(result.bubble?.kind || "alert", result.bubble?.text || ui.needsConfirm, 0);
     } else {
       pendingAsk = null;
       bubbleConfirm.hidden = true;
-      if (result.bubble?.text) speak(result.bubble.kind, result.bubble.text);
+      const stay = Boolean(result.ok && "bubbleActions" in result && result.bubbleActions?.length);
+      if (result.bubble?.text) speak(result.bubble.kind, result.bubble.text, stay ? 0 : undefined);
     }
     if (isTransientState(machine.state)) {
       window.clearTimeout(idleReturnTimer);
@@ -340,6 +382,7 @@ async function main() {
     if (act === "THINK") await run({ type: "THINK" });
     if (act === "ALERT") await run({ type: "ALERT", text: "تنبيه تجريبي" });
     if (act === "MATRIX") await run({ type: "OPEN_MATRIX" });
+    if (act === "MAIL") await run({ type: "MAIL_POLL", prompt: true });
     if (act === "SETTINGS") await openSettings();
     if (act === "OPEN_AQHUB") await run({ type: "OPEN_AQHUB" });
   });
@@ -419,6 +462,26 @@ async function main() {
   });
   bubbleNo.addEventListener("click", () => {
     if (pendingAsk) void run({ type: "DENY", pending: pendingAsk });
+  });
+  bubbleMail.addEventListener("click", (ev) => {
+    const btn = (ev.target as HTMLElement).closest("[data-mail]");
+    if (!btn || !pendingMail) return;
+    const act = btn.getAttribute("data-mail");
+    const m = pendingMail;
+    if (act === "open") void run({ type: "MAIL_OPEN", taskId: m.taskId, entryId: m.entryId, query: m.title });
+    if (act === "task") {
+      void run({
+        type: "MAIL_CREATE_TASK",
+        title: m.title,
+        notes: m.preview,
+        taskId: m.taskId,
+        entryId: m.entryId,
+        fromEmail: m.fromEmail,
+      });
+    }
+    if (act === "remind") void run({ type: "MAIL_REMIND", text: m.title, taskId: m.taskId });
+    if (act === "draft") void run({ type: "MAIL_DRAFT", taskId: m.taskId });
+    if (act === "ignore") void run({ type: "MAIL_IGNORE", taskId: m.taskId, entryId: m.entryId });
   });
 
   document.addEventListener("pointerdown", (ev) => {
@@ -501,6 +564,13 @@ async function main() {
     });
     if (changed) void settings.save({ reminders: next });
   }, 1000);
+
+  window.setInterval(() => {
+    if (settings.current.permissions["outlook.read"] !== "allow") return;
+    if (!composer.hidden || settingsUi.visible || matrix.visible || pendingAsk) return;
+    if (pendingMail && bubbles.current?.visible) return;
+    void run({ type: "MAIL_POLL" });
+  }, 45_000);
 }
 
 void main();

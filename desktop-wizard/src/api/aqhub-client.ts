@@ -1,10 +1,12 @@
 import { parseAuditLog, type AuditLine, AUDIT_VIEW_LIMIT } from "./audit.ts";
-import { mergeTaskIntoDoc, nextTaskId, newWizardTask, type BoardDoc } from "./tasks.ts";
+import { mergeTaskIntoDoc, nextTaskId, newWizardTask, type BoardDoc, type BoardTask } from "./tasks.ts";
 import {
   defaultPermissionMap,
   normalizePermissionMap,
   type PermissionMap,
 } from "../ui/permissions.ts";
+import type { MailItem, MailStatus, MailSyncResult } from "./mail.ts";
+import { taskToMailItem } from "./mail.ts";
 
 export const DEFAULT_AQHUB_URL = "http://127.0.0.1:8766";
 
@@ -49,6 +51,8 @@ export interface WizardSettings {
   bubbleFontSize: number;
   closeAction: CloseAction;
   permissions: PermissionMap;
+  mailLastSyncAt: string;
+  mailIgnored: string[];
 }
 
 export function defaultSettings(displayName = "الساحر العتيق"): WizardSettings {
@@ -74,6 +78,8 @@ export function defaultSettings(displayName = "الساحر العتيق"): Wiza
     bubbleFontSize: 13,
     closeAction: "hide",
     permissions: defaultPermissionMap(),
+    mailLastSyncAt: "",
+    mailIgnored: [],
   };
 }
 
@@ -126,6 +132,8 @@ export function normalizeSettings(raw: Partial<WizardSettings> | Record<string, 
     bubbleFontSize: clamp(Number(s.bubbleFontSize ?? base.bubbleFontSize), 11, 22, 13),
     closeAction,
     permissions: normalizePermissionMap(s.permissions),
+    mailLastSyncAt: String(s.mailLastSyncAt || ""),
+    mailIgnored: Array.isArray(s.mailIgnored) ? s.mailIgnored.map(String).filter(Boolean).slice(0, 200) : [],
   };
 }
 
@@ -140,6 +148,10 @@ export interface AqHubApi {
   getAudit(limit?: number): Promise<AuditLine[]>;
   getEisDoc(): Promise<import("./eisenhower.ts").EisDoc>;
   putEisDoc(doc: import("./eisenhower.ts").EisDoc): Promise<void>;
+  getMailStatus(): Promise<MailStatus>;
+  postMailSync(): Promise<MailSyncResult>;
+  postOpen(body: { type?: string; url?: string; entryId?: string; query?: string }): Promise<{ ok: boolean; error?: string; method?: string }>;
+  postTaskChat(taskId: string, text: string): Promise<{ ok: boolean; suggestedReply?: string; error?: string }>;
 }
 
 export function createAqHubClient(baseUrl = DEFAULT_AQHUB_URL): AqHubApi {
@@ -233,6 +245,75 @@ export function createAqHubClient(baseUrl = DEFAULT_AQHUB_URL): AqHubApi {
         body: JSON.stringify({ items: doc.items || [], updatedAt: doc.updatedAt || new Date().toISOString() }),
       });
     },
+    async getMailStatus() {
+      try {
+        const body = await json("/api/v1/wizard/mail/status");
+        return {
+          outlook: Boolean(body.outlook),
+          aqhub: body.aqhub !== false,
+          reason: String(body.reason || ""),
+          lastSyncAt: String(body.lastSyncAt || ""),
+          unreadTotal: typeof body.unreadTotal === "number" ? body.unreadTotal : undefined,
+        };
+      } catch {
+        return { outlook: false, aqhub: false, reason: "unavailable", lastSyncAt: "" };
+      }
+    },
+    async postMailSync() {
+      try {
+        const body = await json("/api/mail/sync", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+        const rawItems = Array.isArray(body.items) ? body.items : [];
+        const items: MailItem[] = [];
+        for (const row of rawItems) {
+          const mapped = taskToMailItem(row as BoardTask);
+          if (mapped) items.push(mapped);
+        }
+        return {
+          ok: body.ok !== false,
+          outlook: body.outlook !== false && body.ok !== false,
+          added: Number(body.added || items.length || 0),
+          scanned: Number(body.scanned || 0),
+          unreadTotal: Number(body.unreadTotal || 0),
+          items,
+          error: body.error ? String(body.error) : undefined,
+        };
+      } catch (err) {
+        return {
+          ok: false,
+          outlook: false,
+          added: 0,
+          scanned: 0,
+          unreadTotal: 0,
+          items: [],
+          error: err instanceof Error ? err.message : String(err),
+        };
+      }
+    },
+    async postOpen(body) {
+      try {
+        const res = await json("/api/open", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        return { ok: res.ok !== false, error: res.error ? String(res.error) : undefined, method: res.method ? String(res.method) : undefined };
+      } catch (err) {
+        return { ok: false, error: err instanceof Error ? err.message : String(err) };
+      }
+    },
+    async postTaskChat(taskId, text) {
+      try {
+        const res = await json("/api/task/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ taskId, text }),
+        });
+        const task = (res.task || {}) as { suggestedReply?: string };
+        return { ok: res.ok !== false, suggestedReply: task.suggestedReply ? String(task.suggestedReply) : undefined };
+      } catch (err) {
+        return { ok: false, error: err instanceof Error ? err.message : String(err) };
+      }
+    },
   };
 }
 
@@ -240,13 +321,14 @@ export async function createTaskViaHub(
   api: AqHubApi,
   title: string,
   notes = "",
+  extra: Partial<BoardTask> = {},
 ): Promise<{ id: string; doc: BoardDoc }> {
   const trimmed = title.trim();
   if (!trimmed) throw new Error("title_required");
   const doc = await api.getTasksDoc();
   const tasks = Array.isArray(doc.tasks) ? doc.tasks : [];
   const id = nextTaskId(tasks);
-  const task = newWizardTask(id, trimmed, notes);
+  const task = { ...newWizardTask(id, trimmed, notes), ...extra, id };
   const next = mergeTaskIntoDoc(doc, task);
   await api.putTasksDoc(next);
   return { id, doc: next };

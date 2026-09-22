@@ -41,6 +41,7 @@ export class WizardSettingsStore {
       technicalId: this.current.technicalId,
       window: { ...this.current.window, ...(partial.window || {}) },
       reminders: partial.reminders ?? this.current.reminders,
+      mailIgnored: partial.mailIgnored ?? this.current.mailIgnored,
       permissions: {
         ...this.current.permissions,
         ...(partial.permissions || {}),

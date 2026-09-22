@@ -19,6 +19,8 @@ test("capability catalog has the brief defaults", () => {
   assert.equal(map["board.reminder"], "allow");
   assert.equal(map["eisenhower.move"], "allow");
   assert.equal(map["eisenhower.trash"], "ask");
+  assert.equal(map["outlook.read"], "ask");
+  assert.equal(map["outlook.draft"], "ask");
   assert.equal(map["outlook.send"], "never");
   assert.equal(map["delete.external"], "never");
   assert.equal(map["uia.magic_wand"], "never");
@@ -31,6 +33,9 @@ test("Allow passes, Never blocks, Ask waits", () => {
   assert.equal(decidePermission("CREATE_TASK", perms), "allow");
   assert.equal(decidePermission("TRASH_EIS_ITEM", perms), "ask");
   assert.equal(decidePermission("TRASH_EIS_ITEM", perms, true), "allow");
+  assert.equal(decidePermission("MAIL_POLL", perms), "ask");
+  assert.equal(decidePermission("MAIL_DRAFT", perms), "ask");
+  assert.equal(decidePermission("MAIL_POLL", perms, true), "allow");
   assert.equal(decidePermission("APPROVE_SEND", perms), "never");
   assert.equal(allowAction("SHOW", perms), true);
   assert.equal(allowAction("APPROVE_SEND", perms), false);

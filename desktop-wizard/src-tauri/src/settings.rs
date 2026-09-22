@@ -49,6 +49,10 @@ pub struct WizardSettings {
     pub close_action: Option<String>,
     #[serde(default)]
     pub permissions: Option<HashMap<String, String>>,
+    #[serde(default)]
+    pub mail_last_sync_at: Option<String>,
+    #[serde(default)]
+    pub mail_ignored: Option<Vec<String>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -139,6 +143,8 @@ fn read_settings() -> Result<WizardSettings, String> {
             bubble_font_size: Some(13.0),
             close_action: Some("hide".into()),
             permissions: None,
+            mail_last_sync_at: Some(String::new()),
+            mail_ignored: Some(Vec::new()),
         });
     }
     let raw = fs::read_to_string(&path).map_err(|e| e.to_string())?;

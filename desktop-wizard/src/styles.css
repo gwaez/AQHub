@@ -318,11 +318,8 @@ body[data-anim="reduced"] .character .lid {
   font: inherit;
   cursor: pointer;
 }
-#bubbleYes {
-  background: linear-gradient(135deg, var(--cyan), #60a5fa);
-  color: #04131a;
-  border: 0;
-  font-weight: 700;
+.bubble-mail {
+  flex-wrap: wrap;
 }
 
 .settings-panel {

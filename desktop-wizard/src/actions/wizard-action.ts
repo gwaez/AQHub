@@ -34,6 +34,13 @@ export type WizardAction =
   | { type: "ENTER_STUB"; state: "WAND" | "NOTE" }
   | { type: "APPROVE_SEND"; taskId: string }
   | { type: "DELETE_EXTERNAL"; target?: string }
+  | { type: "MAIL_POLL"; prompt?: boolean }
+  | { type: "MAIL_SYNC" }
+  | { type: "MAIL_OPEN"; taskId?: string; entryId?: string; query?: string }
+  | { type: "MAIL_CREATE_TASK"; title: string; notes?: string; taskId?: string; entryId?: string; fromEmail?: string }
+  | { type: "MAIL_REMIND"; text: string; dueAt?: string; taskId?: string }
+  | { type: "MAIL_IGNORE"; taskId?: string; entryId?: string }
+  | { type: "MAIL_DRAFT"; taskId: string }
   | { type: "CONFIRM"; pending: WizardAction }
   | { type: "DENY"; pending: WizardAction };
 
@@ -50,6 +57,9 @@ export type WizardActionResult =
       flavour?: string;
       undo?: { id: string; prevQuad: string };
       returnTo?: "MATRIX" | "IDLE";
+      mail?: import("../api/mail.ts").MailItem;
+      mailStatus?: import("../api/mail.ts").MailStatus;
+      bubbleActions?: import("../api/mail.ts").MailBubbleAction[];
     }
   | {
       ok: false;
@@ -57,6 +67,7 @@ export type WizardActionResult =
       error: string;
       bubble?: { kind: BubbleKind; text: string };
       needsConfirm?: boolean;
+      mailStatus?: import("../api/mail.ts").MailStatus;
     };
 
 const TYPES: WizardAction["type"][] = [
@@ -92,6 +103,13 @@ const TYPES: WizardAction["type"][] = [
   "ENTER_STUB",
   "APPROVE_SEND",
   "DELETE_EXTERNAL",
+  "MAIL_POLL",
+  "MAIL_SYNC",
+  "MAIL_OPEN",
+  "MAIL_CREATE_TASK",
+  "MAIL_REMIND",
+  "MAIL_IGNORE",
+  "MAIL_DRAFT",
   "CONFIRM",
   "DENY",
 ];

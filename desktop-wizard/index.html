@@ -15,6 +15,13 @@
           <button type="button" id="bubbleYes">تأكيد</button>
           <button type="button" id="bubbleNo">رفض</button>
         </div>
+        <div id="bubbleMail" class="bubble-confirm bubble-mail" hidden>
+          <button type="button" data-mail="open">فتح</button>
+          <button type="button" data-mail="task">تاسك</button>
+          <button type="button" data-mail="remind">ذكّرني</button>
+          <button type="button" data-mail="draft">مسودة</button>
+          <button type="button" data-mail="ignore">تجاهل</button>
+        </div>
       </div>
       <div id="character" class="character" data-state="IDLE" data-motion="breathe" data-tauri-drag-region="false"></div>
       <div class="nameplate" data-tauri-drag-region="false">
@@ -66,6 +73,7 @@
         <button type="button" data-act="THINK">يفكر</button>
         <button type="button" data-act="ALERT">تنبيه</button>
         <button type="button" data-act="MATRIX">مصفوفة</button>
+        <button type="button" data-act="MAIL">بريد</button>
         <button type="button" data-act="SETTINGS">إعدادات</button>
         <button type="button" data-act="OPEN_AQHUB">فتح AQHub</button>
       </div>

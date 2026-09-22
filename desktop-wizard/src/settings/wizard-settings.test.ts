@@ -22,7 +22,11 @@ test("normalizeSettings fills P9 defaults and clamps", () => {
   assert.equal(s.closeAction, "exit");
   assert.equal(s.permissions["eisenhower.trash"], "never");
   assert.equal(s.permissions["outlook.send"], "ask");
+  assert.equal(s.permissions["outlook.read"], "ask");
+  assert.equal(s.permissions["outlook.draft"], "ask");
   assert.equal(s.permissions["board.create_task"], "allow");
+  assert.equal(s.mailLastSyncAt, "");
+  assert.deepEqual(s.mailIgnored, []);
 });
 
 test("store save merges permissions without resetting others", async () => {
@@ -41,6 +45,10 @@ test("store save merges permissions without resetting others", async () => {
     getAudit: async () => [],
     getEisDoc: async () => ({ items: [] }),
     putEisDoc: async () => {},
+    getMailStatus: async () => ({ outlook: false, aqhub: true, reason: "test", lastSyncAt: "" }),
+    postMailSync: async () => ({ ok: false, outlook: false, added: 0, scanned: 0, unreadTotal: 0, items: [] }),
+    postOpen: async () => ({ ok: false }),
+    postTaskChat: async () => ({ ok: false }),
   });
   await store.load();
   await store.save({ permissions: { "eisenhower.trash": "never" } });
@@ -49,4 +57,8 @@ test("store save merges permissions without resetting others", async () => {
   await store.save({ opacity: 0.5 });
   assert.equal(store.current.opacity, 0.5);
   assert.equal(store.current.permissions["eisenhower.trash"], "never");
+  await store.save({ mailIgnored: ["T-009"] });
+  assert.deepEqual(store.current.mailIgnored, ["T-009"]);
+  await store.save({ opacity: 0.8 });
+  assert.deepEqual(store.current.mailIgnored, ["T-009"]);
 });

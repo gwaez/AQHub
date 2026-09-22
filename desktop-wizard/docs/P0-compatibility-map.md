@@ -13,17 +13,17 @@ All of these already exist on the single-threaded listener in `Start-Board.ps1`.
 | GET | `/api/tasks` | Raw `data/tasks.json` (board document: `version`, `title`, `tasks[]`) | **Adapter.** Read-only in P1. Later: list/search before any create. Never treat this as a character settings file. |
 | POST | `/api/tasks` | **Full-file replace** of `tasks.json` after JSON parse | **Adapter, high risk.** Later task create/update MUST `GET` → mutate one task → `POST` whole document. Never POST an empty/partial board. Prefer a future dedicated create endpoint if the replace contract becomes unsafe. |
 | GET | `/api/task?id=` | One task; migrates `chat`/`timeline`/`pendingSend` via `Ensure-TaskRoom` | **Adapter.** Later: open-task / watch a room. |
-| POST | `/api/task/chat` | User chat + rule-based bot brain; may set `pendingSend` (does **not** send) | **Adapter.** Later bubbles. Do not send mail from chat text. |
-| POST | `/api/task/approve-send` | Outlook send **only** if `pendingSend` exists | **Do not call from idle/animation.** Later: explicit user confirm UI only. |
-| POST | `/api/task/cancel-send` | Clears `pendingSend` | Adapter for later mail bubbles. |
+| POST | `/api/task/chat` | User chat + rule-based bot brain; may set `pendingSend` (does **not** send). Text `draft` fills `suggestedReply`. | **P10 adapter.** Wizard Draft Reply posts `{ taskId, text: "draft" }` only. Never approve-send. |
+| POST | `/api/task/approve-send` | Outlook send **only** if `pendingSend` exists | **Forbidden from Wizard.** Capability `outlook.send` is Never / confirm-or-deny; Action Engine never HTTP. |
+| POST | `/api/task/cancel-send` | Clears `pendingSend` | Unused by Wizard P10 (no send path). |
 | POST | `/api/task/box-note` | Sets `task.boxNote` + timeline/comment | **Adapter.** Later Eisenhower note sync. Body: `{ taskId, note }`. |
 | GET | `/api/eisenhower` | Load + enrich items from linked tasks (`taskId`, `entryId`, `crmUrl`, …) | **Adapter.** Later Watch / matrix panel. P1 does not render the matrix. |
 | POST | `/api/eisenhower` | Save items; merges missing linkage fields from previous file | **Adapter.** GET-merge-POST like tasks. |
 | POST | `/api/eisenhower/feed` | Insert open tasks into inbox; **does not re-feed trash** | Adapter. Later “follow my work” seed. Query `force=1` exists. |
 | GET | `/api/signing-platforms` | `data/signing-platforms.json` (digiapi / digisign) | Adapter. Later “open sign” action. |
 | GET/POST | `/api/audit` | `data/audit.jsonl` | Optional later: Wizard actions as audit lines. Never store tokens here. |
-| POST | `/api/open` | `{ type:'url', url }` → `Start-Process`; else Outlook `Open-Mail` via COM (`entryId` / subject search) | **Adapter.** Later Magic Wand / “open source”. Wizard must not host Outlook COM itself. |
-| POST | `/api/mail/sync` | Unread inbox → new tasks (`source=email`, `entryId`, `suggestedReply`) | **Adapter.** Later Watch. Outlook must already be signed in on Windows. |
+| POST | `/api/open` | `{ type:'url', url }` → `Start-Process`; else Outlook `Open-Mail` via COM (`entryId` / subject search) | **P10 adapter.** Bubble **Open** → this route. Wizard never hosts Outlook COM. |
+| POST | `/api/mail/sync` | Unread inbox → new tasks (`source=email`, `entryId`, `suggestedReply`) | **P10 adapter.** User-triggered (Settings Sync now / chrome بريد after Ask). Writes `tasks.json`. Outlook must already be signed in on Windows. |
 | POST | `/api/bot/run` `{taskId,mode}` | Background job files under `data/jobs/` | Out of scope P1. Do not duplicate job runner. |
 | POST | `/api/bot/stop` `{id}` | Cancel flag on job | Out of scope P1. |
 | GET | `/api/bot/job?id=` / `/api/bot/jobs` | Job JSON | Out of scope P1. |
@@ -59,39 +59,57 @@ Statuses in Arabic UI: لاحقاً / مطلوب / جاري / معلّق / تم.
 
 ## 2. New versioned bridge (`/api/v1/wizard/*`) vs adapters
 
-Keep AQHub core routes stable. Add a **thin optional module** `wizard/Wizard-Bridge.ps1` dotted from `Start-Board.ps1`. The module owns **only** `data/wizard-settings.json`. It does not import Outlook COM, CRM tokens, or task files.
+Keep AQHub core routes stable. Add a **thin optional module** `wizard/Wizard-Bridge.ps1` dotted from `Start-Board.ps1`. The module owns **only** `data/wizard-settings.json` plus a **read-only** Outlook status probe (`GetActiveObject`, never `New-Object`). It does not write `tasks.json`, CRM tokens, or start Outlook. It never calls approve-send.
 
 ### P1+P2 (implemented)
 
 | Method | Path | Body / result | Why new (not adapter) |
 |--------|------|----------------|------------------------|
 | GET | `/api/v1/wizard/health` | `{ ok, aqhub: true, version }` | No existing health route. |
-| GET | `/api/v1/wizard/settings` | Settings JSON including P9 fields + `permissions` | Character UX + local reminder list. |
-| PUT | `/api/v1/wizard/settings` | Same schema; merge known keys | Live writes. Reminders are **not** tasks.json. |
+| GET | `/api/v1/wizard/settings` | Settings JSON including P9/P10 fields + `permissions` | Character UX + local reminder list + `mailIgnored` / `mailLastSyncAt`. |
+| PUT | `/api/v1/wizard/settings` | Same schema; merge known keys | Live writes. Reminders / ignore list are **not** tasks.json. |
 | GET | `/api/v1/wizard/permissions` | Capability catalog + current modes | P11 dashboard. Do not overload CRM config. |
+| GET | `/api/v1/wizard/mail/status` | `{ outlook, aqhub, reason, lastSyncAt, adapter: GetActiveObject }` | P10. AQHub has no live inbox GET. Probe must not call `Get-OutlookApp` (that path may `New-Object` and start Outlook). |
 
-### P4–P11 adapters (companion, reuse AQHub)
+### P4–P10 adapters (companion, reuse AQHub)
 
 | Method | Path | Wizard use |
 |--------|------|------------|
-| GET then POST | `/api/tasks` | Quick Task: GET document → prepend one task → POST full board. Never empty the array. |
+| GET then POST | `/api/tasks` | Quick Task: GET document → prepend one task → POST full board. Never empty the array. **P10 recent mail** = filter `source=email` (or `entryId`) after GET. |
 | POST | `/api/task/box-note` | Quick Note after a task id exists. |
 | GET then POST | `/api/eisenhower` | P5 matrix: GET items → change one `quad` → POST `{ items, updatedAt }`. Never empty. Soft-delete = `quad: trash`. |
 | POST | `/api/audit` | Best-effort wizard action audit stub (no secrets). |
 | GET | `/api/audit` | jsonl; Wizard shows last N sanitized lines. |
+| POST | `/api/mail/sync` | P10 Sync now. Unread → board tasks. User-triggered; `outlook.read` Ask by default. |
+| POST | `/api/open` | P10 Open mail item (`entryId` / query). |
+| POST | `/api/task/chat` | P10 Draft Reply. Body `{ taskId, text: "draft" }`. Never `/api/task/approve-send`. |
 
-### Permission table (P11 defaults)
+### P10 mail API gaps (honest)
+
+AQHub does **not** expose a live inbox GET. P10 therefore:
+
+1. **Recent mail bubble** = newest non-ignored email-sourced **board task** from `GET /api/tasks`.
+2. **Unread import** remains `POST /api/mail/sync` (writes `tasks.json`) — not a second Outlook stack.
+3. **Connected/unavailable** = `GET /api/v1/wizard/mail/status` wrapping `Marshal.GetActiveObject('Outlook.Application')` only.
+4. There is no dedicated draft-create COM route; Wizard reuses the existing chat brain `draft` path that fills `suggestedReply` without sending.
+5. Linux/cloud VMs cannot exercise Outlook COM; tests mock these endpoints.
+
+Ignored ids live in `wizard-settings.mailIgnored`, not in `tasks.json`. Auto-poll (`MAIL_POLL` without prompt) runs only when `outlook.read` is **Allow**, so Ask does not spam confirm bubbles.
+
+### Permission table (P11 + P10 defaults)
 
 | Capability | Default | Modes | Notes |
 |------------|---------|-------|--------|
 | `character.window` | Allow | allow/ask/never | Show/hide companion |
 | `aqhub.open` | Allow | allow/ask/never | Open local board |
 | `settings.local` | Allow | allow only | Cannot lock yourself out |
-| `board.create_task` | Allow | allow/ask/never | GET-merge-POST `/api/tasks` |
+| `board.create_task` | Allow | allow/ask/never | GET-merge-POST `/api/tasks`; also mail Create Task |
 | `board.create_note` | Allow | allow/ask/never | `/api/task/box-note` |
-| `board.reminder` | Allow | allow/ask/never | `wizard-settings.json` only |
+| `board.reminder` | Allow | allow/ask/never | `wizard-settings.json` only; also mail Remind Me |
 | `eisenhower.move` | Allow | allow/ask/never | GET-merge-POST quadrants |
 | `eisenhower.trash` | Ask | allow/ask/never | Soft-delete; confirm bubble |
+| `outlook.read` | Ask | allow/ask/never | MAIL_POLL / MAIL_SYNC / MAIL_OPEN / MAIL_IGNORE |
+| `outlook.draft` | Ask | allow/ask/never | MAIL_DRAFT → `/api/task/chat` only |
 | `outlook.send` | Never | ask/never | Always confirm or deny; Wizard never calls approve-send |
 | `delete.external` | Never | ask/never | Always confirm or deny; no-op stub |
 | `uia.magic_wand` | Never | never | Windows desktop later |
@@ -101,9 +119,9 @@ Action Engine: **Allow** executes, **Ask** returns `needs_confirm` + confirmatio
 
 ### Planned later
 
-Watch board poll, Magic Wand / UIA on Windows, open mail/CRM via `POST /api/open`, real Outlook approve-send **from AQHub only**.
+Watch board poll, Magic Wand / UIA on Windows, real Outlook approve-send **from AQHub only** (future explicit confirm model — still blocked in Wizard).
 
-Out of scope modules (folder stubs only): Magic Wand / UIA, Follow My Work, AI, voice, NSIS installer, email bubbles.
+Out of scope modules (folder stubs only): Magic Wand / UIA, Follow My Work, AI, voice, NSIS installer.
 
 ### Architecture seam
 
@@ -143,8 +161,12 @@ Settings schema (`data/wizard-settings.json`, gitignored):
   "permissions": {
     "character.window": "allow",
     "eisenhower.trash": "ask",
+    "outlook.read": "ask",
+    "outlook.draft": "ask",
     "outlook.send": "never"
   },
+  "mailLastSyncAt": "",
+  "mailIgnored": [],
   "updatedAt": "ISO-8601"
 }
 ```
@@ -160,7 +182,7 @@ Settings schema (`data/wizard-settings.json`, gitignored):
 **Outlook COM**
 
 - `Get-OutlookApp` / `Open-Mail` / `Sync-MailToTasks` / `Invoke-SendPending` live only in `Start-Board.ps1`.
-- Wizard on Windows must not create `Outlook.Application`. Use `/api/open` and `/api/mail/sync`.
+- Wizard on Windows must not create `Outlook.Application`. Status uses `GetActiveObject` in `Wizard-Bridge.ps1` only. Open/sync reuse `/api/open` and `/api/mail/sync`.
 - First COM use may show a Windows security prompt — AQHub already documents this; Wizard should not add a second COM host.
 - This Linux agent VM cannot exercise Outlook.
 
@@ -174,7 +196,7 @@ Settings schema (`data/wizard-settings.json`, gitignored):
 
 - Product rule: drafts stay local until the user approves.
 - `/api/task/chat` may create `pendingSend`; only `/api/task/approve-send` (or chat “yes” inside AQHub) sends.
-- Wizard P1 has no send UI. Later mail bubbles must require a visible confirm control. Animations must never call approve-send.
+- Wizard P10 Draft Reply posts `text: "draft"` only. `APPROVE_SEND` stays denied even after confirm. Animations must never call approve-send.
 
 **Full-file POST `/api/tasks`**
 
@@ -213,7 +235,7 @@ Settings schema (`data/wizard-settings.json`, gitignored):
 |------|-------|--------|
 | `desktop-wizard/` | **Wizard** | Tauri 2 app, UI engines, character packs, Wizard README. |
 | `desktop-wizard/characters/` | **Wizard** | Packs (`old-wizard/manifest.json` + assets). |
-| `wizard/Wizard-Bridge.ps1` | **Wizard** (hosted by AQHub process) | Health + settings + permission catalog. |
+| `wizard/Wizard-Bridge.ps1` | **Wizard** (hosted by AQHub process) | Health + settings + permission catalog + read-only Outlook status. |
 | `data/wizard-settings.json` | **Wizard via API** | Gitignored live file. |
 | `data/wizard-settings.sample.json` | **Wizard** (safe to commit) | Seed / docs. |
 | `Start-Board.ps1` | **AQHub core** | Listener. Only a dot-source + 4-line dispatch + CORS PUT. |

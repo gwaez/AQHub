@@ -1,6 +1,7 @@
 import type { WizardAction, WizardActionResult } from "../actions/wizard-action.ts";
 import { createTaskViaHub, type AqHubApi } from "../api/aqhub-client.ts";
 import { flavourBubble, flavourForQuad, isEisQuad, moveEisItem, type EisQuad } from "../api/eisenhower.ts";
+import { mailAlertText, mailUnavailableText, pickRecentMail } from "../api/mail.ts";
 import { WizardSettingsStore } from "../settings/wizard-settings.ts";
 import {
   WizardStateMachine,
@@ -340,6 +341,204 @@ export async function dispatch(
           bubble: {
             kind: "thought",
             text: lang === "en" ? "External delete is not enabled" : "الحذف الخارجي غير مفعّل",
+          },
+        };
+      }
+      case "MAIL_POLL": {
+        try {
+          const status = await ports.api.getMailStatus();
+          const doc = await ports.api.getTasksDoc();
+          const item = pickRecentMail(doc.tasks, settings.current.mailIgnored);
+          const mailStatus = { ...status, lastSyncAt: settings.current.mailLastSyncAt || status.lastSyncAt };
+          await audit(ports, action, {
+            taskId: item?.taskId || "",
+            outlook: status.outlook,
+            prompt: Boolean(action.prompt),
+          });
+          if (item) {
+            if (machine.state !== "HIDDEN") machine.enter("ALERT", c());
+            return {
+              ok: true,
+              action,
+              mail: item,
+              mailStatus,
+              bubbleActions: ["open", "task", "remind", "ignore", "draft"],
+              bubble: { kind: "alert", text: mailAlertText(item, lang) },
+            };
+          }
+          if (!action.prompt) return { ok: true, action, mailStatus };
+          if (!status.outlook) {
+            return {
+              ok: false,
+              action,
+              error: "outlook_unavailable",
+              mailStatus,
+              bubble: { kind: "thought", text: mailUnavailableText(lang) },
+            };
+          }
+          return {
+            ok: true,
+            action,
+            mailStatus,
+            bubble: {
+              kind: "thought",
+              text: lang === "en" ? "No recent mail on the board" : "ما في بريد حديث على اللوحة",
+            },
+          };
+        } catch {
+          await audit(ports, action, { error: "outlook_unavailable" });
+          return {
+            ok: false,
+            action,
+            error: "outlook_unavailable",
+            mailStatus: {
+              outlook: false,
+              aqhub: false,
+              reason: "unavailable",
+              lastSyncAt: settings.current.mailLastSyncAt,
+            },
+            bubble: { kind: "thought", text: mailUnavailableText(lang) },
+          };
+        }
+      }
+      case "MAIL_SYNC": {
+        const synced = await ports.api.postMailSync();
+        await settings.save({ mailLastSyncAt: new Date().toISOString() });
+        await audit(ports, action, { added: synced.added, outlook: synced.outlook, error: synced.error || "" });
+        if (!synced.ok || synced.outlook === false) {
+          return {
+            ok: false,
+            action,
+            error: synced.error || "outlook_unavailable",
+            mailStatus: {
+              outlook: false,
+              aqhub: true,
+              reason: synced.error || "unavailable",
+              lastSyncAt: settings.current.mailLastSyncAt,
+              added: synced.added,
+              unreadTotal: synced.unreadTotal,
+            },
+            bubble: { kind: "thought", text: mailUnavailableText(lang) },
+          };
+        }
+        const doc = await ports.api.getTasksDoc();
+        const item = synced.items[0] || pickRecentMail(doc.tasks, settings.current.mailIgnored);
+        if (machine.state !== "HIDDEN") machine.enter(item ? "ALERT" : "SUCCESS", c());
+        return {
+          ok: true,
+          action,
+          mail: item || undefined,
+          mailStatus: {
+            outlook: true,
+            aqhub: true,
+            reason: "",
+            lastSyncAt: settings.current.mailLastSyncAt,
+            added: synced.added,
+            unreadTotal: synced.unreadTotal,
+          },
+          bubbleActions: item ? ["open", "task", "remind", "ignore", "draft"] : undefined,
+          bubble: item
+            ? { kind: "alert", text: mailAlertText(item, lang) }
+            : { kind: "speech", text: lang === "en" ? "No new mail tasks" : "ما في بريد جديد على اللوحة" },
+        };
+      }
+      case "MAIL_OPEN": {
+        const opened = await ports.api.postOpen({
+          entryId: action.entryId || "",
+          query: action.query || "",
+        });
+        await audit(ports, action, { taskId: action.taskId || "", ok: opened.ok, method: opened.method || "" });
+        if (!opened.ok) {
+          return {
+            ok: false,
+            action,
+            error: opened.error || "open_failed",
+            bubble: {
+              kind: "thought",
+              text: lang === "en" ? "Could not open Outlook — use AQHub instead." : "تعذر فتح Outlook — افتح AQHub.",
+            },
+          };
+        }
+        if (machine.state !== "HIDDEN") machine.enter("SUCCESS", c());
+        return { ok: true, action, bubble: { kind: "speech", text: lang === "en" ? "Opened in Outlook" : "اتفتح في Outlook" } };
+      }
+      case "MAIL_CREATE_TASK": {
+        const title = action.title.trim();
+        if (!title) return fail(action, "title_required", machine, ports);
+        const doc = await ports.api.getTasksDoc();
+        const existing = (doc.tasks || []).find((t) => String(t.id) === (action.taskId || ""));
+        if (existing?.id) {
+          await audit(ports, action, { taskId: String(existing.id), reused: true });
+          machine.enter("SUCCESS", c());
+          return {
+            ok: true,
+            action,
+            taskId: String(existing.id),
+            bubble: { kind: "speech", text: lang === "en" ? `Already on the board as ${existing.id}` : `موجود على اللوحة ${existing.id}` },
+          };
+        }
+        machine.enter("WORKING", c());
+        const created = await createTaskViaHub(ports.api, title, action.notes || "", {
+          source: "email",
+          sourceRef: action.fromEmail || "AQWizard mail",
+          entryId: action.entryId || "",
+          fromEmail: action.fromEmail || "",
+          tags: ["wizard", "email"],
+        });
+        await audit(ports, action, { taskId: created.id });
+        machine.enter("SUCCESS", c());
+        return {
+          ok: true,
+          action,
+          taskId: created.id,
+          bubble: { kind: "speech", text: lang === "en" ? `Task ${created.id} saved` : `اتسجل التاسك ${created.id}` },
+        };
+      }
+      case "MAIL_REMIND": {
+        const text = action.text.trim();
+        if (!text) return fail(action, "text_required", machine, ports);
+        const dueAt = action.dueAt || new Date(Date.now() + 60 * 60 * 1000).toISOString();
+        const id = "R-" + Date.now().toString(36);
+        const reminders = [...settings.current.reminders, { id, text, dueAt, fired: false }];
+        await settings.save({ reminders });
+        await audit(ports, action, { id, taskId: action.taskId || "" });
+        machine.enter("SUCCESS", c());
+        return { ok: true, action, bubble: { kind: "speech", text: lang === "en" ? "Reminder saved" : "التذكير اتسجل" } };
+      }
+      case "MAIL_IGNORE": {
+        const extra = [action.taskId, action.entryId].filter(Boolean) as string[];
+        const mailIgnored = [...new Set([...settings.current.mailIgnored, ...extra])].slice(-200);
+        await settings.save({ mailIgnored });
+        await audit(ports, action, { taskId: action.taskId || "" });
+        if (machine.state !== "HIDDEN") machine.enter("IDLE", c());
+        return { ok: true, action, bubble: { kind: "thought", text: lang === "en" ? "Ignored" : "تم التجاهل" } };
+      }
+      case "MAIL_DRAFT": {
+        const chat = await ports.api.postTaskChat(action.taskId, "draft");
+        await audit(ports, action, { taskId: action.taskId, ok: chat.ok });
+        if (!chat.ok) {
+          return {
+            ok: false,
+            action,
+            error: chat.error || "draft_failed",
+            bubble: {
+              kind: "thought",
+              text: lang === "en" ? "Draft unavailable — open the task in AQHub." : "المسودة غير متاحة — افتح المهمة في AQHub.",
+            },
+          };
+        }
+        const preview = (chat.suggestedReply || "").trim().slice(0, 180);
+        if (machine.state !== "HIDDEN") machine.enter("SUCCESS", c());
+        return {
+          ok: true,
+          action,
+          bubble: {
+            kind: "speech",
+            text: preview
+              ? (lang === "en" ? "Draft ready (not sent): " : "المسودة جاهزة (ما انرسلت): ") + preview
+              : lang === "en"
+                ? "Draft prepared in AQHub — not sent."
+                : "اتحضّرت المسودة في AQHub — بدون إرسال.",
           },
         };
       }

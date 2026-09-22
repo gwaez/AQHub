@@ -1,8 +1,9 @@
 # ASCII-only thin AQWizard bridge.
-# Dotted from Start-Board.ps1. Owns ONLY data/wizard-settings.json.
-# Never reads or writes tasks.json, eisenhower.json, crm-config, or tokens.
+# Dotted from Start-Board.ps1. Owns data/wizard-settings.json plus a read-only
+# Outlook status probe (GetActiveObject wrap). Never writes tasks.json / tokens.
+# Never starts Outlook. Never calls approve-send.
 
-$script:WizardBridgeVersion = '0.3.0-p9'
+$script:WizardBridgeVersion = '0.4.0-p10'
 
 function Get-WizardSettingsPath {
   param([string]$DataDir)
@@ -19,6 +20,8 @@ function Get-WizardDefaultPermissions {
     'board.reminder' = 'allow'
     'eisenhower.move' = 'allow'
     'eisenhower.trash' = 'ask'
+    'outlook.read' = 'ask'
+    'outlook.draft' = 'ask'
     'outlook.send' = 'never'
     'delete.external' = 'never'
     'uia.magic_wand' = 'never'
@@ -36,6 +39,8 @@ function Get-WizardCapabilityCatalog {
     [ordered]@{ id = 'board.reminder'; defaultMode = 'allow'; modes = @('allow','ask','never'); implemented = $true; alwaysConfirmOrDeny = $false }
     [ordered]@{ id = 'eisenhower.move'; defaultMode = 'allow'; modes = @('allow','ask','never'); implemented = $true; alwaysConfirmOrDeny = $false }
     [ordered]@{ id = 'eisenhower.trash'; defaultMode = 'ask'; modes = @('allow','ask','never'); implemented = $true; alwaysConfirmOrDeny = $false }
+    [ordered]@{ id = 'outlook.read'; defaultMode = 'ask'; modes = @('allow','ask','never'); implemented = $true; alwaysConfirmOrDeny = $false }
+    [ordered]@{ id = 'outlook.draft'; defaultMode = 'ask'; modes = @('allow','ask','never'); implemented = $true; alwaysConfirmOrDeny = $false }
     [ordered]@{ id = 'outlook.send'; defaultMode = 'never'; modes = @('ask','never'); implemented = $true; alwaysConfirmOrDeny = $true }
     [ordered]@{ id = 'delete.external'; defaultMode = 'never'; modes = @('ask','never'); implemented = $true; alwaysConfirmOrDeny = $true }
     [ordered]@{ id = 'uia.magic_wand'; defaultMode = 'never'; modes = @('never'); implemented = $false; alwaysConfirmOrDeny = $false }
@@ -98,6 +103,8 @@ function Get-WizardDefaultSettings {
     bubbleScale = 1
     bubbleFontSize = 13
     closeAction = 'hide'
+    mailLastSyncAt = ''
+    mailIgnored = @()
     permissions = Get-WizardDefaultPermissions
   }
 }
@@ -168,6 +175,8 @@ function Read-WizardSettings {
     if ($obj.PSObject.Properties['permissions']) {
       $defaults.permissions = ConvertTo-WizardPermissionMap -Incoming $obj.permissions
     }
+    if ($obj.mailLastSyncAt) { $defaults.mailLastSyncAt = [string]$obj.mailLastSyncAt }
+    if ($null -ne $obj.mailIgnored) { $defaults.mailIgnored = @($obj.mailIgnored | ForEach-Object { [string]$_ }) }
     return $defaults
   } catch {
     return $defaults
@@ -281,6 +290,12 @@ function Merge-WizardSettings {
   if ($Incoming.PSObject.Properties['permissions'] -and $null -ne $Incoming.permissions) {
     $Current.permissions = ConvertTo-WizardPermissionMap -Incoming $Incoming.permissions -Base $Current.permissions
   }
+  if ($Incoming.PSObject.Properties['mailLastSyncAt'] -and $null -ne $Incoming.mailLastSyncAt) {
+    $Current.mailLastSyncAt = [string]$Incoming.mailLastSyncAt
+  }
+  if ($Incoming.PSObject.Properties['mailIgnored'] -and $null -ne $Incoming.mailIgnored) {
+    $Current.mailIgnored = @($Incoming.mailIgnored | ForEach-Object { [string]$_ })
+  }
   return $Current
 }
 
@@ -336,6 +351,28 @@ function Invoke-WizardBridge {
       permissions = $settings.permissions
       capabilities = Get-WizardCapabilityCatalog
       version = $script:WizardBridgeVersion
+    }
+    return $true
+  }
+
+  if ($Path -eq '/api/v1/wizard/mail/status' -and $Req.HttpMethod -eq 'GET') {
+    $settings = Read-WizardSettings -DataDir $DataDir
+    $outlook = $false
+    $reason = 'outlook_not_running'
+    try {
+      $app = [Runtime.InteropServices.Marshal]::GetActiveObject('Outlook.Application')
+      if ($app) { $outlook = $true; $reason = '' }
+    } catch {
+      $reason = 'outlook_not_running'
+    }
+    Write-Json $Res @{
+      ok = $true
+      aqhub = $true
+      outlook = $outlook
+      reason = $reason
+      lastSyncAt = $settings.mailLastSyncAt
+      adapter = 'GetActiveObject'
+      note = 'Unread import remains POST /api/mail/sync. Recent mail is email-sourced tasks via GET /api/tasks. Wizard never calls /api/task/approve-send.'
     }
     return $true
   }

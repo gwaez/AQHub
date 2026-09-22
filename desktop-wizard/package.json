@@ -1,7 +1,7 @@
 {
   "name": "aqwizard",
   "private": true,
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "AQWizard — native Windows companion for AQHub (Tauri 2)",
   "type": "module",
   "scripts": {
@@ -9,7 +9,7 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "test": "node --experimental-strip-types --test src/state/wizard-state-machine.test.ts src/actions/wizard-action.test.ts src/engines/idle-director.test.ts src/engines/bubble-engine.test.ts src/api/tasks.test.ts src/api/eisenhower.test.ts src/ui/permissions.test.ts src/settings/wizard-settings.test.ts src/api/audit.test.ts",
+    "test": "node --experimental-strip-types --test src/state/wizard-state-machine.test.ts src/actions/wizard-action.test.ts src/engines/idle-director.test.ts src/engines/bubble-engine.test.ts src/api/tasks.test.ts src/api/eisenhower.test.ts src/ui/permissions.test.ts src/settings/wizard-settings.test.ts src/api/audit.test.ts src/api/mail.test.ts",
     "tauri": "tauri",
     "copy-characters": "node scripts/copy-characters.mjs"
   },

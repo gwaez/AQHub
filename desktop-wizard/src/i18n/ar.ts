@@ -76,6 +76,19 @@ export const ar = {
   modeAsk: "اسأل",
   modeNever: "أبدًا",
   notImplemented: "غير متاح بعد",
+  email: "بريد",
+  emailStatus: "حالة Outlook",
+  emailConnected: "متصل",
+  emailUnavailable: "غير متاح",
+  emailLastSync: "آخر مزامنة",
+  emailSyncNow: "مزامنة الآن",
+  emailPerms: "صلاحيات البريد",
+  emailHint: "القراءة عبر AQHub فقط. لا إرسال من الساحر. المسودة عبر /api/task/chat.",
+  mailOpen: "فتح",
+  mailTask: "تاسك",
+  mailRemind: "ذكّرني",
+  mailIgnore: "تجاهل",
+  mailDraft: "مسودة",
 };
 
 export type UiCopy = typeof ar;

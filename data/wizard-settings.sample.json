@@ -28,9 +28,13 @@
     "board.reminder": "allow",
     "eisenhower.move": "allow",
     "eisenhower.trash": "ask",
+    "outlook.read": "ask",
+    "outlook.draft": "ask",
     "outlook.send": "never",
     "delete.external": "never",
     "uia.magic_wand": "never",
     "crm.tokens": "never"
-  }
+  },
+  "mailLastSyncAt": "",
+  "mailIgnored": []
 }

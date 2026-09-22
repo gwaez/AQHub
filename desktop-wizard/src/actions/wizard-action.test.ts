@@ -3,23 +3,12 @@ import test from "node:test";
 import { isWizardActionType } from "./wizard-action.ts";
 import { dispatch, type WizardPorts } from "../engines/action-engine.ts";
 import { WizardStateMachine } from "../state/wizard-state-machine.ts";
-import { defaultSettings, type WizardSettings } from "../api/aqhub-client.ts";
+import { defaultSettings } from "../api/aqhub-client.ts";
 import type { BoardDoc } from "../api/tasks.ts";
 import type { EisDoc } from "../api/eisenhower.ts";
+import type { MailItem, MailStatus, MailSyncResult } from "../api/mail.ts";
 
-function mockPorts(): {
-  ports: WizardPorts;
-  store: {
-    settings: WizardSettings;
-    hidden: boolean;
-    opened: boolean;
-    docs: BoardDoc[];
-    notes: { taskId: string; note: string }[];
-    audits: number;
-    eis: EisDoc[];
-    matrixOpen: boolean;
-  };
-} {
+function mockPorts() {
   const store = {
     settings: defaultSettings(),
     hidden: false,
@@ -37,6 +26,21 @@ function mockPorts(): {
       },
     ] as EisDoc[],
     matrixOpen: false,
+    chats: [] as { taskId: string; text: string }[],
+    opens: [] as { entryId?: string; query?: string }[],
+    syncs: 0,
+    approveSends: 0,
+    mailStatus: { outlook: true, aqhub: true, reason: "", lastSyncAt: "" } as MailStatus,
+    syncResult: {
+      ok: true,
+      outlook: true,
+      added: 1,
+      scanned: 2,
+      unreadTotal: 1,
+      items: [] as MailItem[],
+    } as MailSyncResult,
+    openResult: { ok: true, method: "outlook" } as { ok: boolean; error?: string; method?: string },
+    chatResult: { ok: true, suggestedReply: "شكرا لتواصلك — مسودة" } as { ok: boolean; suggestedReply?: string; error?: string },
   };
   const ports: WizardPorts = {
     api: {
@@ -61,6 +65,19 @@ function mockPorts(): {
       getEisDoc: async () => store.eis[store.eis.length - 1],
       putEisDoc: async (doc) => {
         store.eis.push(doc);
+      },
+      getMailStatus: async () => store.mailStatus,
+      postMailSync: async () => {
+        store.syncs += 1;
+        return store.syncResult;
+      },
+      postOpen: async (body) => {
+        store.opens.push({ entryId: body.entryId, query: body.query });
+        return store.openResult;
+      },
+      postTaskChat: async (taskId, text) => {
+        store.chats.push({ taskId, text });
+        return store.chatResult;
       },
     },
     window: {
@@ -87,6 +104,8 @@ function mockPorts(): {
 test("action type guard", () => {
   assert.equal(isWizardActionType("SHOW"), true);
   assert.equal(isWizardActionType("CREATE_TASK"), true);
+  assert.equal(isWizardActionType("MAIL_POLL"), true);
+  assert.equal(isWizardActionType("MAIL_DRAFT"), true);
   assert.equal(isWizardActionType("approve-send"), false);
 });
 
@@ -280,4 +299,166 @@ test("SET_PERMISSION cannot Allow outlook.send", async () => {
   const sm = new WizardStateMachine();
   await dispatch({ type: "SET_PERMISSION", capabilityId: "outlook.send", mode: "allow" }, ports, sm);
   assert.equal(store.settings.permissions["outlook.send"], "ask");
+});
+
+const EMAIL_TASK = {
+  id: "T-009",
+  title: "عقد موجان",
+  source: "email",
+  entryId: "eid-1",
+  fromEmail: "ops@aqaar.com",
+  notes: "نحتاج رد",
+  createdAt: "2026-09-22T08:00:00Z",
+};
+
+async function allowOutlook(ports: WizardPorts) {
+  const sm = new WizardStateMachine();
+  await dispatch({ type: "SET_PERMISSION", capabilityId: "outlook.read", mode: "allow" }, ports, sm);
+  await dispatch({ type: "SET_PERMISSION", capabilityId: "outlook.draft", mode: "allow" }, ports, sm);
+  return sm;
+}
+
+test("MAIL_POLL default Ask does not hit mail APIs", async () => {
+  const { ports, store } = mockPorts();
+  store.docs.push({ version: 1, title: "Aqaar Command", tasks: [EMAIL_TASK] });
+  const sm = new WizardStateMachine();
+  const asked = await dispatch({ type: "MAIL_POLL", prompt: true }, ports, sm);
+  assert.equal(asked.ok, false);
+  if (!asked.ok) {
+    assert.equal(asked.needsConfirm, true);
+    assert.equal(asked.error, "needs_confirm");
+  }
+  assert.equal(store.syncs, 0);
+  assert.equal(store.chats.length, 0);
+});
+
+test("MAIL_POLL Allow shows newest email task and bubble actions", async () => {
+  const { ports, store } = mockPorts();
+  store.docs.push({
+    version: 1,
+    title: "Aqaar Command",
+    tasks: [{ id: "T-001", title: "يدوي", source: "wizard" }, EMAIL_TASK],
+  });
+  const sm = await allowOutlook(ports);
+  const result = await dispatch({ type: "MAIL_POLL", prompt: true }, ports, sm);
+  assert.equal(result.ok, true);
+  if (result.ok) {
+    assert.equal(result.mail?.taskId, "T-009");
+    assert.deepEqual(result.bubbleActions, ["open", "task", "remind", "ignore", "draft"]);
+    assert.match(result.bubble?.text || "", /عقد موجان/);
+  }
+  assert.equal(sm.state, "ALERT");
+  assert.ok(store.audits >= 1);
+});
+
+test("MAIL_POLL silent skip when no item; prompt shows unavailable thought without ERROR", async () => {
+  const { ports, store } = mockPorts();
+  store.mailStatus = { outlook: false, aqhub: true, reason: "outlook_not_running", lastSyncAt: "" };
+  const sm = await allowOutlook(ports);
+  const silent = await dispatch({ type: "MAIL_POLL" }, ports, sm);
+  assert.equal(silent.ok, true);
+  if (silent.ok) assert.equal(silent.mail, undefined);
+  assert.notEqual(sm.state, "ERROR");
+  const prompted = await dispatch({ type: "MAIL_POLL", prompt: true }, ports, sm);
+  assert.equal(prompted.ok, false);
+  if (!prompted.ok) {
+    assert.equal(prompted.error, "outlook_unavailable");
+    assert.equal(prompted.bubble?.kind, "thought");
+  }
+  assert.notEqual(sm.state, "ERROR");
+});
+
+test("MAIL_SYNC unavailable is a thought bubble — no crash, no approve-send", async () => {
+  const { ports, store } = mockPorts();
+  store.syncResult = {
+    ok: false,
+    outlook: false,
+    added: 0,
+    scanned: 0,
+    unreadTotal: 0,
+    items: [],
+    error: "outlook_not_running",
+  };
+  const sm = await allowOutlook(ports);
+  const result = await dispatch({ type: "MAIL_SYNC" }, ports, sm);
+  assert.equal(result.ok, false);
+  if (!result.ok) {
+    assert.equal(result.mailStatus?.outlook, false);
+    assert.equal(result.bubble?.kind, "thought");
+  }
+  assert.equal(store.syncs, 1);
+  assert.equal(store.chats.length, 0);
+  assert.equal(store.approveSends, 0);
+  assert.notEqual(sm.state, "ERROR");
+  assert.ok(store.settings.mailLastSyncAt);
+});
+
+test("MAIL_OPEN uses POST /api/open", async () => {
+  const { ports, store } = mockPorts();
+  const sm = await allowOutlook(ports);
+  const result = await dispatch({ type: "MAIL_OPEN", taskId: "T-009", entryId: "eid-1", query: "عقد" }, ports, sm);
+  assert.equal(result.ok, true);
+  assert.equal(store.opens[0]?.entryId, "eid-1");
+});
+
+test("MAIL_CREATE_TASK reuses the existing email board task", async () => {
+  const { ports, store } = mockPorts();
+  store.docs.push({ version: 1, title: "Aqaar Command", tasks: [EMAIL_TASK] });
+  const sm = await allowOutlook(ports);
+  const result = await dispatch(
+    { type: "MAIL_CREATE_TASK", title: "عقد موجان", taskId: "T-009", entryId: "eid-1", fromEmail: "ops@aqaar.com" },
+    ports,
+    sm,
+  );
+  assert.equal(result.ok, true);
+  if (result.ok) assert.equal(result.taskId, "T-009");
+  assert.equal(store.docs.length, 2);
+});
+
+test("MAIL_IGNORE persists in wizard-settings, not tasks.json", async () => {
+  const { ports, store } = mockPorts();
+  store.docs.push({ version: 1, title: "Aqaar Command", tasks: [EMAIL_TASK] });
+  const sm = await allowOutlook(ports);
+  const ignored = await dispatch({ type: "MAIL_IGNORE", taskId: "T-009", entryId: "eid-1" }, ports, sm);
+  assert.equal(ignored.ok, true);
+  assert.ok(store.settings.mailIgnored.includes("T-009"));
+  assert.equal(store.docs.at(-1)?.tasks?.[0].id, "T-009");
+  const polled = await dispatch({ type: "MAIL_POLL", prompt: true }, ports, sm);
+  assert.equal(polled.ok, true);
+  if (polled.ok) assert.equal(polled.mail, undefined);
+});
+
+test("MAIL_REMIND writes wizard-settings reminders", async () => {
+  const { ports, store } = mockPorts();
+  const sm = await allowOutlook(ports);
+  const result = await dispatch({ type: "MAIL_REMIND", text: "عقد موجان", taskId: "T-009" }, ports, sm);
+  assert.equal(result.ok, true);
+  assert.equal(store.settings.reminders.length, 1);
+  assert.equal(store.settings.reminders[0].text, "عقد موجان");
+  assert.equal(store.docs.length, 1);
+});
+
+test("MAIL_DRAFT posts /api/task/chat draft and never approve-send", async () => {
+  const { ports, store } = mockPorts();
+  const sm = await allowOutlook(ports);
+  const asked = await dispatch({ type: "MAIL_DRAFT", taskId: "T-009" }, ports, sm);
+  assert.equal(asked.ok, true);
+  assert.equal(store.chats.length, 1);
+  assert.equal(store.chats[0].text, "draft");
+  assert.equal(store.approveSends, 0);
+  if (asked.ok) assert.match(asked.bubble?.text || "", /مسودة|Draft|ما انرسلت|not sent/i);
+});
+
+test("MAIL_DRAFT default Ask waits; Never blocks HTTP", async () => {
+  const { ports, store } = mockPorts();
+  const sm = new WizardStateMachine();
+  const asked = await dispatch({ type: "MAIL_DRAFT", taskId: "T-009" }, ports, sm);
+  assert.equal(asked.ok, false);
+  if (!asked.ok) assert.equal(asked.needsConfirm, true);
+  assert.equal(store.chats.length, 0);
+  await dispatch({ type: "SET_PERMISSION", capabilityId: "outlook.draft", mode: "never" }, ports, sm);
+  const blocked = await dispatch({ type: "MAIL_DRAFT", taskId: "T-009" }, ports, sm);
+  assert.equal(blocked.ok, false);
+  if (!blocked.ok) assert.equal(blocked.error, "permission_denied");
+  assert.equal(store.chats.length, 0);
 });
