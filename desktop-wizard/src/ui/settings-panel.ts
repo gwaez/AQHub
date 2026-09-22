@@ -148,6 +148,9 @@ export class SettingsPanel {
       case "followPointer":
         patch.followPointer = (el as HTMLInputElement).checked;
         break;
+      case "roamEnabled":
+        patch.roamEnabled = (el as HTMLInputElement).checked;
+        break;
       case "preferredCorner":
         patch.preferredCorner = el.value as WizardSettings["preferredCorner"];
         break;
@@ -190,6 +193,7 @@ export class SettingsPanel {
     setVal("opacity", String(Math.round(settings.opacity * 100)));
     setVal("animationLevel", settings.animationLevel);
     setVal("followPointer", settings.followPointer);
+    setVal("roamEnabled", settings.roamEnabled);
     setVal("preferredCorner", settings.preferredCorner);
     setVal("proactiveBubbles", settings.proactiveBubbles);
     setVal("idleSleepMs", String(Math.round(settings.idleSleepMs / 1000)));
@@ -295,6 +299,7 @@ export class SettingsPanel {
             </select>
           </label>
           <label class="check"><input type="checkbox" data-set="followPointer" ${chk(settings.followPointer)} /> ${esc(c.followPointer)}</label>
+          <label class="check"><input type="checkbox" data-set="roamEnabled" ${chk(settings.roamEnabled)} /> ${esc(c.roamEnabled)}</label>
           <label>${esc(c.preferredCorner)}
             <select data-set="preferredCorner">
               <option value="bottom-end" ${sel(settings.preferredCorner === "bottom-end")}>bottom-end</option>

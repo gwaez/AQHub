@@ -92,6 +92,13 @@ function mockPorts() {
       },
       exit: async () => {},
       setPosition: async () => {},
+      getPlacement: async () => ({
+        x: 40,
+        y: 40,
+        width: 380,
+        height: 560,
+        workArea: { x: 0, y: 0, width: 1920, height: 1040 },
+      }),
       setMatrixLayout: async (open) => {
         store.matrixOpen = open;
       },
@@ -283,7 +290,7 @@ test("PATCH_SETTINGS persists P9 fields on wizard settings, not tasks", async ()
   await dispatch(
     {
       type: "PATCH_SETTINGS",
-      patch: { language: "en", opacity: 0.7, closeAction: "exit", proactiveBubbles: "low" },
+      patch: { language: "en", opacity: 0.7, closeAction: "exit", proactiveBubbles: "low", roamEnabled: false },
     },
     ports,
     sm,
@@ -291,6 +298,7 @@ test("PATCH_SETTINGS persists P9 fields on wizard settings, not tasks", async ()
   assert.equal(store.settings.language, "en");
   assert.equal(store.settings.opacity, 0.7);
   assert.equal(store.settings.closeAction, "exit");
+  assert.equal(store.settings.roamEnabled, false);
   assert.equal(store.docs.length, 1);
 });
 

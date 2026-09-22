@@ -153,6 +153,7 @@ Settings schema (`data/wizard-settings.json`, gitignored):
   "alwaysOnTop": true,
   "opacity": 1,
   "followPointer": true,
+  "roamEnabled": true,
   "preferredCorner": "bottom-end",
   "proactiveBubbles": "normal",
   "bubbleScale": 1,

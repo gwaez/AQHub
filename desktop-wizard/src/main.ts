@@ -1,4 +1,4 @@
-import { getCurrentWindow } from "@tauri-apps/api/window";
+import { currentMonitor, getCurrentWindow } from "@tauri-apps/api/window";
 import { listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
 import { createAqHubClient } from "./api/aqhub-client.ts";
@@ -7,6 +7,7 @@ import { dispatch, type CharacterWindowPort } from "./engines/action-engine.ts";
 import { WizardStateMachine, isTransientState } from "./state/wizard-state-machine.ts";
 import { applyAnimation } from "./engines/animation-engine.ts";
 import { IdleDirector } from "./engines/idle-director.ts";
+import { RoamEngine } from "./engines/roam-engine.ts";
 import { BubbleEngine } from "./engines/bubble-engine.ts";
 import { injectWizardSvg, loadCharacterPack } from "./ui/character.ts";
 import { EisenhowerPanel } from "./ui/eisenhower-panel.ts";
@@ -24,6 +25,16 @@ function el<T extends HTMLElement>(id: string): T {
   const node = document.getElementById(id);
   if (!node) throw new Error("missing #" + id);
   return node as T;
+}
+
+function fallbackWorkArea(): { x: number; y: number; width: number; height: number } {
+  const s = window.screen as Screen & { availLeft?: number; availTop?: number };
+  return {
+    x: s.availLeft || 0,
+    y: s.availTop || 0,
+    width: s.availWidth || window.innerWidth || 1280,
+    height: s.availHeight || window.innerHeight || 720,
+  };
 }
 
 function browserWindowPort(): CharacterWindowPort {
@@ -44,7 +55,23 @@ function browserWindowPort(): CharacterWindowPort {
     async exit() {
       /* browser preview has no process to exit */
     },
-    async setPosition() {},
+    async setPosition(x: number, y: number) {
+      const stage = el("stage");
+      stage.classList.add("is-roaming");
+      stage.style.left = `${Math.round(x)}px`;
+      stage.style.top = `${Math.round(y)}px`;
+    },
+    async getPlacement() {
+      const stage = el("stage");
+      const r = stage.getBoundingClientRect();
+      return {
+        x: Math.round(r.left),
+        y: Math.round(r.top),
+        width: Math.round(r.width) || 200,
+        height: Math.round(r.height) || 250,
+        workArea: { x: 8, y: 88, width: Math.max(240, window.innerWidth - 16), height: Math.max(280, window.innerHeight - 96) },
+      };
+    },
     async setMatrixLayout(open: boolean) {
       document.body.classList.toggle("matrix-open", open);
     },
@@ -68,6 +95,27 @@ function tauriWindowPort(): CharacterWindowPort {
     },
     async setPosition(x: number, y: number) {
       await invoke("set_character_position", { x, y });
+    },
+    async getPlacement() {
+      const win = getCurrentWindow();
+      const pos = await win.outerPosition();
+      const size = await win.outerSize();
+      const mon = await currentMonitor();
+      const work = mon?.workArea;
+      return {
+        x: pos.x,
+        y: pos.y,
+        width: size.width,
+        height: size.height,
+        workArea: work
+          ? {
+              x: work.position.x,
+              y: work.position.y,
+              width: work.size.width,
+              height: work.size.height,
+            }
+          : fallbackWorkArea(),
+      };
     },
     async setMatrixLayout(open: boolean) {
       document.body.classList.toggle("matrix-open", open);
@@ -129,6 +177,10 @@ async function main() {
   const machine = new WizardStateMachine();
   const bubbles = new BubbleEngine();
   const idle = new IdleDirector({ sleepAfterMs: 90_000, animationLevel: "normal" }, Date.now());
+  const roam = new RoamEngine();
+  let lastRoamPos: { x: number; y: number } | null = null;
+  let roamQuietUntil = 0;
+  let roamTickBusy = false;
   const look = { x: 0, y: 0 };
   let idleReturnTimer = 0;
   let lastUndo: { id: string; prevQuad: EisQuad } | null = null;
@@ -360,6 +412,9 @@ async function main() {
   idle.sleepAfterMs = settings.current.idleSleepMs;
   idle.animationLevel = settings.current.animationLevel;
   idle.nudge(Date.now());
+  if (settings.current.window.x != null && settings.current.window.y != null) {
+    lastRoamPos = { x: settings.current.window.x, y: settings.current.window.y };
+  }
   if (!settings.current.displayName) {
     await run({ type: "RENAME_DISPLAY", displayName: pack.defaultDisplayName });
   }
@@ -513,7 +568,10 @@ async function main() {
     const win = getCurrentWindow();
     let moveTimer: number | undefined;
     await win.onMoved(async (pos) => {
+      if (Date.now() < roamQuietUntil) return;
       idle.nudge(Date.now());
+      roam.noteDrag(Date.now());
+      lastRoamPos = { x: pos.payload.x, y: pos.payload.y };
       if (machine.state !== "DRAGGING") void run({ type: "DRAG_START" });
       window.clearTimeout(moveTimer);
       moveTimer = window.setTimeout(() => {
@@ -521,6 +579,37 @@ async function main() {
         void run({ type: "DRAG_END" });
       }, 400);
     });
+  }
+
+  async function tickRoam(now: number) {
+    if (roamTickBusy) return;
+    roamTickBusy = true;
+    try {
+      const place = await ports.window.getPlacement();
+      const pos = lastRoamPos ?? { x: place.x, y: place.y };
+      const overlays = !composer.hidden || settingsUi.visible || matrix.visible || !ctx.hidden;
+      const result = roam.tick({
+        nowMs: now,
+        state: machine.state,
+        animationLevel: settings.current.animationLevel,
+        roamEnabled: settings.current.roamEnabled,
+        position: pos,
+        windowSize: { width: place.width, height: place.height },
+        workArea: place.workArea,
+        forcePause: overlays || idle.isPaused,
+      });
+      if (!result.move) return;
+      lastRoamPos = { x: result.x, y: result.y };
+      roamQuietUntil = Date.now() + 220;
+      await ports.window.setPosition(result.x, result.y);
+      if (result.persist) {
+        await settings.save({ window: { ...settings.current.window, x: result.x, y: result.y } });
+      }
+    } catch {
+      /* roam is best-effort; never block the character loop */
+    } finally {
+      roamTickBusy = false;
+    }
   }
 
   window.setInterval(() => {
@@ -537,6 +626,7 @@ async function main() {
       250,
     );
     if (idle.shouldSleep(now, machine.state)) void run({ type: "SLEEP" });
+    void tickRoam(now);
     const gap =
       settings.current.proactiveBubbles === "high"
         ? 20_000

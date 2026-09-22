@@ -28,6 +28,9 @@ test("normalizeSettings fills P9 defaults and clamps", () => {
   assert.equal(s.mailLastSyncAt, "");
   assert.deepEqual(s.mailIgnored, []);
   assert.equal(s.firstRunComplete, false);
+  assert.equal(s.roamEnabled, true);
+  const off = normalizeSettings({ roamEnabled: false });
+  assert.equal(off.roamEnabled, false);
 });
 
 test("store save merges permissions without resetting others", async () => {

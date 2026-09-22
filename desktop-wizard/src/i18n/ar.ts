@@ -58,6 +58,7 @@ export const ar = {
   packSelect: "حزمة الشخصية",
   opacity: "الشفافية",
   followPointer: "يتبع المؤشر",
+  roamEnabled: "يتجوّل على سطح المكتب",
   preferredCorner: "الزاوية المفضّلة",
   proactive: "فقاعات استباقية",
   bubbleScale: "حجم الفقاعة",

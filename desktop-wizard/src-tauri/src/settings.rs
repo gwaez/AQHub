@@ -38,6 +38,8 @@ pub struct WizardSettings {
     #[serde(default)]
     pub follow_pointer: Option<bool>,
     #[serde(default)]
+    pub roam_enabled: Option<bool>,
+    #[serde(default)]
     pub preferred_corner: Option<String>,
     #[serde(default)]
     pub proactive_bubbles: Option<String>,
@@ -139,6 +141,7 @@ fn read_settings() -> Result<WizardSettings, String> {
             always_on_top: Some(true),
             opacity: Some(1.0),
             follow_pointer: Some(true),
+            roam_enabled: Some(true),
             preferred_corner: Some("bottom-end".into()),
             proactive_bubbles: Some("normal".into()),
             bubble_scale: Some(1.0),

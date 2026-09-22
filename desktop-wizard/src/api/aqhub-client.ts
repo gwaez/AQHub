@@ -45,6 +45,7 @@ export interface WizardSettings {
   alwaysOnTop: boolean;
   opacity: number;
   followPointer: boolean;
+  roamEnabled: boolean;
   preferredCorner: PreferredCorner;
   proactiveBubbles: ProactiveLevel;
   bubbleScale: number;
@@ -73,6 +74,7 @@ export function defaultSettings(displayName = "الساحر العتيق"): Wiza
     alwaysOnTop: true,
     opacity: 1,
     followPointer: true,
+    roamEnabled: true,
     preferredCorner: "bottom-end",
     proactiveBubbles: "normal",
     bubbleScale: 1,
@@ -128,6 +130,7 @@ export function normalizeSettings(raw: Partial<WizardSettings> | Record<string, 
     alwaysOnTop: s.alwaysOnTop !== false,
     opacity: clamp(Number(s.opacity ?? base.opacity), 0.35, 1, 1),
     followPointer: s.followPointer !== false,
+    roamEnabled: s.roamEnabled !== false,
     preferredCorner: corner,
     proactiveBubbles: proactive,
     bubbleScale: clamp(Number(s.bubbleScale ?? base.bubbleScale), 0.7, 1.8, 1),

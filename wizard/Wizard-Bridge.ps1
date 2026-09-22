@@ -98,6 +98,7 @@ function Get-WizardDefaultSettings {
     alwaysOnTop = $true
     opacity = 1
     followPointer = $true
+    roamEnabled = $true
     preferredCorner = 'bottom-end'
     proactiveBubbles = 'normal'
     bubbleScale = 1
@@ -152,6 +153,7 @@ function Read-WizardSettings {
       $defaults.opacity = $op
     }
     if ($obj.PSObject.Properties['followPointer']) { $defaults.followPointer = [bool]$obj.followPointer }
+    if ($obj.PSObject.Properties['roamEnabled']) { $defaults.roamEnabled = [bool]$obj.roamEnabled }
     if ($obj.preferredCorner -and ([string]$obj.preferredCorner -in @('bottom-end','bottom-start','top-end','top-start'))) {
       $defaults.preferredCorner = [string]$obj.preferredCorner
     }
@@ -264,6 +266,9 @@ function Merge-WizardSettings {
   }
   if ($Incoming.PSObject.Properties['followPointer'] -and $null -ne $Incoming.followPointer) {
     $Current.followPointer = [bool]$Incoming.followPointer
+  }
+  if ($Incoming.PSObject.Properties['roamEnabled'] -and $null -ne $Incoming.roamEnabled) {
+    $Current.roamEnabled = [bool]$Incoming.roamEnabled
   }
   if ($Incoming.PSObject.Properties['preferredCorner'] -and $Incoming.preferredCorner) {
     $c = [string]$Incoming.preferredCorner

@@ -60,6 +60,7 @@ export const en: UiCopy = {
   packSelect: "Character pack",
   opacity: "Opacity",
   followPointer: "Follow pointer",
+  roamEnabled: "Roam around the desktop",
   preferredCorner: "Preferred corner",
   proactive: "Proactive bubbles",
   bubbleScale: "Bubble scale",

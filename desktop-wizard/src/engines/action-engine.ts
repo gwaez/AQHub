@@ -12,12 +12,21 @@ import {
 import { confirmLabel, decidePermission } from "../ui/permissions.ts";
 import { stripSecrets } from "../api/audit.ts";
 
+export interface WindowPlacement {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  workArea: { x: number; y: number; width: number; height: number };
+}
+
 export interface CharacterWindowPort {
   show(): Promise<void>;
   hide(): Promise<void>;
   openAqHub(): Promise<void>;
   exit(): Promise<void>;
   setPosition(x: number, y: number): Promise<void>;
+  getPlacement(): Promise<WindowPlacement>;
   setMatrixLayout(open: boolean): Promise<void>;
   setAlwaysOnTop(on: boolean): Promise<void>;
 }

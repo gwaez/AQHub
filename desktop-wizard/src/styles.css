@@ -37,6 +37,17 @@ body.browser-preview {
   transition: padding 0.6s ease, align-items 0.6s ease;
 }
 
+#stage.is-roaming {
+  position: absolute;
+  width: auto;
+  height: auto;
+  align-items: center;
+  justify-content: flex-end;
+  padding-bottom: 0;
+  right: auto;
+  bottom: auto;
+}
+
 .drag-strip {
   position: absolute;
   top: 0;
