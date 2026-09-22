@@ -12,6 +12,13 @@ import { BubbleEngine } from "./engines/bubble-engine.ts";
 import { applyCharacterVisual, loadCharacterPack } from "./ui/character.ts";
 import { EisenhowerPanel } from "./ui/eisenhower-panel.ts";
 import { SettingsPanel } from "./ui/settings-panel.ts";
+import { ChatPanel } from "./chat/chat-panel.ts";
+import { routeOutbound } from "./chat/mode-router.ts";
+import { nextLineId, type ChatMode } from "./chat/types.ts";
+import { postBridge } from "./bridge/client.ts";
+import { enqueueOutbound, takeOutboundQueue } from "./bridge/queue.ts";
+import { browserKv, readBridgeSecret, writeBridgeSecret } from "./bridge/secret-store.ts";
+import { isBridgeLinked } from "./bridge/config.ts";
 import { measureAndPlaceMenu } from "./ui/place-menu.ts";
 import { applyDocumentLocale, localeCopy } from "./i18n/index.ts";
 import { firstRunBubbleText, shouldMarkFirstRunQuiet, shouldShowFirstRun } from "./settings/first-run.ts";
@@ -166,6 +173,7 @@ async function main() {
   const composerDue = el<HTMLInputElement>("composerDue");
   const ctx = el("ctx");
   const settingsHost = el("settingsPanel");
+  const askHost = el("askSheet");
   const matrixHost = el("matrixPanel");
   const bubbleConfirm = el("bubbleConfirm");
   const bubbleYes = el<HTMLButtonElement>("bubbleYes");
@@ -214,6 +222,8 @@ async function main() {
   let auditLines: AuditLine[] = [];
   let ui = localeCopy(settings.current.language);
   let settingsUi: SettingsPanel;
+  let chatUi: ChatPanel;
+  const secretKv = browserKv();
 
   const ports = {
     api,
@@ -256,6 +266,7 @@ async function main() {
     const mailVisible = Boolean(pendingMail && bubbles.current?.visible && !pendingAsk);
     bubbleMail.hidden = !mailVisible;
     if (settingsUi.visible) settingsUi.sync(settings.current, auditLines, lastMailStatus);
+    if (chatUi.visible) chatUi.sync(settings.current);
   };
 
   const speak = (kind: "speech" | "thought" | "alert", text: string, ms?: number) => {
@@ -307,8 +318,32 @@ async function main() {
       onClose() {
         closeOverlays();
       },
+      onBridgeSecret(secret) {
+        writeBridgeSecret(settings.current.bridge.secretRef, secret, secretKv);
+      },
     },
     ui,
+  );
+
+  chatUi = new ChatPanel(
+    askHost,
+    {
+      onSend(mode, text) {
+        void handleAskSend(mode, text);
+      },
+      onClose() {
+        closeOverlays();
+      },
+      onBridgePatch(patch) {
+        void run({ type: "PATCH_SETTINGS", patch: { bridge: { ...settings.current.bridge, ...patch } } });
+      },
+      onSecretChange(secret) {
+        writeBridgeSecret(settings.current.bridge.secretRef, secret, secretKv);
+        chatUi.sync(settings.current);
+      },
+    },
+    ui,
+    secretKv,
   );
 
   async function refreshAudit() {
@@ -332,6 +367,77 @@ async function main() {
 
   async function openAqHubEisenhower() {
     await ports.window.openAqHubPath("/eisenhower.html");
+  }
+
+  async function openAsk() {
+    closeOverlays();
+    idle.pause();
+    chatUi.setCopy(localeCopy(settings.current.language));
+    chatUi.show(settings.current);
+    document.body.classList.add("chat-open");
+    await ports.window.setSettingsLayout(true);
+  }
+
+  function askLine(role: "user" | "wizard" | "system", text: string, mode?: ChatMode) {
+    return { id: nextLineId(), role, text, mode, at: new Date().toISOString() };
+  }
+
+  async function flushChatQueue() {
+    if (!isBridgeLinked(settings.current.bridge)) return;
+    const secret = readBridgeSecret(settings.current.bridge.secretRef, secretKv);
+    const queued = takeOutboundQueue(secretKv);
+    for (const item of queued) {
+      const sent = await postBridge(settings.current.bridge.url, item.payload, secret);
+      if (!sent.ok) enqueueOutbound(item.payload, secretKv);
+    }
+  }
+
+  async function handleAskSend(mode: ChatMode, text: string) {
+    chatUi.addLine(askLine("user", text, mode));
+    const routed = routeOutbound({
+      mode,
+      text,
+      characterId: settings.current.characterId,
+      technicalId: settings.current.technicalId,
+      agentId: settings.current.bridge.agentId,
+      bridge: settings.current.bridge,
+    });
+    if (routed.mode === "execute") {
+      const ex = routed.execute;
+      if (ex.kind === "blocked") {
+        chatUi.addLine(askLine("system", ex.reason === "send" ? ui.askBlockedSend : ui.askBlockedCrm));
+        return;
+      }
+      if (ex.kind === "unknown") {
+        const hint = settings.current.language === "en" ? ex.hintEn : ex.hintAr;
+        chatUi.addLine(askLine("system", ui.askUnknown + " " + hint));
+        return;
+      }
+      if (ex.kind === "open_settings") {
+        await openSettings();
+        chatUi.addLine(askLine("wizard", ui.askOpenedSettings));
+        return;
+      }
+      const result = await run(ex.action);
+      const msg = result.bubble?.text || (result.ok ? ui.success : result.error || ui.error);
+      chatUi.addLine(askLine(result.ok ? "wizard" : "system", msg, "execute"));
+      return;
+    }
+    if (!routed.linked) {
+      enqueueOutbound(routed.payload, secretKv);
+      chatUi.addLine(askLine("system", ui.askQueued));
+      chatUi.addLine(askLine("wizard", ui.askEcho + "\n" + routed.payload.text));
+      return;
+    }
+    const secret = readBridgeSecret(settings.current.bridge.secretRef, secretKv);
+    const sent = await postBridge(settings.current.bridge.url, routed.payload, secret);
+    if (!sent.ok) {
+      enqueueOutbound(routed.payload, secretKv);
+      chatUi.addLine(askLine("system", ui.askSendFailed));
+      return;
+    }
+    await flushChatQueue();
+    chatUi.addLine(askLine("wizard", sent.reply || ui.askSent));
   }
 
   async function run(action: WizardAction) {
@@ -422,10 +528,13 @@ async function main() {
 
   const closeOverlays = () => {
     const settingsWereOpen = settingsUi.visible;
+    const chatWereOpen = chatUi.visible;
     composer.hidden = true;
     ctx.hidden = true;
     settingsUi.hide();
-    if (settingsWereOpen) {
+    chatUi.hide();
+    document.body.classList.remove("chat-open");
+    if (settingsWereOpen || chatWereOpen) {
       if (matrix.visible) {
         document.body.classList.remove("settings-open");
         void ports.window.setMatrixLayout(true);
@@ -508,6 +617,7 @@ async function main() {
     if (act === "MATRIX") await openAqHubEisenhower();
     if (act === "MAIL") await run({ type: "MAIL_POLL", prompt: true });
     if (act === "SETTINGS") await openSettings();
+    if (act === "ASK") await openAsk();
     if (act === "OPEN_AQHUB") await run({ type: "OPEN_AQHUB" });
   });
 
@@ -594,7 +704,7 @@ async function main() {
     if (key === "QUICK_NOTE") openComposer("note");
     if (key === "MATRIX") await openAqHubEisenhower();
     if (key === "OPEN_AQHUB") await run({ type: "OPEN_AQHUB" });
-    if (key === "ASK") speak("thought", ui.askLater);
+    if (key === "ASK") await openAsk();
     if (key === "SETTINGS") await openSettings();
     if (key === "HIDE") await run({ type: "HIDE" });
     if (key === "EXIT") await run({ type: "EXIT" });
@@ -691,7 +801,7 @@ async function main() {
     try {
       const place = await ports.window.getPlacement();
       const pos = lastRoamPos ?? { x: place.x, y: place.y };
-      const overlays = !composer.hidden || settingsUi.visible || matrix.visible || !ctx.hidden;
+      const overlays = !composer.hidden || settingsUi.visible || matrix.visible || !ctx.hidden || chatUi.visible;
       const result = roam.tick({
         nowMs: now,
         state: machine.state,
@@ -745,7 +855,8 @@ async function main() {
       machine.state === "IDLE" &&
       composer.hidden &&
       !settingsUi.visible &&
-      !matrix.visible
+      !matrix.visible &&
+      !chatUi.visible
     ) {
       lastProactive = now;
       speak(
@@ -773,7 +884,7 @@ async function main() {
 
   window.setInterval(() => {
     if (settings.current.permissions["outlook.read"] !== "allow") return;
-    if (!composer.hidden || settingsUi.visible || matrix.visible || pendingAsk) return;
+    if (!composer.hidden || settingsUi.visible || matrix.visible || pendingAsk || chatUi.visible) return;
     if (pendingMail && bubbles.current?.visible) return;
     void run({ type: "MAIL_POLL" });
   }, 45_000);

@@ -7,6 +7,7 @@ import {
 } from "../ui/permissions.ts";
 import type { MailItem, MailStatus, MailSyncResult } from "./mail.ts";
 import { taskToMailItem } from "./mail.ts";
+import { defaultBridge, normalizeBridge, type WizardBridgeConfig } from "../bridge/config.ts";
 
 export const DEFAULT_AQHUB_URL = "http://127.0.0.1:8766";
 
@@ -55,7 +56,10 @@ export interface WizardSettings {
   mailLastSyncAt: string;
   mailIgnored: string[];
   firstRunComplete: boolean;
+  bridge: WizardBridgeConfig;
 }
+
+export type { WizardBridgeConfig };
 
 export const DEFAULT_CHARACTER_ID = "secretary";
 export const KNOWN_CHARACTER_IDS = ["secretary", "old-wizard"] as const;
@@ -92,6 +96,7 @@ export function defaultSettings(displayName = "السكرتيرة"): WizardSetti
     mailLastSyncAt: "",
     mailIgnored: [],
     firstRunComplete: false,
+    bridge: defaultBridge(),
   };
 }
 
@@ -148,6 +153,7 @@ export function normalizeSettings(raw: Partial<WizardSettings> | Record<string, 
     mailLastSyncAt: String(s.mailLastSyncAt || ""),
     mailIgnored: Array.isArray(s.mailIgnored) ? s.mailIgnored.map(String).filter(Boolean).slice(0, 200) : [],
     firstRunComplete: s.firstRunComplete === true,
+    bridge: normalizeBridge((s as { bridge?: unknown }).bridge),
   };
 }
 

@@ -57,6 +57,17 @@ pub struct WizardSettings {
     pub mail_ignored: Option<Vec<String>>,
     #[serde(default)]
     pub first_run_complete: Option<bool>,
+    #[serde(default)]
+    pub bridge: Option<BridgeSettings>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct BridgeSettings {
+    pub enabled: Option<bool>,
+    pub url: Option<String>,
+    pub secret_ref: Option<String>,
+    pub agent_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -151,6 +162,12 @@ fn read_settings() -> Result<WizardSettings, String> {
             mail_last_sync_at: Some(String::new()),
             mail_ignored: Some(Vec::new()),
             first_run_complete: Some(false),
+            bridge: Some(BridgeSettings {
+                enabled: Some(false),
+                url: Some(String::new()),
+                secret_ref: Some("wizard-bridge".into()),
+                agent_id: Some(String::new()),
+            }),
         });
     }
     let raw = fs::read_to_string(&path).map_err(|e| e.to_string())?;

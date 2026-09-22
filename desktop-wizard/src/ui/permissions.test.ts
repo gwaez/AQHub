@@ -30,7 +30,8 @@ test("capability catalog has the brief defaults", () => {
 
 test("Allow passes, Never blocks, Ask waits", () => {
   const perms = defaultPermissionMap();
-  assert.equal(decidePermission("CREATE_TASK", perms), "allow");
+  assert.equal(decidePermission("OPEN_AQHUB", perms), "allow");
+  assert.equal(decidePermission("OPEN_EISENHOWER", perms), "allow");
   assert.equal(decidePermission("TRASH_EIS_ITEM", perms), "ask");
   assert.equal(decidePermission("TRASH_EIS_ITEM", perms, true), "allow");
   assert.equal(decidePermission("MAIL_POLL", perms), "ask");

@@ -26,6 +26,7 @@ function mockPorts() {
       },
     ] as EisDoc[],
     matrixOpen: false,
+    openedPaths: [] as string[],
     chats: [] as { taskId: string; text: string }[],
     opens: [] as { entryId?: string; query?: string }[],
     syncs: 0,
@@ -90,7 +91,9 @@ function mockPorts() {
       openAqHub: async () => {
         store.opened = true;
       },
-      openAqHubPath: async () => {},
+      openAqHubPath: async (path: string) => {
+        store.openedPaths.push(path);
+      },
       exit: async () => {},
       setPosition: async () => {},
       getPlacement: async () => ({
@@ -115,6 +118,7 @@ test("action type guard", () => {
   assert.equal(isWizardActionType("CREATE_TASK"), true);
   assert.equal(isWizardActionType("MAIL_POLL"), true);
   assert.equal(isWizardActionType("MAIL_DRAFT"), true);
+  assert.equal(isWizardActionType("OPEN_EISENHOWER"), true);
   assert.equal(isWizardActionType("approve-send"), false);
 });
 
@@ -471,4 +475,23 @@ test("MAIL_DRAFT default Ask waits; Never blocks HTTP", async () => {
   assert.equal(blocked.ok, false);
   if (!blocked.ok) assert.equal(blocked.error, "permission_denied");
   assert.equal(store.chats.length, 0);
+});
+
+test("OPEN_EISENHOWER opens /eisenhower.html through aqhub.open permission", async () => {
+  const { ports, store } = mockPorts();
+  const sm = new WizardStateMachine();
+  const result = await dispatch({ type: "OPEN_EISENHOWER" }, ports, sm);
+  assert.equal(result.ok, true);
+  assert.deepEqual(store.openedPaths, ["/eisenhower.html"]);
+  await dispatch({ type: "SET_PERMISSION", capabilityId: "aqhub.open", mode: "never" }, ports, sm);
+  const blocked = await dispatch({ type: "OPEN_EISENHOWER" }, ports, sm);
+  assert.equal(blocked.ok, false);
+  if (!blocked.ok) assert.equal(blocked.error, "permission_denied");
+  const askedStore = mockPorts();
+  const askedSm = new WizardStateMachine();
+  await dispatch({ type: "SET_PERMISSION", capabilityId: "aqhub.open", mode: "ask" }, askedStore.ports, askedSm);
+  const asked = await dispatch({ type: "OPEN_EISENHOWER" }, askedStore.ports, askedSm);
+  assert.equal(asked.ok, false);
+  if (!asked.ok) assert.equal(asked.needsConfirm, true);
+  assert.deepEqual(askedStore.store.openedPaths, []);
 });

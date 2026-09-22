@@ -5,6 +5,7 @@ export type WizardAction =
   | { type: "SHOW" }
   | { type: "HIDE" }
   | { type: "OPEN_AQHUB" }
+  | { type: "OPEN_EISENHOWER" }
   | { type: "EXIT" }
   | { type: "RENAME_DISPLAY"; displayName: string }
   | { type: "SET_SCALE"; scale: number }
@@ -74,6 +75,7 @@ const TYPES: WizardAction["type"][] = [
   "SHOW",
   "HIDE",
   "OPEN_AQHUB",
+  "OPEN_EISENHOWER",
   "EXIT",
   "RENAME_DISPLAY",
   "SET_SCALE",

@@ -46,6 +46,10 @@ export class WizardSettingsStore {
         ...this.current.permissions,
         ...(partial.permissions || {}),
       },
+      bridge: {
+        ...this.current.bridge,
+        ...(partial.bridge || {}),
+      },
     });
     if (partial.displayName !== undefined) {
       next.displayName = partial.displayName.trim().slice(0, 80) || this.current.displayName;

@@ -31,6 +31,9 @@ test("normalizeSettings fills P9 defaults and clamps", () => {
   assert.deepEqual(s.mailIgnored, []);
   assert.equal(s.firstRunComplete, false);
   assert.equal(s.roamEnabled, true);
+  assert.equal(s.bridge.enabled, false);
+  assert.equal(s.bridge.secretRef, "wizard-bridge");
+  assert.equal("secret" in s.bridge, false);
   const off = normalizeSettings({ roamEnabled: false });
   assert.equal(off.roamEnabled, false);
 });
@@ -71,4 +74,10 @@ test("store save merges permissions without resetting others", async () => {
   assert.equal(store.current.characterId, "old-wizard");
   await store.save({ opacity: 0.9 });
   assert.equal(store.current.characterId, "old-wizard");
+  await store.save({ bridge: { enabled: true, url: "https://hooks.example.test/w", secretRef: "k", agentId: "g" } });
+  assert.equal(store.current.bridge.enabled, true);
+  assert.equal(store.current.bridge.url, "https://hooks.example.test/w");
+  await store.save({ opacity: 0.7 });
+  assert.equal(store.current.bridge.enabled, true);
+  assert.equal(store.current.bridge.agentId, "g");
 });

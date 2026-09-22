@@ -38,5 +38,11 @@
   },
   "mailLastSyncAt": "",
   "mailIgnored": [],
-  "firstRunComplete": false
+  "firstRunComplete": false,
+  "bridge": {
+    "enabled": false,
+    "url": "",
+    "secretRef": "wizard-bridge",
+    "agentId": ""
+  }
 }

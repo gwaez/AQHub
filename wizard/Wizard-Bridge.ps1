@@ -107,6 +107,12 @@ function Get-WizardDefaultSettings {
     mailLastSyncAt = ''
     mailIgnored = @()
     firstRunComplete = $false
+    bridge = [ordered]@{
+      enabled = $false
+      url = ''
+      secretRef = 'wizard-bridge'
+      agentId = ''
+    }
     permissions = Get-WizardDefaultPermissions
   }
 }
@@ -184,6 +190,9 @@ function Read-WizardSettings {
     if ($obj.mailLastSyncAt) { $defaults.mailLastSyncAt = [string]$obj.mailLastSyncAt }
     if ($null -ne $obj.mailIgnored) { $defaults.mailIgnored = @($obj.mailIgnored | ForEach-Object { [string]$_ }) }
     if ($obj.PSObject.Properties['firstRunComplete']) { $defaults.firstRunComplete = [bool]$obj.firstRunComplete }
+    if ($obj.PSObject.Properties['bridge'] -and $null -ne $obj.bridge) {
+      $defaults.bridge = ConvertTo-WizardBridgeConfig -Incoming $obj.bridge
+    }
     return $defaults
   } catch {
     return $defaults
@@ -313,7 +322,36 @@ function Merge-WizardSettings {
   if ($Incoming.PSObject.Properties['firstRunComplete'] -and $null -ne $Incoming.firstRunComplete) {
     $Current.firstRunComplete = [bool]$Incoming.firstRunComplete
   }
+  if ($Incoming.PSObject.Properties['bridge'] -and $null -ne $Incoming.bridge) {
+    $Current.bridge = ConvertTo-WizardBridgeConfig -Incoming $Incoming.bridge
+  }
   return $Current
+}
+
+function ConvertTo-WizardBridgeConfig {
+  param($Incoming)
+  $bridge = [ordered]@{
+    enabled = $false
+    url = ''
+    secretRef = 'wizard-bridge'
+    agentId = ''
+  }
+  if ($null -eq $Incoming) { return $bridge }
+  if ($Incoming.PSObject.Properties['enabled']) { $bridge.enabled = [bool]$Incoming.enabled }
+  if ($Incoming.PSObject.Properties['url'] -and $null -ne $Incoming.url) {
+    $bridge.url = ([string]$Incoming.url).Trim()
+  }
+  if ($Incoming.PSObject.Properties['secretRef'] -and $null -ne $Incoming.secretRef) {
+    $ref = ([string]$Incoming.secretRef).Trim()
+    if ($ref.Length -gt 80) { $ref = $ref.Substring(0, 80) }
+    if ($ref.Length -gt 0) { $bridge.secretRef = $ref }
+  }
+  if ($Incoming.PSObject.Properties['agentId'] -and $null -ne $Incoming.agentId) {
+    $aid = ([string]$Incoming.agentId).Trim()
+    if ($aid.Length -gt 80) { $aid = $aid.Substring(0, 80) }
+    $bridge.agentId = $aid
+  }
+  return $bridge
 }
 
 function Invoke-WizardBridge {

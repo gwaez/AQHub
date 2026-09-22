@@ -130,6 +130,15 @@ export async function dispatch(
         await audit(ports, action);
         return { ok: true, action, bubble: { kind: "speech", text: "فتحت AQHub" } };
       }
+      case "OPEN_EISENHOWER": {
+        await ports.window.openAqHubPath("/eisenhower.html");
+        await audit(ports, action);
+        return {
+          ok: true,
+          action,
+          bubble: { kind: "speech", text: lang === "en" ? "Opened Eisenhower" : "فتحت أيزنهاور" },
+        };
+      }
       case "EXIT": {
         await ports.window.exit();
         return { ok: true, action };

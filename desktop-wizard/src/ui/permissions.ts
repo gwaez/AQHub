@@ -55,7 +55,7 @@ export const CAPABILITIES: Capability[] = [
     hintEn: "Open the local board in the browser.",
     defaultMode: "allow",
     modes: ["allow", "ask", "never"],
-    actions: ["OPEN_AQHUB"],
+    actions: ["OPEN_AQHUB", "OPEN_EISENHOWER"],
     implemented: true,
   },
   {

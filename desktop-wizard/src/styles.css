@@ -523,6 +523,7 @@ body[data-anim="reduced"] .character .lid {
 .chrome[hidden],
 .composer[hidden],
 .settings-panel[hidden],
+.ask-sheet[hidden],
 .ctx-menu[hidden],
 .matrix-panel[hidden] {
   display: none;
@@ -766,4 +767,117 @@ body.settings-open .matrix-panel {
   padding: 5px 10px;
   font: inherit;
   cursor: pointer;
+}
+
+.ask-sheet {
+  position: fixed;
+  z-index: 6;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(12, 24, 38, 0.96);
+  border: 1px solid rgba(125, 211, 252, 0.22);
+  font-size: 0.8rem;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  display: grid;
+  gap: 8px;
+  max-height: min(520px, calc(100% - 24px));
+}
+.ask-sheet[hidden] {
+  display: none;
+}
+.ask-log {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 120px;
+  max-height: 220px;
+  overflow: auto;
+  padding: 6px;
+  border-radius: 10px;
+  background: rgba(7, 17, 28, 0.55);
+  border: 1px solid rgba(125, 211, 252, 0.18);
+}
+.ask-line p {
+  margin: 2px 0 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.ask-line small {
+  color: var(--muted);
+  font-size: 0.62rem;
+}
+.ask-line.ask-user p {
+  background: rgba(34, 211, 238, 0.12);
+  border: 1px solid rgba(34, 211, 238, 0.25);
+  border-radius: 10px;
+  padding: 6px 8px;
+}
+.ask-line.ask-wizard p,
+.ask-line.ask-system p {
+  background: rgba(251, 191, 36, 0.08);
+  border: 1px solid rgba(251, 191, 36, 0.22);
+  border-radius: 10px;
+  padding: 6px 8px;
+}
+.ask-mode {
+  display: flex;
+  gap: 6px;
+}
+.ask-mode button.active {
+  background: linear-gradient(135deg, var(--cyan), #60a5fa);
+  color: #04131a;
+  border: 0;
+  font-weight: 700;
+}
+.ask-form {
+  display: grid;
+  gap: 8px;
+}
+.ask-bridge {
+  color: var(--muted);
+}
+.ask-bridge summary {
+  cursor: pointer;
+  color: var(--cyan);
+  font-weight: 700;
+}
+.ask-sheet button {
+  border: 1px solid rgba(125, 211, 252, 0.25);
+  background: rgba(15, 32, 51, 0.95);
+  color: var(--text);
+  border-radius: 10px;
+  padding: 6px 10px;
+  font: inherit;
+  cursor: pointer;
+}
+
+body.chat-open {
+  display: grid;
+  grid-template-columns: minmax(180px, 240px) minmax(0, 1fr);
+  grid-template-rows: 1fr;
+}
+body.chat-open .chrome {
+  display: none;
+}
+body.chat-open #stage {
+  grid-column: 1;
+  height: 100%;
+  min-width: 0;
+}
+body.chat-open .ask-sheet:not([hidden]) {
+  position: relative;
+  inset: auto;
+  left: auto;
+  right: auto;
+  bottom: auto;
+  grid-column: 2;
+  margin: 12px;
+  max-height: none;
+  height: auto;
+  min-height: 0;
+  overflow: auto;
+  align-self: stretch;
+  z-index: 9;
 }

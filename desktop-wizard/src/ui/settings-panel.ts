@@ -20,6 +20,7 @@ export interface SettingsHandlers {
   onMailSync(): void;
   onJumpPermissions(): void;
   onClose(): void;
+  onBridgeSecret?(secret: string): void;
 }
 
 export class SettingsPanel {
@@ -172,6 +173,21 @@ export class SettingsPanel {
       case "closeAction":
         patch.closeAction = el.value === "exit" ? "exit" : "hide";
         break;
+      case "bridge.enabled":
+        patch.bridge = { ...(this.last?.bridge || { enabled: false, url: "", secretRef: "wizard-bridge", agentId: "" }), enabled: (el as HTMLInputElement).checked };
+        break;
+      case "bridge.url":
+        patch.bridge = { ...(this.last?.bridge || { enabled: false, url: "", secretRef: "wizard-bridge", agentId: "" }), url: el.value.trim() };
+        break;
+      case "bridge.secretRef":
+        patch.bridge = { ...(this.last?.bridge || { enabled: false, url: "", secretRef: "wizard-bridge", agentId: "" }), secretRef: el.value.trim() };
+        break;
+      case "bridge.agentId":
+        patch.bridge = { ...(this.last?.bridge || { enabled: false, url: "", secretRef: "wizard-bridge", agentId: "" }), agentId: el.value.trim() };
+        break;
+      case "bridge.secret":
+        this.handlers.onBridgeSecret?.(el.value);
+        return;
       default:
         return;
     }
@@ -204,6 +220,10 @@ export class SettingsPanel {
     setVal("bubbleScale", String(Math.round(settings.bubbleScale * 100)));
     setVal("bubbleFontSize", String(settings.bubbleFontSize));
     setVal("closeAction", settings.closeAction);
+    setVal("bridge.enabled", settings.bridge.enabled);
+    setVal("bridge.url", settings.bridge.url);
+    setVal("bridge.secretRef", settings.bridge.secretRef);
+    setVal("bridge.agentId", settings.bridge.agentId);
   }
 
   private fillPermissions(settings: WizardSettings): void {
@@ -266,6 +286,7 @@ export class SettingsPanel {
         ${tabBtn("hotkeys", c.hotkeys)}
         ${tabBtn("tray", c.tray)}
         ${tabBtn("email", c.email)}
+        ${tabBtn("agent", c.bridgeTitle)}
         ${tabBtn("permissions", c.permissions)}
         ${tabBtn("audit", c.audit)}
       </nav>
@@ -361,6 +382,22 @@ export class SettingsPanel {
             <button type="button" data-settings="mail-sync">${esc(c.emailSyncNow)}</button>
             <button type="button" data-settings="mail-perms">${esc(c.emailPerms)}</button>
           </div>
+        </section>
+        <section data-settings-section="agent">
+          <p class="hint">${esc(c.bridgeHint)}</p>
+          <label class="check"><input type="checkbox" data-set="bridge.enabled" ${chk(settings.bridge.enabled)} /> ${esc(c.bridgeEnabled)}</label>
+          <label>${esc(c.bridgeUrl)}
+            <input data-set="bridge.url" type="url" dir="ltr" value="${esc(settings.bridge.url)}" />
+          </label>
+          <label>${esc(c.bridgeSecretRef)}
+            <input data-set="bridge.secretRef" type="text" dir="ltr" maxlength="80" value="${esc(settings.bridge.secretRef)}" />
+          </label>
+          <label>${esc(c.bridgeSecret)}
+            <input data-set="bridge.secret" type="password" dir="ltr" autocomplete="off" placeholder="${esc(c.bridgeSecretPlaceholder)}" />
+          </label>
+          <label>${esc(c.bridgeAgentId)}
+            <input data-set="bridge.agentId" type="text" dir="ltr" maxlength="80" value="${esc(settings.bridge.agentId)}" />
+          </label>
         </section>
         <section data-settings-section="permissions">
           <table class="perm-table">
