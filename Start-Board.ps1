@@ -2591,6 +2591,7 @@ function Get-TaskIndex {
 
 function ConvertTo-EisItemFromTask($t, [string]$quad = 'inbox') {
   if (-not $t) { return $null }
+  if (Test-EisCrmSource $t) { return $null }
   $src = ([string]$t.source).ToLowerInvariant()
   if (-not $src) { $src = 'task' }
   $title = [string]$(if ($t.title) { $t.title } elseif ($t.subject) { $t.subject } else { $t.id })
@@ -2631,9 +2632,12 @@ function ConvertTo-EisItemFromTask($t, [string]$quad = 'inbox') {
 
 function Merge-EisItemWithTask($item, $t) {
   if (-not $item -or -not $t) { return $item }
+  $keepQuad = $null
+  try { $keepQuad = Get-EisProp $item 'quad' } catch { $keepQuad = $null }
   $isHash = $item -is [hashtable] -or $item -is [System.Collections.Specialized.OrderedDictionary]
   function Set-Prop($o, $name, $val) {
     if ($null -eq $val -or [string]$val -eq '') { return }
+    if ($name -eq 'quad') { return }
     if ($o -is [hashtable] -or $o -is [System.Collections.Specialized.OrderedDictionary]) { $o[$name] = $val }
     else { try { $o | Add-Member -NotePropertyName $name -NotePropertyValue $val -Force } catch {} }
   }
@@ -2666,6 +2670,10 @@ function Merge-EisItemWithTask($item, $t) {
       Set-Prop $item 'sourceUrl' $u
     }
   }
+  if ($keepQuad) {
+    if ($isHash) { $item['quad'] = $keepQuad }
+    else { try { $item | Add-Member -NotePropertyName quad -NotePropertyValue $keepQuad -Force } catch {} }
+  }
   return $item
 }
 
@@ -2675,9 +2683,17 @@ function Enrich-EisPayload($payload) {
   $out = New-EisArrayList
   foreach ($it in $items) {
     if (-not (Test-EisRealItem $it)) { continue }
+    $keepQuad = [string](Get-EisProp $it 'quad')
     $tid = [string]$(if ($it.taskId) { $it.taskId } elseif ($it.PSObject.Properties['taskId']) { $it.taskId } else { '' })
-    if ($tid -and $map.ContainsKey($tid)) {
+    $quadNorm = $keepQuad.Trim().ToLowerInvariant()
+    $isInbox = (-not $quadNorm -or $quadNorm -eq 'inbox')
+    $skipInboxCrm = $isInbox -and ((Test-EisCrmSource $it) -or ($tid -and $map.ContainsKey($tid) -and (Test-EisCrmSource $map[$tid])))
+    if ($tid -and $map.ContainsKey($tid) -and -not $skipInboxCrm) {
       $it = Merge-EisItemWithTask $it $map[$tid]
+    }
+    if ($keepQuad) {
+      if ($it -is [hashtable] -or $it -is [System.Collections.Specialized.OrderedDictionary]) { $it['quad'] = $keepQuad }
+      else { try { $it | Add-Member -NotePropertyName quad -NotePropertyValue $keepQuad -Force } catch {} }
     }
     [void]$out.Add($it)
   }
@@ -2685,6 +2701,8 @@ function Enrich-EisPayload($payload) {
 }
 
 function Invoke-EisAutoFeed([bool]$force = $false) {
+  # Additive only: never reset existing quads to inbox. -force does not re-inbox organized items.
+  $null = $force
   $payload = Read-EisDoc $eisenhowerPath
   $items = New-EisArrayList
   foreach ($it in @(Get-EisNormalizedItems $payload)) {
@@ -2702,9 +2720,10 @@ function Invoke-EisAutoFeed([bool]$force = $false) {
   }
 
   $added = 0
+  $skippedCrm = 0
   $tasksPath = Join-Path $dataDir 'tasks.json'
   if (-not (Test-Path $tasksPath)) {
-    return @{ ok = $true; added = 0; total = $items.Count; message = 'no_tasks' }
+    return @{ ok = $true; added = 0; total = $items.Count; skippedCrm = 0; message = 'no_tasks' }
   }
   $tj = [IO.File]::ReadAllText($tasksPath, [Text.Encoding]::UTF8) | ConvertFrom-Json
   foreach ($t in @($tj.tasks)) {
@@ -2712,9 +2731,11 @@ function Invoke-EisAutoFeed([bool]$force = $false) {
     if ($st -match 'done|closed|complet|archive') { continue }
     $tid = [string]$t.id
     if (-not $tid) { continue }
+    if (Test-EisCrmSource $t) { $skippedCrm++; continue }
     if ($existingTask.ContainsKey($tid) -or $trashedTask.ContainsKey($tid)) { continue }
     $row = ConvertTo-EisItemFromTask $t 'inbox'
     if ($row) {
+      if (Test-EisCrmSource $row) { $skippedCrm++; continue }
       [void]$items.Insert(0, $row)
       $existingTask[$tid] = $true
       $added++
@@ -2728,8 +2749,15 @@ function Invoke-EisAutoFeed([bool]$force = $false) {
     lastFeedAt = $now
     lastFeedAdded = $added
   }
-  [void](Save-EisDoc $outObj $eisenhowerPath)
-  return @{ ok = $true; added = $added; total = $items.Count; lastFeedAt = $now; source = 'feed' }
+  try {
+    [void](Save-EisDoc $outObj $eisenhowerPath)
+  } catch {
+    if ([string]$_.Exception.Message -eq 'eis_refuse_overwrite') {
+      return @{ ok = $false; error = 'refuse_overwrite'; added = 0; total = $items.Count; skippedCrm = $skippedCrm; message = 'existing_quads_preserved' }
+    }
+    throw
+  }
+  return @{ ok = $true; added = $added; total = $items.Count; skippedCrm = $skippedCrm; lastFeedAt = $now; source = 'feed' }
 }
 
 while ($listener.IsListening) {
@@ -2818,23 +2846,26 @@ while ($listener.IsListening) {
     if ($path -eq '/api/eisenhower' -and $req.HttpMethod -eq 'GET') {
       try {
         $payload = Read-EisDoc $eisenhowerPath
-        $real = @(Get-EisNormalizedItems $payload)
-        if ($real.Count -eq 0) {
-          $null = Invoke-EisAutoFeed
-          $payload = Read-EisDoc $eisenhowerPath
-        }
         $payload = Enrich-EisPayload $payload
         try {
           $payload | Add-Member -NotePropertyName enrichedAt -NotePropertyValue ((Get-Date).ToUniversalTime().ToString('o')) -Force
         } catch {}
-        $json = Save-EisDoc $payload $eisenhowerPath
+        try {
+          $json = Save-EisDoc $payload $eisenhowerPath
+        } catch {
+          if ([string]$_.Exception.Message -eq 'eis_refuse_overwrite') {
+            if (Test-Path $eisenhowerPath) { Write-FileResp $res $eisenhowerPath; continue }
+            $json = ConvertTo-EisJson $payload
+          } else { throw }
+        }
         Write-Text $res 200 'application/json; charset=utf-8' $json
       } catch {
         try {
           $fallback = ConvertTo-EisJson (Read-EisDoc $eisenhowerPath)
           Write-Text $res 200 'application/json; charset=utf-8' $fallback
         } catch {
-          Write-Json $res @{ items = @(); updatedAt = ''; error = 'eis_read_failed' }
+          if (Test-Path $eisenhowerPath) { Write-FileResp $res $eisenhowerPath }
+          else { Write-Json $res @{ items = @(); updatedAt = ''; error = 'eis_read_failed' } }
         }
       }
       continue
@@ -2860,7 +2891,7 @@ while ($listener.IsListening) {
         if ($iid -and $prevMap.ContainsKey($iid)) { $old = $prevMap[$iid] }
         elseif ($itid -and $prevMap.ContainsKey(('task:' + $itid))) { $old = $prevMap[('task:' + $itid)] }
         if ($old) {
-          foreach ($k in @('entryId','sourceUrl','crmUrl','teamsUrl','sourceRef','mailQuery','fromEmail','source')) {
+          foreach ($k in @('entryId','sourceUrl','crmUrl','teamsUrl','sourceRef','mailQuery','fromEmail','source','quad')) {
             $cur = [string](Get-EisProp $it $k)
             $prv = [string](Get-EisProp $old $k)
             if ((-not $cur) -and $prv) {
@@ -2871,8 +2902,36 @@ while ($listener.IsListening) {
         }
         [void]$merged.Add($it)
       }
+      $prevItems = @(Get-EisNormalizedItems $prev)
+      if ($prevItems.Count -gt 10 -and $merged.Count -lt [Math]::Max(2, [int]($prevItems.Count * 0.5))) {
+        $seenId = @{}
+        $seenTask = @{}
+        foreach ($it in @($merged)) {
+          $iid = [string](Get-EisProp $it 'id')
+          $itid = [string](Get-EisProp $it 'taskId')
+          if ($iid) { $seenId[$iid] = $true }
+          if ($itid) { $seenTask[$itid] = $true }
+        }
+        foreach ($p in $prevItems) {
+          $pid = [string](Get-EisProp $p 'id')
+          $ptid = [string](Get-EisProp $p 'taskId')
+          if ($pid -and $seenId.ContainsKey($pid)) { continue }
+          if ($ptid -and $seenTask.ContainsKey($ptid)) { continue }
+          [void]$merged.Add($p)
+          if ($pid) { $seenId[$pid] = $true }
+          if ($ptid) { $seenTask[$ptid] = $true }
+        }
+      }
       $incoming = Enrich-EisPayload ([pscustomobject]@{ items = @($merged); updatedAt = (Get-Date).ToUniversalTime().ToString('o') })
-      [void](Save-EisDoc $incoming $eisenhowerPath)
+      try {
+        [void](Save-EisDoc $incoming $eisenhowerPath)
+      } catch {
+        if ([string]$_.Exception.Message -eq 'eis_refuse_overwrite') {
+          Write-Json $res @{ ok = $false; error = 'refuse_overwrite'; count = @(Get-EisNormalizedItems $prev).Count; message = 'existing_quads_preserved' }
+          continue
+        }
+        throw
+      }
       Write-Json $res @{ ok = $true; count = @(Get-EisNormalizedItems $incoming).Count }
       continue
     }

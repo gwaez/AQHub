@@ -28,7 +28,9 @@ test("Eis-Json.ps1 encodes items as a JSON array of objects", () => {
   const helper = read("wizard/Eis-Json.ps1");
   assertAscii("Eis-Json.ps1", helper);
   assert.equal(braceBalance(helper), 0);
-  assert.match(helper, /function ConvertTo-EisJson/);
+  assert.match(helper, /function Test-EisCrmSource/);
+  assert.match(helper, /function Test-EisWouldWipeOrganization/);
+  assert.match(helper, /eis_refuse_overwrite/);
   assert.match(helper, /function Get-EisNormalizedItems/);
   assert.match(helper, /function Test-EisRawCorrupt/);
   assert.match(helper, /function Save-EisDoc/);
@@ -50,28 +52,35 @@ test("Start-Board Eisenhower GET/POST/feed use Save-EisDoc not ConvertTo-Json wr
   assert.match(src, /Save-EisDoc \$incoming \$eisenhowerPath/);
   assert.match(src, /Read-EisDoc \$eisenhowerPath/);
   assert.match(src, /Get-EisNormalizedItems/);
-  assert.match(src, /if \(\$real\.Count -eq 0\)/);
+  assert.match(src, /Test-EisCrmSource/);
+  assert.match(src, /existing_quads_preserved/);
+  assert.match(src, /never reset existing quads/);
+  assert.doesNotMatch(src, /if \(\$real\.Count -eq 0\)/);
   assert.doesNotMatch(src, /WriteAllText\(\$eisenhowerPath, \(\$payload \| ConvertTo-Json/);
   assert.doesNotMatch(src, /\$outObj \| ConvertTo-Json -Depth 10/);
   assert.doesNotMatch(src, /\$outJson = \(\$incoming \| ConvertTo-Json/);
   assert.doesNotMatch(src, /\$arr = New-Object object\[\] \$items\.Count/);
 });
 
-test("eisenhower.html never renders title undefined", () => {
+test("eisenhower.html import skips CRM and never renders title undefined", () => {
   const eis = read("eisenhower.html");
   assert.match(eis, /function itemTitle/);
   assert.match(eis, /function normalizeEisItems/);
   assert.match(eis, /بدون عنوان/);
   assert.match(eis, /normalizeEisItems\(j\.items\)/);
   assert.match(eis, /escapeHtml\(itemTitle\(it\)\)/);
+  assert.match(eis, /src === 'crm'/);
   assert.doesNotMatch(eis, /escapeHtml\(it\.title\|\|''\)/);
 });
 
-test("wrapped sample fixture unwraps to three titled items", () => {
+test("wrapped sample fixture unwraps to three titled items and keeps quads", () => {
   const j = JSON.parse(read("data/eisenhower.wrapped.sample.json")) as { items: unknown };
   const items = normalizeEisItems(j.items);
   assert.equal(items.length, 3);
   assert.ok(items.every((it) => it.id && itemTitle(it) !== "بدون عنوان"));
   assert.ok(items.every((it) => itemTitle(it) !== "undefined"));
   assert.equal(itemTitle(items[0]), "Inbox sample");
+  assert.equal(items.find((i) => i.id === "E-sample-do")?.quad, "do");
+  assert.equal(items.find((i) => i.id === "E-sample-sched")?.quad, "sched");
+  assert.equal(items.find((i) => i.id === "E-sample-inbox")?.quad, "inbox");
 });

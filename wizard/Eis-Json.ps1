@@ -272,9 +272,55 @@ function Test-EisJsonItemsArray {
   return $true
 }
 
+function Test-EisCrmSource {
+  param($Obj)
+  if ($null -eq $Obj) { return $false }
+  $src = ([string](Get-EisProp $Obj 'source')).Trim().ToLowerInvariant()
+  if ($src -eq 'crm') { return $true }
+  $ent = ([string](Get-EisProp $Obj 'crmEntity')).Trim().ToLowerInvariant()
+  if ($ent) { return $true }
+  $createdBy = ([string](Get-EisProp $Obj 'createdBy')).Trim()
+  if ($createdBy -eq 'CRM Sync') { return $true }
+  $sref = [string](Get-EisProp $Obj 'sourceRef')
+  if ($sref -match '(?i)(md_units|md_unit|md_offers|md_approvaltransactions|aqr_legalcases)\b') { return $true }
+  $tags = Get-EisProp $Obj 'tags'
+  foreach ($tg in @($tags)) {
+    if (([string]$tg).Trim().ToLowerInvariant() -eq 'crm') { return $true }
+  }
+  $title = [string](Get-EisProp $Obj 'title')
+  if ($title -match '(?i)crm\s*unit') { return $true }
+  return $false
+}
+
+function Test-EisWouldWipeOrganization {
+  param($PrevPayload, $NextPayload)
+  $prev = @(Get-EisNormalizedItems $PrevPayload)
+  $next = @(Get-EisNormalizedItems $NextPayload)
+  if ($prev.Count -gt 10 -and $next.Count -lt 2) { return $true }
+  $prevOrg = 0
+  $nextOrg = 0
+  foreach ($it in $prev) {
+    $q = ([string](Get-EisProp $it 'quad')).Trim().ToLowerInvariant()
+    if ($q -and $q -ne 'inbox') { $prevOrg++ }
+  }
+  foreach ($it in $next) {
+    $q = ([string](Get-EisProp $it 'quad')).Trim().ToLowerInvariant()
+    if ($q -and $q -ne 'inbox') { $nextOrg++ }
+  }
+  if ($prevOrg -ge 1 -and $nextOrg -eq 0 -and $prev.Count -ge 5) { return $true }
+  return $false
+}
+
 function Save-EisDoc {
   param($Payload, [string]$Path)
   if (-not $Path) { throw 'eis_path_required' }
+  if (Test-Path -LiteralPath $Path) {
+    $prev = $null
+    try { $prev = [IO.File]::ReadAllText($Path, [Text.Encoding]::UTF8) | ConvertFrom-Json } catch {}
+    if ($null -ne $prev -and (Test-EisWouldWipeOrganization $prev $Payload)) {
+      throw 'eis_refuse_overwrite'
+    }
+  }
   $json = ConvertTo-EisJson $Payload
   if (-not (Test-EisJsonItemsArray $json)) {
     $clean = Set-EisPayloadItems ([pscustomobject]@{
@@ -283,6 +329,11 @@ function Save-EisDoc {
       lastFeedAdded = (Get-EisProp $Payload 'lastFeedAdded')
       enrichedAt = [string](Get-EisProp $Payload 'enrichedAt')
     }) @(Get-EisNormalizedItems $Payload)
+    if (Test-Path -LiteralPath $Path) {
+      $prev2 = $null
+      try { $prev2 = [IO.File]::ReadAllText($Path, [Text.Encoding]::UTF8) | ConvertFrom-Json } catch {}
+      if ($null -ne $prev2 -and (Test-EisWouldWipeOrganization $prev2 $clean)) { throw 'eis_refuse_overwrite' }
+    }
     $json = ConvertTo-EisJson $clean
   }
   [IO.File]::WriteAllText($Path, $json, [Text.UTF8Encoding]::new($false))
@@ -292,11 +343,13 @@ function Save-EisDoc {
 function Read-EisDoc {
   param([string]$Path)
   $payload = [pscustomobject]@{ items = @(); updatedAt = '' }
+  $original = $null
   if ($Path -and (Test-Path -LiteralPath $Path)) {
     try {
       $txt = [IO.File]::ReadAllText($Path, [Text.Encoding]::UTF8)
       if (-not [string]::IsNullOrWhiteSpace($txt)) {
         $payload = $txt | ConvertFrom-Json
+        $original = $payload
       }
     } catch {
       $payload = [pscustomobject]@{ items = @(); updatedAt = '' }
@@ -306,10 +359,11 @@ function Read-EisDoc {
   $corrupt = Test-EisRawCorrupt $raw
   $items = @(Get-EisNormalizedItems $payload)
   $payload = Set-EisPayloadItems $payload $items
-  $repaired = $false
-  if ($corrupt) { $repaired = $true }
-  if ($Path -and $repaired) {
-    try { [void](Save-EisDoc $payload $Path) } catch {}
+  # Persist unwrap only when real items were recovered. Never write empty over a populated board.
+  if ($Path -and $corrupt -and $items.Count -gt 0) {
+    if ($null -eq $original -or -not (Test-EisWouldWipeOrganization $original $payload)) {
+      try { [void](Save-EisDoc $payload $Path) } catch {}
+    }
   }
   return $payload
 }

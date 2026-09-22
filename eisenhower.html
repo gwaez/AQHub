@@ -2499,6 +2499,9 @@ async function importOpenTasks(){
     list.forEach(t => {
       const st = String(t.status||t.state||'').toLowerCase();
       if (st.includes('done')||st.includes('closed')||st.includes('مكتمل')) return;
+      const src = String(t.source||t.crmEntity||'').toLowerCase();
+      const hay = [t.sourceRef, t.crmEntity, t.title, t.createdBy, (t.tags||[]).join(' ')].join(' ');
+      if (src === 'crm' || /md_units|md_unit|crm\s*unit|CRM Sync/i.test(hay)) return;
       const title = t.title||t.subject||t.id;
       if (!title) return;
       if (items.some(i => (t.id && i.taskId===t.id) || i.title===String(title))) return;
