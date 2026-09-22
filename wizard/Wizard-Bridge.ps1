@@ -648,7 +648,9 @@ function Invoke-WizardBridge {
     [string]$DataDir,
     [string]$Root = ''
   )
-  if (-not $Path.StartsWith('/api/v1/wizard/')) {
+  $Path = [string]$Path
+  if ($Path.EndsWith('/') -and $Path.Length -gt 1) { $Path = $Path.TrimEnd('/') }
+  if (-not $Path.StartsWith('/api/v1/wizard')) {
     return $false
   }
 
@@ -698,11 +700,20 @@ function Invoke-WizardBridge {
   }
 
   if ($Path -eq '/api/v1/wizard/mail/status' -and $Req.HttpMethod -eq 'GET') {
+    if (Get-Command Get-OutlookRunningStatus -ErrorAction SilentlyContinue) {
+      Write-Json $Res (Get-OutlookRunningStatus -DataDir $DataDir)
+      return $true
+    }
     $settings = Read-WizardSettings -DataDir $DataDir
     $outlook = $false
     $reason = 'outlook_not_running'
     try {
-      $app = [Runtime.InteropServices.Marshal]::GetActiveObject('Outlook.Application')
+      $app = $null
+      if (Get-Command Get-ActiveComObject -ErrorAction SilentlyContinue) {
+        $app = Get-ActiveComObject 'Outlook.Application'
+      } else {
+        $app = [Runtime.InteropServices.Marshal]::GetActiveObject('Outlook.Application')
+      }
       if ($app) { $outlook = $true; $reason = '' }
     } catch {
       $reason = 'outlook_not_running'

@@ -10,6 +10,7 @@ const read = (name: string) => readFileSync(join(repoRoot, name), "utf8");
 test("Watch-Board starts Start-Board hidden with -NoBrowser", () => {
   const watch = read("Watch-Board.ps1");
   assert.match(watch, /'-WindowStyle','Hidden'/);
+  assert.match(watch, /'-STA'/);
   assert.match(watch, /-WindowStyle Hidden/);
   assert.match(watch, /-NoBrowser/);
   assert.doesNotMatch(watch, /WindowStyle Minimized/);
@@ -25,7 +26,7 @@ test("Start-Board.ps1 does not always open a browser tab", () => {
   assert.match(start, /AQHUB_OPEN_BROWSER/);
   assert.match(start, /if \(\$wantOpen\)/);
   assert.doesNotMatch(start, /Start-Process "http:\/\/127\.0\.0\.1:\$Port\/board\.html"/);
-  assert.match(start, /Invoke-WizardBridge -Req \$req -Res \$res -Path \$path -DataDir \$dataDir -Root \$Root/);
+  assert.match(start, /Invoke-WizardBridge -Req \$req -Res \$res -Path \$pathNorm -DataDir \$dataDir -Root \$Root/);
 });
 
 test("Background VBS launches Watch-Board with WScript window style 0", () => {

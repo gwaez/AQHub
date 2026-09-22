@@ -7,7 +7,7 @@ data/wizard-settings.json
 data/crm-cache-*.json
 data/audit.jsonl
 data/jobs/
-data/*.log
+data/*.tmp
 desktop-wizard/node_modules/
 desktop-wizard/dist/
 desktop-wizard/src-tauri/target/

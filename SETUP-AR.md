@@ -206,7 +206,8 @@ npm run tauri dev
 | `git` غير معروف بعد التثبيت | أغلق PowerShell وافتحه من جديد، ثم `git --version` |
 | فشل `git clone` / طلب دخول | سجّل دخول GitHub في النافذة/المتصفح، أو تأكد أن لديك صلاحية على المستودع |
 | المنفذ مشغول / اللوحة لا تفتح | أعد تشغيل `Start-Board-Background.bat` أو أغلق نوافذ PowerShell القديمة للوحة إن وُجدت |
-| البريد لا يعمل | تأكد أن Outlook للكمبيوتر مفتوح ومسجّل الدخول على نفس الجهاز |
+| البريد لا يعمل | تأكد أن Outlook للكمبيوتر مفتوح ومسجّل الدخول على نفس الجهاز. ثم `POST /api/mail/sync` |
+| `POST /api/mail/sync` يعيد 500 فارغ | أعد تشغيل اللوحة من هذا الفرع؛ Outlook لازم يكون مفتوح. الخطأ JSON `{ok:false,error,message}` |
 | تحذير ExecutionPolicy | استخدم أمر الخطوة 5 مع `-ExecutionPolicy Bypass` كما هو مكتوب |
 
 ---
