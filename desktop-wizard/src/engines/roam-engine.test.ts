@@ -1,4 +1,7 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import test from "node:test";
 import { RoamEngine, clampToWorkArea, stepToward } from "./roam-engine.ts";
 
@@ -185,4 +188,11 @@ test("reduced steps are smaller than normal", () => {
   assert.ok(da <= 21 && da >= 1);
   assert.ok(db <= 9 && db >= 1);
   assert.ok(db < da);
+});
+
+test("character body is a window-drag hit, not drag-region=false", () => {
+  const html = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "..", "index.html"), "utf8");
+  assert.match(html, /id="petHit"[^>]*data-tauri-drag-region/);
+  assert.doesNotMatch(html, /id="character"[^>]*data-tauri-drag-region="false"/);
+  assert.match(html, /id="displayName"[^>]*data-tauri-drag-region="false"/);
 });

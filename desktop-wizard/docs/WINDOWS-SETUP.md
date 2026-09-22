@@ -132,7 +132,7 @@ powershell -ExecutionPolicy Bypass -File .\Setup-AQWizard.ps1 -DisableAutostart
 
 While **IDLE** or **WATCHING**, AQWizard slowly glides the transparent window left/right inside the **monitor work area** (taskbar-safe). This is not P8 app-tracking.
 
-- Drag the character: roam pauses during the drag and for ~2.5s after.
+- Drag the **character body or nameplate** (not only the thin top strip): roam pauses during the drag and for ~2.5s after, then resumes from the new spot. The display-name button stays a non-drag hit so double-click rename still works.
 - **SLEEPING** / **HIDDEN**: roam stops; the window stays put (sleep does not drift to a corner).
 - Settings → Character → **Roam around the desktop** (`roamEnabled`, default on). Animation level **Off** also freezes roam.
 - Moves call `set_character_position`. They do **not** write `tasks.json`. Glide steps are not PUT every frame; the last spot is saved when a roam target is reached or after a user drag.

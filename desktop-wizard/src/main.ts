@@ -454,6 +454,31 @@ async function main() {
     if (act === "OPEN_AQHUB") await run({ type: "OPEN_AQHUB" });
   });
 
+  const petHit = el("petHit");
+  let skipCharacterClick = false;
+  petHit.addEventListener("pointerdown", (ev) => {
+    if (ev.button !== 0) return;
+    if ((ev.target as HTMLElement).closest("button, input, textarea, select, a")) return;
+    const sx = ev.clientX;
+    const sy = ev.clientY;
+    const onMove = (e: PointerEvent) => {
+      if (Math.hypot(e.clientX - sx, e.clientY - sy) < 5) return;
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      skipCharacterClick = true;
+      idle.nudge(Date.now());
+      roam.noteDrag(Date.now());
+      if (machine.state !== "DRAGGING") void run({ type: "DRAG_START" });
+      if (isTauri) void getCurrentWindow().startDragging();
+    };
+    const onUp = () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+  });
+
   character.addEventListener("pointermove", (ev) => {
     idle.nudge(Date.now());
     if (!settings.current.followPointer) {
@@ -474,6 +499,10 @@ async function main() {
     if (machine.state === "WATCHING" && !matrix.visible) void run({ type: "IDLE" });
   });
   character.addEventListener("click", (ev) => {
+    if (skipCharacterClick) {
+      skipCharacterClick = false;
+      return;
+    }
     ev.preventDefault();
     idle.nudge(Date.now());
     openComposer("task");

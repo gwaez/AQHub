@@ -53,7 +53,20 @@ body.browser-preview {
   top: 0;
   left: 0;
   right: 0;
-  height: 18px;
+  height: 36px;
+}
+
+.pet-hit {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 200px;
+  min-height: 290px;
+  cursor: grab;
+  pointer-events: auto;
+}
+.pet-hit:active {
+  cursor: grabbing;
 }
 
 #stage.is-sleeping {
@@ -67,7 +80,8 @@ body.browser-preview {
   height: 250px;
   transform-origin: bottom center;
   user-select: none;
-  cursor: pointer;
+  cursor: grab;
+  pointer-events: auto;
   --look-x: 0px;
   --look-y: 0px;
   --char-scale: 1;
