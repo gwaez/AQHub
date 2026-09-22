@@ -73,6 +73,28 @@ body{color:var(--text);font-family:"IBM Plex Sans Arabic",system-ui,sans-serif;b
 .errbox{padding:10px;border:1px solid rgba(251,113,133,.4);border-radius:12px;background:rgba(251,113,133,.08);color:var(--hot);font-size:.8rem}
 .pending{padding:8px 10px;border:1px solid rgba(251,191,36,.4);border-radius:10px;background:rgba(251,191,36,.08);font-size:.75rem;margin:8px 12px 0}
 .pending b{color:var(--gold)}
+
+.rem-box{display:grid;gap:8px;margin-bottom:12px}
+.rem-item{display:flex;gap:8px;align-items:flex-start;padding:8px 10px;border:1px solid rgba(251,191,36,.35);border-radius:12px;background:rgba(251,191,36,.08)}
+.rem-item.done{opacity:.55;border-color:var(--line);background:rgba(0,0,0,.15)}
+.rem-item .when{font-size:.68rem;color:var(--gold);font-family:"JetBrains Mono",monospace}
+.rem-item .txt{font-size:.78rem;line-height:1.4;flex:1}
+.rem-add{display:grid;gap:6px;padding:8px;border:1px dashed rgba(251,191,36,.35);border-radius:12px;margin-bottom:10px}
+.rem-add input,.rem-add textarea{width:100%}
+.simple-tl{display:grid;gap:0;padding:4px 0 12px}
+.stl-item{display:grid;grid-template-columns:18px 1fr;gap:10px;position:relative;padding:0 0 14px 0}
+.stl-item:not(:last-child)::before{content:"";position:absolute;top:14px;bottom:0;right:8px;width:2px;background:rgba(34,211,238,.28)}
+.stl-dot{width:12px;height:12px;margin-top:4px;border-radius:50%;background:var(--cyan);box-shadow:0 0 0 3px rgba(34,211,238,.18)}
+.stl-body{background:rgba(15,32,51,.9);border:1px solid var(--line);border-radius:12px;padding:8px 10px}
+.stl-meta{font-size:.66rem;color:var(--muted);margin-bottom:4px;font-family:"JetBrains Mono",monospace}
+.stl-text{font-size:.8rem;line-height:1.45;white-space:pre-wrap;word-break:break-word}
+.sec-title{font-size:.72rem;font-weight:700;color:var(--muted);margin:12px 0 8px;letter-spacing:.02em}
+.audit-wrap{margin-top:8px}
+.audit-wrap summary{cursor:pointer;color:var(--muted);font-size:.75rem;font-weight:600;padding:6px 0}
+.audit-list{display:grid;gap:6px;padding:6px 0 10px}
+.audit-row{font-size:.7rem;color:var(--muted);padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:rgba(0,0,0,.18);line-height:1.35}
+
+.box-note{margin:10px 0 14px;padding:10px 12px;border-radius:12px;background:#f0fdfa;border:1px solid #99f6e4;color:#115e59;font-size:.92rem;line-height:1.45}.box-note b{display:block;margin-bottom:4px;color:#0f766e;font-size:.78rem}.box-note.empty{display:none}
 </style>
 </head>
 <body>
@@ -95,8 +117,26 @@ body{color:var(--text);font-family:"IBM Plex Sans Arabic",system-ui,sans-serif;b
   <div id="err" class="errbox" hidden></div>
   <div class="workspace">
     <section class="panel">
-      <div class="panel-h"><h2>الخط الزمني</h2><span class="chip" id="tlCount">0</span></div>
-      <div class="panel-b" id="timeline"></div>
+      <div class="panel-h"><h2>تعليقات وتذكيرات</h2><span class="chip" id="tlCount">0</span></div>
+      <div class="box-note empty" id="boxNote"><b>Box note</b><div id="boxNoteText"></div></div><div class="panel-b" id="timeline">
+        <div class="sec-title">تذكيرات على التاسك ده</div>
+        <div class="rem-add">
+          <input id="remDue" type="datetime-local" />
+          <textarea id="remText" rows="2" placeholder="تذكير مختصر… مثال: Folow up مع العميل"></textarea>
+          <button class="btn gold" type="button" id="btnAddRem">إضافة تذكير</button>
+        </div>
+        <div class="rem-box" id="remList"></div>
+        <div class="sec-title">تايم لاين التعليقات</div>
+        <div class="simple-tl" id="commentTl"></div>
+        <div class="rem-add">
+          <textarea id="commentText" rows="2" placeholder="اكتب تعليق واضح…"></textarea>
+          <button class="btn primary" type="button" id="btnAddComment">إضافة تعليق</button>
+        </div>
+        <details class="audit-wrap">
+          <summary>سجل النظام (Audit) — للتفاصيل التقنية</summary>
+          <div class="audit-list" id="auditList"></div>
+        </details>
+      </div>
     </section>
     <section class="panel">
       <div class="panel-h"><h2>محادثة الوكيل</h2><span class="chip warn" id="pendingBadge" hidden>إرسال معلّق</span></div>
@@ -155,6 +195,14 @@ function seedDraft(force){
   }
 }
 
+function renderBoxNote(){
+  var el=document.getElementById('boxNote');
+  var tx=document.getElementById('boxNoteText');
+  if(!el||!tx||!task) return;
+  var n=String(task.boxNote||'').trim();
+  if(!n){ el.classList.add('empty'); tx.textContent=''; return; }
+  el.classList.remove('empty'); tx.textContent=n;
+}
 function renderMeta(){
   const pri=task.priority||'medium';
   const priCls=pri==='urgent'||pri==='high'?'hot':(pri==='medium'?'warn':'');
@@ -167,23 +215,122 @@ function renderMeta(){
     (task.pendingTrash?'<span class="chip hot">pending trash</span>':'');
 }
 
-function renderTimeline(){
-  const box=$('timeline');
-  const events=Array.isArray(task.timeline)?task.timeline.slice():[];
-  $('tlCount').textContent=String(events.length);
-  if(!events.length){ box.innerHTML='<div class="empty">مفيش أحداث لسه — ابدأ بالشات</div>'; return }
-  let html='<div class="tl-wrap">';
-  events.forEach((ev,i)=>{
-    const type=ev.type||'system';
-    const ico=TL_ICON[type]||'•';
-    const lab=TL_LABEL[type]||type;
-    const side=(i%2===0)?'right':'left';
-    const card='<div class="card"><div class="tl-meta"><span class="tl-type">'+esc(lab)+'</span> · '+esc(ev.actor||'')+' · '+esc(fmtAt(ev.at))+'</div><div class="tl-text">'+esc(ev.text||'')+'</div></div>';
-    html+='<div class="tl-item '+side+'"><div class="tl-side a">'+(side==='left'?card:'')+'</div><div class="tl-node">'+ico+'</div><div class="tl-side b">'+(side==='right'?card:'')+'</div></div>';
+function isCommentEvent(ev){
+  const t=String(ev.type||'').toLowerCase();
+  return t==='comment'||t==='remind'||t==='reminder'||t==='note';
+}
+function isAuditEvent(ev){ return !isCommentEvent(ev) }
+
+function renderReminders(){
+  const box=$('remList'); if(!box) return;
+  const list=Array.isArray(task.reminders)?task.reminders.slice():[];
+  if(!list.length){ box.innerHTML='<div class="empty">مفيش تذكيرات — زوّد تذكير فوق</div>'; return }
+  list.sort((a,b)=>String(a.dueAt||'').localeCompare(String(b.dueAt||'')));
+  box.innerHTML=list.map(r=>{
+    const done=!!r.done;
+    return '<div class="rem-item'+(done?' done':'')+'">'+
+      '<div style="flex:1"><div class="when">'+esc(fmtAt(r.dueAt)||'بدون موعد')+'</div>'+
+      '<div class="txt">'+esc(r.text||'')+'</div></div>'+
+      (done?'':'<button class="btn ghost" type="button" data-rem-done="'+esc(r.id)+'">تم</button>')+
+      '</div>';
+  }).join('');
+  box.querySelectorAll('[data-rem-done]').forEach(btn=>{
+    btn.onclick=()=>completeReminder(btn.getAttribute('data-rem-done'));
   });
-  html+='</div>';
-  box.innerHTML=html;
-  box.scrollTop=box.scrollHeight;
+}
+
+function renderCommentTimeline(){
+  const box=$('commentTl'); if(!box) return;
+  const events=(Array.isArray(task.timeline)?task.timeline:[]).filter(isCommentEvent);
+  $('tlCount').textContent=String(events.length);
+  if(!events.length){ box.innerHTML='<div class="empty">مفيش تعليقات لسه — اكتب تعليق تحت</div>'; return }
+  const sorted=events.slice().sort((a,b)=>String(a.at||'').localeCompare(String(b.at||'')));
+  box.innerHTML=sorted.map(ev=>{
+    const lab=ev.type==='remind'||ev.type==='reminder'?'تذكير':'تعليق';
+    return '<div class="stl-item"><div class="stl-dot"></div><div class="stl-body">'+
+      '<div class="stl-meta">'+esc(lab)+' · '+esc(ev.actor||'أنت')+' · '+esc(fmtAt(ev.at))+'</div>'+
+      '<div class="stl-text">'+esc(ev.text||'')+'</div></div></div>';
+  }).join('');
+}
+
+function renderAudit(){
+  const box=$('auditList'); if(!box) return;
+  const events=(Array.isArray(task.timeline)?task.timeline:[]).filter(isAuditEvent);
+  if(!events.length){ box.innerHTML='<div class="empty">فاضي</div>'; return }
+  const sorted=events.slice().sort((a,b)=>String(b.at||'').localeCompare(String(a.at||'')));
+  box.innerHTML=sorted.map(ev=>{
+    const lab=TL_LABEL[ev.type]||ev.type||'system';
+    return '<div class="audit-row"><b>'+esc(lab)+'</b> · '+esc(ev.actor||'')+' · '+esc(fmtAt(ev.at))+'<br>'+esc(ev.text||'')+'</div>';
+  }).join('');
+}
+
+function renderTimeline(){
+  renderReminders();
+  renderCommentTimeline();
+  renderAudit();
+}
+
+async function persistTaskPatch(mutator){
+  const data=await (await fetch('/api/tasks')).json();
+  const t=(data.tasks||[]).find(x=>x.id===task.id); if(!t) throw new Error('task missing');
+  mutator(t);
+  t.updatedAt=new Date().toISOString();
+  data.updatedAt=t.updatedAt;
+  await api('/api/tasks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+  task=t;
+  renderAll();
+}
+
+async function addComment(){
+  const text=($('commentText').value||'').trim();
+  if(!text){ toast('اكتب تعليق',''); return }
+  try{
+    await persistTaskPatch(t=>{
+      if(!Array.isArray(t.timeline)) t.timeline=[];
+      if(!Array.isArray(t.comments)) t.comments=[];
+      const at=new Date().toISOString();
+      const ev={id:'TL-'+Date.now(),type:'comment',text,at,actor:'User'};
+      t.timeline.push(ev);
+      t.comments.push({text,by:'user',at});
+      t.hasUserComment=true;
+    });
+    $('commentText').value='';
+    toast('اتسجل التعليق','ظاهر في التايم لاين');
+  }catch(e){ toast('فشل التعليق', e.message||e) }
+}
+
+async function addReminder(){
+  const text=($('remText').value||'').trim();
+  const dueRaw=$('remDue').value;
+  if(!text){ toast('اكتب نص التذكير',''); return }
+  if(!dueRaw){ toast('اختار معاد',''); return }
+  const dueAt=new Date(dueRaw).toISOString();
+  try{
+    await persistTaskPatch(t=>{
+      if(!Array.isArray(t.reminders)) t.reminders=[];
+      if(!Array.isArray(t.timeline)) t.timeline=[];
+      const at=new Date().toISOString();
+      const id='REM-'+Date.now();
+      t.reminders.push({id,text,dueAt,createdAt:at,done:false,by:'user'});
+      t.timeline.push({id:'TL-'+Date.now(),type:'remind',text:'تذكير: '+text+' @ '+dueAt,at,actor:'User'});
+      t.hasReminder=true;
+      const tags=Array.isArray(t.tags)?t.tags.filter(x=>x!=='has-reminder'):[];
+      tags.push('has-reminder');
+      t.tags=tags;
+    });
+    $('remText').value='';
+    toast('اتضاف التذكير','هيبان هنا وفي اللوحة');
+  }catch(e){ toast('فشل التذكير', e.message||e) }
+}
+
+async function completeReminder(id){
+  try{
+    await persistTaskPatch(t=>{
+      (t.reminders||[]).forEach(r=>{ if(r.id===id) r.done=true });
+      if(!Array.isArray(t.timeline)) t.timeline=[];
+      t.timeline.push({id:'TL-'+Date.now(),type:'remind',text:'تم التذكير '+id,at:new Date().toISOString(),actor:'User'});
+    });
+  }catch(e){ toast('فشل', e.message||e) }
 }
 
 function renderConfirm(){
@@ -236,7 +383,7 @@ function renderAll(){
   $('taskIdLabel').textContent=task.id||'—';
   if(!dirtyTitle) $('fTitle').value=task.title||'';
   document.title=(task.id||'')+' · '+(task.title||'غرفة التاسك');
-  renderMeta(); renderTimeline(); renderChat();
+  renderMeta(); renderBoxNote(); renderTimeline(); renderChat();
 }
 
 async function loadTask(){
@@ -324,6 +471,9 @@ $('suggestChips').onclick=e=>{ const b=e.target.closest('.schip'); if(b) sendCha
 $('btnOpenSrc').onclick=openSource;
 $('btnSaveTitle').onclick=saveTitle;
 $('fTitle').addEventListener('input',()=>{ dirtyTitle=true; $('btnSaveTitle').disabled=false });
+
+$('btnAddRem').onclick=()=>addReminder();
+$('btnAddComment').onclick=()=>addComment();
 loadTask();
 </script>
 </body>

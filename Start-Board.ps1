@@ -5,13 +5,17 @@ if (-not $Root) { $Root = (Get-Location).Path }
 $Port = 8766
 $dataDir = Join-Path $Root 'data'
 $tasksPath = Join-Path $dataDir 'tasks.json'
+$eisenhowerPath = Join-Path $dataDir 'eisenhower.json'
 $auditPath = Join-Path $dataDir 'audit.jsonl'
 $jobsDir = Join-Path $dataDir 'jobs'
 $crmConfigPath = Join-Path $dataDir 'crm-config.json'
 New-Item -ItemType Directory -Force -Path $dataDir | Out-Null
+if (-not (Test-Path $eisenhowerPath)) {
+  [IO.File]::WriteAllText($eisenhowerPath, '{"items":[],"updatedAt":""}', [Text.UTF8Encoding]::new($false))
+}
 New-Item -ItemType Directory -Force -Path $jobsDir | Out-Null
 if (-not (Test-Path $crmConfigPath)) {
-  $crmSeed = '{"orgUrl":"https://aqaar.crm15.dynamics.com","appId":"944e68b1-308d-4e3a-86c7-cf0452397938","environment":"prod","uatOrgUrl":"https://operations-aqaaruat-1.crm15.dynamics.com","tenantId":"common","clientId":"","accessToken":"","refreshToken":"","tokenExpiresAt":"","authMode":"pac","authStatus":"pending_auth","deviceCode":"","deviceCodeExpiresAt":"","userCode":"","verificationUrl":"","lastSyncAt":"","lastError":"pending_auth","lastPreviewAt":"","pacUser":"","defaultEntities":"md_units,md_offers,md_approvaltransactions,aqr_legalcases,leads,opportunities,accounts"}'
+  $crmSeed = '{"orgUrl":"https://aqaar.crm15.dynamics.com","appId":"944e68b1-308d-4e3a-86c7-cf0452397938","environment":"prod","uatOrgUrl":"https://operations-aqaaruat-1.crm15.dynamics.com","tenantId":"cd686870-f362-4a4a-9a97-23d4437aadb7","clientId":"9cee029c-6210-4654-90bb-17e6e9d36617","redirectUri":"http://localhost","accessToken":"","refreshToken":"","tokenExpiresAt":"","authMode":"pac","authStatus":"pending_auth","deviceCode":"","deviceCodeExpiresAt":"","userCode":"","verificationUrl":"","lastSyncAt":"","lastError":"pending_auth","lastPreviewAt":"","pacUser":"Ahmed.Mahmoud@aqaar.com","defaultEntities":"md_units,md_offers,md_approvaltransactions,aqr_legalcases,leads,opportunities,accounts"}'
   [IO.File]::WriteAllText($crmConfigPath, $crmSeed, [Text.UTF8Encoding]::new($false))
 } else {
   # Ensure known prod org is present when config exists but orgUrl empty
@@ -21,6 +25,9 @@ if (-not (Test-Path $crmConfigPath)) {
     if (-not $existingCfg.orgUrl) { $existingCfg | Add-Member -NotePropertyName orgUrl -NotePropertyValue 'https://aqaar.crm15.dynamics.com' -Force; $changed = $true }
     if (-not ($existingCfg.PSObject.Properties['appId']) -or -not $existingCfg.appId) { $existingCfg | Add-Member -NotePropertyName appId -NotePropertyValue '944e68b1-308d-4e3a-86c7-cf0452397938' -Force; $changed = $true }
     if (-not ($existingCfg.PSObject.Properties['environment']) -or -not $existingCfg.environment) { $existingCfg | Add-Member -NotePropertyName environment -NotePropertyValue 'prod' -Force; $changed = $true }
+    if (-not ($existingCfg.PSObject.Properties['clientId']) -or -not $existingCfg.clientId) { $existingCfg | Add-Member -NotePropertyName clientId -NotePropertyValue '9cee029c-6210-4654-90bb-17e6e9d36617' -Force; $changed = $true }
+    if (-not ($existingCfg.PSObject.Properties['tenantId']) -or -not $existingCfg.tenantId -or $existingCfg.tenantId -eq 'common') { $existingCfg | Add-Member -NotePropertyName tenantId -NotePropertyValue 'cd686870-f362-4a4a-9a97-23d4437aadb7' -Force; $changed = $true }
+    if (-not ($existingCfg.PSObject.Properties['redirectUri']) -or -not $existingCfg.redirectUri) { $existingCfg | Add-Member -NotePropertyName redirectUri -NotePropertyValue 'http://localhost' -Force; $changed = $true }
     if ($changed) {
       $jsonFix = $existingCfg | ConvertTo-Json -Depth 6 -Compress
       [IO.File]::WriteAllText($crmConfigPath, $jsonFix, [Text.UTF8Encoding]::new($false))
@@ -28,9 +35,7 @@ if (-not (Test-Path $crmConfigPath)) {
   } catch {}
 }
 if (-not (Test-Path $tasksPath)) {
-  $sampleTasks = Join-Path $dataDir 'tasks.sample.json'
-  if (Test-Path $sampleTasks) { Copy-Item $sampleTasks $tasksPath -Force }
-  else { Set-Content -Path $tasksPath -Value '{"version":1,"title":"Aqaar Command Board","tasks":[]}' -Encoding Ascii }
+  Set-Content -Path $tasksPath -Value '{"version":1,"title":"Aqaar Command","tasks":[]}' -Encoding Ascii
 }
 if (-not (Test-Path $auditPath)) { New-Item -ItemType File -Path $auditPath | Out-Null }
 
@@ -96,7 +101,13 @@ function Write-FileResp($res, $path) {
   }
 }
 function Write-Json($res, $obj, $code = 200) {
-  $json = $obj | ConvertTo-Json -Depth 12 -Compress
+  try {
+    $json = $obj | ConvertTo-Json -Depth 8 -Compress
+  } catch {
+    $json = (@{ ok = $false; error = 'json_serialize_failed'; message = $_.Exception.Message } | ConvertTo-Json -Compress)
+    $code = 500
+  }
+  if ($null -eq $json) { $json = '{"ok":false,"error":"empty_json"}'; $code = 500 }
   Write-Text $res $code 'application/json; charset=utf-8' $json
 }
 function Get-OutlookApp {
@@ -1028,8 +1039,9 @@ function Get-DefaultCrmConfig {
     appId = '944e68b1-308d-4e3a-86c7-cf0452397938'
     environment = 'prod'
     uatOrgUrl = 'https://operations-aqaaruat-1.crm15.dynamics.com'
-    tenantId = 'common'
-    clientId = ''
+    tenantId = 'cd686870-f362-4a4a-9a97-23d4437aadb7'
+    clientId = '9cee029c-6210-4654-90bb-17e6e9d36617'
+    redirectUri = 'http://localhost'
     accessToken = ''
     refreshToken = ''
     tokenExpiresAt = ''
@@ -1285,8 +1297,8 @@ function Get-CrmEntitySpec([string]$name) {
     { $_ -in @('md_units','md_unit') } {
       return @{
         key = 'md_units'; set = 'md_units'; idField = 'md_unitid'; etn = 'md_unit'; kind = 'custom'
-        select = 'md_unitid,md_name,md_unitnumber,statuscode,createdon,modifiedon'
-        nameFields = @('md_name','md_unitnumber','md_code')
+        select = 'md_unitid,md_name,statuscode,createdon,modifiedon'
+        nameFields = @('md_name','aqr_ajreunitno','aqr_tasdeequnitnumber','md_productnumber','md_code')
       }
     }
     { $_ -in @('md_offers','md_offer') } {
@@ -1610,6 +1622,986 @@ function Get-CrmPreview([string[]]$entities) {
 }
 
 
+
+# --- Mawjan CRM panel (Phase 1: summary counts) ---
+function Ensure-CrmAccessToken {
+  $cfg = Load-CrmConfig
+  $hasToken = -not [string]::IsNullOrWhiteSpace([string]$cfg.accessToken)
+  $expired = $false
+  if ($hasToken) { $expired = Test-CrmTokenExpiry $cfg }
+  if ($hasToken -and -not $expired) {
+    $cfg.authStatus = 'ready'
+    return @{ ok = $true; cfg = $cfg; source = 'cached' }
+  }
+  $clientId = [string]$cfg.clientId
+  if ([string]::IsNullOrWhiteSpace($clientId)) { $clientId = '9cee029c-6210-4654-90bb-17e6e9d36617' }
+  $tenantId = [string]$cfg.tenantId
+  if ([string]::IsNullOrWhiteSpace($tenantId) -or $tenantId -eq 'common') { $tenantId = 'cd686870-f362-4a4a-9a97-23d4437aadb7' }
+  $redirect = 'http://localhost'
+  if ($cfg.PSObject.Properties['redirectUri'] -and $cfg.redirectUri) { $redirect = [string]$cfg.redirectUri }
+  $org = Normalize-CrmOrgUrl ([string]$cfg.orgUrl)
+  if (-not $org) { $org = 'https://aqaar.crm15.dynamics.com' }
+  $scope = ($org.TrimEnd('/') + '/.default')
+  $msalOk = $false
+  try {
+    $mod = Get-Module -ListAvailable -Name MSAL.PS | Select-Object -First 1
+    if ($mod) {
+      Import-Module MSAL.PS -ErrorAction Stop
+      $msalOk = $true
+    }
+  } catch { $msalOk = $false }
+  if (-not $msalOk) {
+    if (-not $hasToken) {
+      $cfg.authStatus = 'pending_auth'
+      $cfg.lastError = 'pending_auth: no token and MSAL.PS not available'
+      Save-CrmConfig $cfg
+      return @{ ok = $false; error = 'pending_auth'; authStatus = 'pending_auth'; message = 'Token missing. Install/import MSAL.PS or paste token via /api/crm/auth/token'; cfg = $cfg }
+    }
+    $cfg.authStatus = 'pending_auth'
+    $cfg.lastError = 'pending_auth: token expired and MSAL.PS not available'
+    Save-CrmConfig $cfg
+    return @{ ok = $false; error = 'pending_auth'; authStatus = 'pending_auth'; message = 'Token expired. Refresh via MSAL.PS or paste a new token'; cfg = $cfg }
+  }
+  $token = $null
+  $source = 'msal_silent'
+  try {
+    $token = Get-MsalToken -ClientId $clientId -TenantId $tenantId -RedirectUri $redirect -Scopes @($scope) -Silent -ErrorAction Stop
+  } catch {
+    # Never Interactive inside the HTTP server loop (blocks/crashes listener).
+    $cfg.authStatus = 'pending_auth'
+    $cfg.lastError = ('pending_auth: MSAL silent failed: ' + $_.Exception.Message)
+    Save-CrmConfig $cfg
+    return @{ ok = $false; error = 'pending_auth'; authStatus = 'pending_auth'; message = $_.Exception.Message; cfg = $cfg }
+  }
+  if (-not $token -or -not $token.AccessToken) {
+    $cfg.authStatus = 'pending_auth'
+    $cfg.lastError = 'pending_auth: MSAL returned empty token'
+    Save-CrmConfig $cfg
+    return @{ ok = $false; error = 'pending_auth'; authStatus = 'pending_auth'; cfg = $cfg }
+  }
+  $cfg.accessToken = [string]$token.AccessToken
+  $cfg.clientId = $clientId
+  $cfg.tenantId = $tenantId
+  $cfg.authMode = 'msal'
+  $cfg.authStatus = 'ready'
+  $cfg.lastError = ''
+  try {
+    if ($token.ExpiresOn) {
+      $cfg.tokenExpiresAt = ([datetime]$token.ExpiresOn).ToUniversalTime().ToString('o')
+    } else {
+      $cfg.tokenExpiresAt = (Get-Date).ToUniversalTime().AddHours(1).ToString('o')
+    }
+  } catch {
+    $cfg.tokenExpiresAt = (Get-Date).ToUniversalTime().AddHours(1).ToString('o')
+  }
+  Save-CrmConfig $cfg
+  return @{ ok = $true; cfg = $cfg; source = $source }
+}
+
+function Get-MawjanUnitAttributeMeta([string]$orgUrl, [string]$accessToken) {
+  $path = "/EntityDefinitions(LogicalName='md_unit')/Attributes?`$select=LogicalName,DisplayName,AttributeType,SchemaName&`$filter=AttributeOf eq null"
+  try {
+    $resp = Invoke-DataverseGet $orgUrl $accessToken $path
+    return @($resp.value)
+  } catch {
+    return @()
+  }
+}
+
+function Get-MawjanSaleEntityHints([string]$orgUrl, [string]$accessToken) {
+  $path = "/EntityDefinitions?`$select=LogicalName,DisplayName,EntitySetName,PrimaryIdAttribute,PrimaryNameAttribute&`$filter=contains(LogicalName,'sale') or contains(LogicalName,'unit')"
+  try {
+    $resp = Invoke-DataverseGet $orgUrl $accessToken $path
+    $rows = @()
+    foreach ($e in @($resp.value)) {
+      $ln = [string]$e.LogicalName
+      if ($ln -match 'sale' -or $ln -match 'unit') {
+        $dn = ''
+        try { $dn = [string]$e.DisplayName.UserLocalizedLabel.Label } catch {}
+        $rows += @{ logicalName = $ln; entitySetName = [string]$e.EntitySetName; primaryId = [string]$e.PrimaryIdAttribute; primaryName = [string]$e.PrimaryNameAttribute; displayName = $dn }
+      }
+    }
+    return $rows
+  } catch {
+    return @()
+  }
+}
+
+function Pick-MawjanProjectField($attrs) {
+  $names = @($attrs | ForEach-Object { [string]$_.LogicalName })
+  $preferred = @(
+    'md_project','md_projectid','_md_project_value','md_projectname','md_projectnamear',
+    'md_community','md_development','md_masterproject','aqr_project','md_scheme'
+  )
+  foreach ($p in $preferred) {
+    if ($names -contains $p) { return $p }
+    $lookup = '_' + $p.TrimStart('_') 
+    if (-not $p.StartsWith('_') -and ($names -contains ('_' + $p + '_value'))) { return ('_' + $p + '_value') }
+  }
+  foreach ($n in $names) {
+    if ($n -match 'project' -or $n -match 'mawjan' -or $n -match 'community' -or $n -match 'development') {
+      if ($n -notmatch 'created|modified|owner|state|status') { return $n }
+    }
+  }
+  return ''
+}
+
+function Pick-MawjanBedroomField($attrs) {
+  $names = @($attrs | ForEach-Object { [string]$_.LogicalName })
+  $preferred = @('md_bedroom','md_bedrooms','md_noofbedrooms','md_numberofbedrooms','md_unittype','md_type','md_propertytype','md_unitcategory','md_layout','md_rooms')
+  foreach ($p in $preferred) {
+    if ($names -contains $p) { return $p }
+  }
+  foreach ($n in $names) {
+    if ($n -match 'bedroom' -or $n -match 'unittype' -or $n -match 'propertytype' -or $n -match 'layout') {
+      if ($n -notmatch 'created|modified|owner') { return $n }
+    }
+  }
+  return ''
+}
+
+function Pick-MawjanSoldField($attrs) {
+  $names = @($attrs | ForEach-Object { [string]$_.LogicalName })
+  $preferred = @('md_sold','md_issold','md_unitsold','md_availability','md_unitstatus','md_salestatus','statuscode','statecode')
+  foreach ($p in $preferred) {
+    if ($names -contains $p) { return $p }
+  }
+  foreach ($n in $names) {
+    if ($n -match 'sold' -or $n -match 'availab' -or $n -match 'salestatus') { return $n }
+  }
+  if ($names -contains 'statuscode') { return 'statuscode' }
+  return 'statuscode'
+}
+
+function Get-AttrFormatted($row, [string]$field) {
+  if ([string]::IsNullOrWhiteSpace($field)) { return '' }
+  $ann = $field + '@OData.Community.Display.V1.FormattedValue'
+  if ($row.PSObject.Properties[$ann] -and $row.$ann) { return [string]$row.$ann }
+  $ann2 = '_' + $field.TrimStart('_')
+  if (-not $field.StartsWith('_') -and $field -notmatch '_value$') {
+    $lv = '_' + $field + '_value'
+    $annL = $lv + '@OData.Community.Display.V1.FormattedValue'
+    if ($row.PSObject.Properties[$annL] -and $row.$annL) { return [string]$row.$annL }
+    if ($row.PSObject.Properties[$lv] -and $row.$lv) { return [string]$row.$lv }
+  }
+  if ($row.PSObject.Properties[$field] -and $null -ne $row.$field) { return [string]$row.$field }
+  return ''
+}
+
+function Test-MawjanProjectMatch([string]$text) {
+  if ([string]::IsNullOrWhiteSpace($text)) { return $false }
+  $t = $text.ToLowerInvariant()
+  if ($t -match 'mawjan') { return $true }
+  # Arabic Mawjan (UTF-8 bytes as escaped in PS via char codes built at runtime)
+  $ar = ([string]([char]0x0645) + [char]0x0648 + [char]0x062C + [char]0x0627 + [char]0x0646)
+  if ($text.Contains($ar)) { return $true }
+  return $false
+}
+
+function Classify-MawjanBedroom([string]$raw) {
+  if ([string]::IsNullOrWhiteSpace($raw)) { return 'unknown' }
+  $t = $raw.Trim().ToLowerInvariant()
+  if ($t -match 'studio' -or $t -eq '0' -or $t -match '^0\s*bed') { return 'studio' }
+  if ($t -match '2\s*bed' -or $t -eq '2' -or $t -match 'two') { return '2bedroom' }
+  if ($t -match '1\s*bed' -or $t -eq '1' -or $t -match 'one' -or $t -match '1br') { return '1bedroom' }
+  if ($t -match '3\s*bed' -or $t -eq '3') { return '3bedroom' }
+  # Arabic studio / bedroom cues via codepoints
+  $studioAr = ([string]([char]0x0633) + [char]0x062A)  # partial; also check english above
+  if ($t -match 'studio') { return 'studio' }
+  return ('other:' + $raw.Trim())
+}
+
+function Test-MawjanUnitSold($row, [string]$soldField) {
+  $fmt = Get-AttrFormatted $row $soldField
+  $raw = ''
+  if ($row.PSObject.Properties[$soldField]) { $raw = [string]$row.$soldField }
+  $blob = ($fmt + ' ' + $raw).ToLowerInvariant()
+  if ($blob -match 'sold' -or $blob -match 'reserved' -and $blob -match 'sold') { return $true }
+  if ($blob -match 'sold') { return $true }
+  # Arabic sold
+  $soldAr = ([string]([char]0x0645) + [char]0x0628 + [char]0x064A + [char]0x0639)
+  if (($fmt + $raw).Contains($soldAr)) { return $true }
+  if ($soldField -eq 'statecode' -and $raw -eq '1') { return $true }
+  # Common Dataverse statuscode for inactive custom often 2; only treat as sold if formatted says sold
+  if ($soldField -eq 'md_sold' -or $soldField -eq 'md_issold' -or $soldField -eq 'md_unitsold') {
+    if ($raw -eq '1' -or $raw -eq 'True' -or $raw -eq 'true') { return $true }
+  }
+  if ($soldField -eq 'md_availability' -and ($blob -match 'sold' -or $blob -match 'unavailable' -or $blob -match 'not available')) { return $true }
+  return $false
+}
+
+function Get-MawjanUnitsRaw([string]$orgUrl, [string]$accessToken, [string]$selectList) {
+  $select = $selectList
+  if ([string]::IsNullOrWhiteSpace($select)) { $select = 'md_unitid,md_name,statuscode,statecode' }
+  $path = '/md_units?$select=' + [uri]::EscapeDataString($select) + '&$top=5000'
+  $all = @()
+  $next = $path
+  $guard = 0
+  while ($next -and $guard -lt 20) {
+    $guard++
+    $resp = Invoke-DataverseGet $orgUrl $accessToken $next
+    if ($resp.value) { $all += @($resp.value) }
+    $nextLink = $null
+    if ($resp.PSObject.Properties['@odata.nextLink']) { $nextLink = [string]$resp.'@odata.nextLink' }
+    if ($nextLink) {
+      $base = Get-CrmApiBase $orgUrl
+      if ($nextLink.StartsWith($base)) { $next = $nextLink.Substring($base.Length) }
+      elseif ($nextLink -match '/api/data/v9\.2(.+)$') { $next = $Matches[1] }
+      else { $next = $null }
+    } else { $next = $null }
+  }
+  return $all
+}
+
+function Get-MawjanCrmSummary {
+  $access = Ensure-CrmAccessToken
+  if (-not $access.ok) {
+    return @{ ok = $false; error = [string]$access.error; authStatus = [string]$access.authStatus; message = [string]$access.message }
+  }
+  $cfg = $access.cfg
+  $org = Normalize-CrmOrgUrl ([string]$cfg.orgUrl)
+  if (-not $org) { $org = 'https://aqaar.crm15.dynamics.com' }
+  $token = [string]$cfg.accessToken
+
+  # Prefer cached live summary if fresh (< 30 min)
+  $cachePath = Join-Path $dataDir 'mawjan-summary.json'
+  if (Test-Path $cachePath) {
+    try {
+      $cached = [IO.File]::ReadAllText($cachePath, [Text.Encoding]::UTF8) | ConvertFrom-Json
+      if ($cached.ok -and $cached.total -and -not $cached.demo) {
+        $cached | Add-Member -NotePropertyName authStatus -NotePropertyValue 'ready' -Force
+        $cached | Add-Member -NotePropertyName source -NotePropertyValue 'cache' -Force
+        return $cached
+      }
+    } catch {}
+  }
+
+  $select = 'md_unitid,md_name,aqr_projectname,md_bedrooms,statuscode,md_subtype'
+  $filter = [uri]::EscapeDataString("contains(aqr_projectname,'Mawjan')")
+  $path = '/md_units?$select=' + $select + '&$filter=' + $filter
+  $rows = @()
+  $next = $path
+  while ($next) {
+    $page = Invoke-DataverseGet $org $token $next
+    if ($page.value) { $rows += @($page.value) }
+    if ($page.PSObject.Properties['@odata.nextLink'] -and $page.'@odata.nextLink') {
+      $full = [string]$page.'@odata.nextLink'
+      $idx = $full.IndexOf('/api/data/v9.2/')
+      if ($idx -ge 0) { $next = $full.Substring($idx + '/api/data/v9.2'.Length) } else { $next = $null }
+    } else { $next = $null }
+  }
+
+  function Get-SubLabel($u) {
+    $ann = 'md_subtype@OData.Community.Display.V1.FormattedValue'
+    if ($u.PSObject.Properties[$ann] -and $u.$ann) { return [string]$u.$ann }
+    return [string]$u.md_subtype
+  }
+  function Test-Res($u) {
+    $s = (Get-SubLabel $u).ToUpperInvariant()
+    return ($s -match 'STUDIO|BEDROOM|PENT')
+  }
+  function Get-Bucket($u) {
+    $s = (Get-SubLabel $u).ToUpperInvariant()
+    if ($s -match 'STUDIO') { return 'studio' }
+    if ($s -match '1 BEDROOM') { return 'br1' }
+    if ($s -match '2 BEDROOM') { return 'br2' }
+    if ($s -match '3 BEDROOM') { return 'br3' }
+    if ($s -match 'PENT') { return 'pent' }
+    return 'other'
+  }
+
+  $res = @($rows | Where-Object { Test-Res $_ })
+  $soldRes = @($res | Where-Object { $_.statuscode -eq 100000004 })
+  $availRes = @($res | Where-Object { $_.statuscode -eq 100000000 })
+  $b = @{ studio = 0; br1 = 0; br2 = 0; br3 = 0; pent = 0; other = 0 }
+  foreach ($u in $availRes) { $k = Get-Bucket $u; $b[$k] = [int]$b[$k] + 1 }
+
+  $total = $res.Count
+  $sold = $soldRes.Count
+  $remaining = $availRes.Count
+  $result = @{
+    ok = $true
+    demo = $false
+    authStatus = 'ready'
+    project = 'Mawjan'
+    projectFilterField = 'aqr_projectname'
+    bedroomTypeField = 'md_subtype'
+    soldField = 'statuscode'
+    soldRule = 'Sold (100000004) / Available (100000000) / residential only'
+    total = $total
+    sold = $sold
+    remaining = $remaining
+    totalAllIncludingParking = $rows.Count
+    occupancyPct = $(if ($total) { [math]::Round(100.0 * $sold / $total, 1) } else { 0 })
+    remainingBreakdown = @{
+      studio = [int]$b.studio
+      '1bedroom' = [int]$b.br1
+      '2bedroom' = [int]$b.br2
+      other = @{ '3bedroom' = [int]$b.br3 }
+    }
+    remainingByType = @{ studio = [int]$b.studio; br1 = [int]$b.br1; br2 = [int]$b.br2; br3 = [int]$b.br3 }
+    fetchedAt = (Get-Date).ToUniversalTime().ToString('o')
+    source = 'live'
+  }
+  try {
+    $json = $result | ConvertTo-Json -Depth 8
+    [IO.File]::WriteAllText($cachePath, $json, [Text.UTF8Encoding]::new($false))
+  } catch {}
+  return $result
+}
+
+function Get-MawjanCrmUnits([string]$statusFilter) {
+  $st = $statusFilter
+  if ($st -eq 'remaining') { $st = 'available' }
+  return Get-CrmUnitsList -project 'Mawjan' -statusFilter $st
+}
+
+function Get-AttrNames($attrs) {
+  $names = @()
+  foreach ($a in @($attrs)) {
+    $n = [string]$a.LogicalName
+    if ($n) { $names += $n }
+  }
+  return $names
+}
+
+function Pick-FieldByPatterns($names, [string[]]$patterns, [string[]]$preferred) {
+  foreach ($p in @($preferred)) {
+    if ($names -contains $p) { return $p }
+  }
+  foreach ($n in @($names)) {
+    $nl = $n.ToLowerInvariant()
+    foreach ($pat in @($patterns)) {
+      if ($nl -match $pat) {
+        if ($nl -match 'created|modified|owner|version|import|traversed') { continue }
+        return $n
+      }
+    }
+  }
+  return ''
+}
+
+function Invoke-DataverseGetPaged([string]$orgUrl, [string]$accessToken, [string]$relativePath, [int]$maxPages = 40) {
+  $all = @()
+  $next = $relativePath
+  $guard = 0
+  while ($next -and $guard -lt $maxPages) {
+    $guard++
+    $resp = Invoke-DataverseGet $orgUrl $accessToken $next
+    if ($resp.value) { $all += @($resp.value) }
+    $nextLink = $null
+    if ($resp.PSObject.Properties['@odata.nextLink']) { $nextLink = [string]$resp.'@odata.nextLink' }
+    if ($nextLink) {
+      $idx = $nextLink.IndexOf('/api/data/v9.2')
+      if ($idx -ge 0) { $next = $nextLink.Substring($idx + '/api/data/v9.2'.Length) }
+      else { $next = $null }
+    } else { $next = $null }
+  }
+  return $all
+}
+
+function Get-EntityAttributeMeta([string]$orgUrl, [string]$accessToken, [string]$logicalName) {
+  $path = "/EntityDefinitions(LogicalName='" + $logicalName + "')/Attributes?`$select=LogicalName,DisplayName,AttributeType,SchemaName&`$filter=AttributeOf eq null"
+  try {
+    $resp = Invoke-DataverseGet $orgUrl $accessToken $path
+    return @($resp.value)
+  } catch {
+    return @()
+  }
+}
+
+function Resolve-UnitSaleEntity([string]$orgUrl, [string]$accessToken) {
+  $candidates = @()
+  $path = "/EntityDefinitions?`$select=LogicalName,DisplayName,EntitySetName,PrimaryIdAttribute,PrimaryNameAttribute&`$filter=contains(LogicalName,'sale')"
+  try {
+    $resp = Invoke-DataverseGet $orgUrl $accessToken $path
+    foreach ($e in @($resp.value)) {
+      $ln = [string]$e.LogicalName
+      $dn = ''
+      try { $dn = [string]$e.DisplayName.UserLocalizedLabel.Label } catch {}
+      $candidates += @{
+        logicalName = $ln
+        entitySetName = [string]$e.EntitySetName
+        primaryId = [string]$e.PrimaryIdAttribute
+        primaryName = [string]$e.PrimaryNameAttribute
+        displayName = $dn
+      }
+    }
+  } catch {}
+
+  $prefer = @('md_unitsale','aqr_unitsale','md_sale','aqr_sale')
+  foreach ($p in $prefer) {
+    foreach ($c in $candidates) {
+      if ([string]$c.logicalName -eq $p) {
+        return @{ ok = $true; entity = $c; candidates = $candidates }
+      }
+    }
+  }
+  foreach ($c in $candidates) {
+    $ln = ([string]$c.logicalName).ToLowerInvariant()
+    if ($ln -match 'unitsale' -or $ln -match 'unit_sale' -or $ln -match 'saleunit') {
+      return @{ ok = $true; entity = $c; candidates = $candidates }
+    }
+  }
+
+  try {
+    $relPath = "/EntityDefinitions(LogicalName='md_unit')/ManyToOneRelationships?`$select=ReferencingAttribute,ReferencedEntity,ReferencedAttribute,SchemaName"
+    $rel = Invoke-DataverseGet $orgUrl $accessToken $relPath
+    foreach ($r in @($rel.value)) {
+      $ra = [string]$r.ReferencingAttribute
+      if ($ra -match 'relatedunitsale' -or $ra -match 'unitsale') {
+        $target = [string]$r.ReferencedEntity
+        if ($target) {
+          $ed = Invoke-DataverseGet $orgUrl $accessToken ("/EntityDefinitions(LogicalName='" + $target + "')?`$select=LogicalName,EntitySetName,PrimaryIdAttribute,PrimaryNameAttribute,DisplayName")
+          $dn = ''
+          try { $dn = [string]$ed.DisplayName.UserLocalizedLabel.Label } catch {}
+          $ent = @{
+            logicalName = [string]$ed.LogicalName
+            entitySetName = [string]$ed.EntitySetName
+            primaryId = [string]$ed.PrimaryIdAttribute
+            primaryName = [string]$ed.PrimaryNameAttribute
+            displayName = $dn
+          }
+          return @{ ok = $true; entity = $ent; candidates = $candidates; via = 'md_unit.relationship'; referencingAttribute = $ra }
+        }
+      }
+    }
+  } catch {}
+
+  if ($candidates.Count -gt 0) {
+    return @{ ok = $true; entity = $candidates[0]; candidates = $candidates; note = 'first sale entity' }
+  }
+  return @{ ok = $false; error = 'unitsale_entity_not_found'; candidates = $candidates }
+}
+
+function Map-SaleFields($attrNames) {
+  # Aqaar-live proven / preferred logical names first, then tight patterns
+  $unit = Pick-FieldByPatterns $attrNames @('^md_unitid$') @('md_unitid','md_unit','aqr_unit','md_relatedunit')
+  $customer = Pick-FieldByPatterns $attrNames @('^md_customercontact$','^md_contact$','md_md_customercompany') @('md_customercontact','md_contact','md_md_customercompany','md_customer','aqr_customer')
+  $pct = Pick-FieldByPatterns $attrNames @('aqr_collectionpercentage','aqr_realizedpercentage') @('aqr_collectionpercentage','aqr_realizedpercentage','md_percentpaid','aqr_percentpaid')
+  $cheque = Pick-FieldByPatterns $attrNames @('aqr_chequeundertakingattached') @('aqr_chequeundertakingattached','md_guaranteecheque','aqr_guaranteecheque','md_securitycheque')
+  $inst = Pick-FieldByPatterns $attrNames @('aqr_realizedinstallments','aqr_numberofoverdueinstallments') @('aqr_realizedinstallments','md_installments','aqr_installments','md_installmentcount')
+  $contract = Pick-FieldByPatterns $attrNames @('aqr_reservationcontractsigned','new_signed','aqr_signedcontractupload') @('aqr_reservationcontractsigned','new_signed','aqr_signedcontractupload','md_contractsigned')
+  $resident = Pick-FieldByPatterns $attrNames @('md_countryofresidenceid','md_nationalityid','^md_resident$','isresident') @('md_countryofresidenceid','md_nationalityid','md_resident','aqr_resident')
+  $project = Pick-FieldByPatterns $attrNames @('^md_projectid$','aqr_projectname') @('md_projectid','aqr_projectname','md_projectname')
+  return @{
+    unit = $unit
+    customer = $customer
+    percentPaid = $pct
+    guaranteeCheque = $cheque
+    installments = $inst
+    contractSigned = $contract
+    resident = $resident
+    project = $project
+  }
+}
+
+function Get-CrmUnitsList([string]$project, [string]$statusFilter) {
+  $access = Ensure-CrmAccessToken
+  if (-not $access.ok) {
+    return @{ ok = $false; error = [string]$access.error; authStatus = [string]$access.authStatus; message = [string]$access.message }
+  }
+  $cfg = $access.cfg
+  $org = Normalize-CrmOrgUrl ([string]$cfg.orgUrl)
+  if (-not $org) { $org = 'https://aqaar.crm15.dynamics.com' }
+  $token = [string]$cfg.accessToken
+  if ([string]::IsNullOrWhiteSpace($project)) { $project = 'Mawjan' }
+  $st = ([string]$statusFilter).Trim().ToLowerInvariant()
+  if (-not $st) { $st = 'all' }
+
+  $selectFull = 'md_unitid,md_name,aqr_projectname,md_subtype,statuscode,statecode,_md_relatedunitsaleid_value,_aqr_holdbysalesperson_value,_aqr_assistedbysalesperson_value,_ownerid_value'
+  $selectBasic = 'md_unitid,md_name,aqr_projectname,md_subtype,statuscode,statecode,_md_relatedunitsaleid_value,_ownerid_value'
+  $filter = "contains(aqr_projectname,'" + ($project -replace "'","''") + "')"
+  if ($st -eq 'sold') { $filter += ' and statuscode eq 100000004' }
+  elseif ($st -eq 'available') { $filter += ' and statuscode eq 100000000' }
+  # Do not $orderby (can be heavy); page cap keeps HttpListener alive
+  $path = '/md_units?$select=' + $selectFull + '&$filter=' + [uri]::EscapeDataString($filter)
+  $rows = @()
+  $fieldNote = ''
+  try { $rows = Invoke-DataverseGetPaged $org $token $path 8 } catch {
+    $path2 = '/md_units?$select=' + $selectBasic + '&$filter=' + [uri]::EscapeDataString($filter)
+    try {
+      $rows = Invoke-DataverseGetPaged $org $token $path2 8
+      $fieldNote = 'salesperson lookups missing; used basic select'
+    } catch {
+      return @{ ok = $false; error = 'units_fetch_failed'; message = $_.Exception.Message }
+    }
+  }
+  if ($rows.Count -gt 400) {
+    $rows = $rows[0..399]
+    if ($fieldNote) { $fieldNote += '; ' }
+    $fieldNote += 'truncated to 400 rows'
+  }
+
+  $out = @()
+  foreach ($r in $rows) {
+    $sub = Get-AttrFormatted $r 'md_subtype'
+    $subU = $sub.ToUpperInvariant()
+    $isRes = ($subU -match 'STUDIO|BEDROOM|PENT')
+    $code = 0
+    try { $code = [int]$r.statuscode } catch {}
+    $status = 'other'
+    if ($code -eq 100000004) { $status = 'sold' }
+    elseif ($code -eq 100000000) { $status = 'available' }
+    $id = [string]$r.md_unitid
+    $out += @{
+      id = $id
+      name = (Get-AttrFormatted $r 'md_name')
+      unitNumber = (Get-AttrFormatted $r 'md_name')
+      project = (Get-AttrFormatted $r 'aqr_projectname')
+      subtype = $sub
+      residential = $isRes
+      status = $status
+      statuscode = [string]$r.statuscode
+      statusLabel = (Get-AttrFormatted $r 'statuscode')
+      relatedUnitSaleId = (Get-AttrFormatted $r '_md_relatedunitsaleid_value')
+      holdBySalesperson = (Get-AttrFormatted $r '_aqr_holdbysalesperson_value')
+      assistedBySalesperson = (Get-AttrFormatted $r '_aqr_assistedbysalesperson_value')
+      owner = (Get-AttrFormatted $r '_ownerid_value')
+      url = (Get-CrmRecordUrl $org 'md_unit' $id)
+    }
+  }
+
+  return @{
+    ok = $true
+    project = $project
+    status = $st
+    count = $out.Count
+    projectFilterField = 'aqr_projectname'
+    bedroomTypeField = 'md_subtype'
+    soldField = 'statuscode'
+    soldRule = 'Sold=100000004 Available=100000000'
+    units = $out
+    fieldNote = $fieldNote
+    fetchedAt = (Get-Date).ToUniversalTime().ToString('o')
+  }
+}
+
+
+function Get-CrmCachePath([string]$kind, [string]$project) {
+  $safe = ($project -replace '[^A-Za-z0-9_\-]', '')
+  if ([string]::IsNullOrWhiteSpace($safe)) { $safe = 'Mawjan' }
+  return (Join-Path $dataDir ('crm-cache-' + $kind + '-' + $safe + '.json'))
+}
+function Read-CrmCacheFile([string]$path) {
+  if (-not (Test-Path $path)) { return $null }
+  try {
+    $obj = [IO.File]::ReadAllText($path, [Text.Encoding]::UTF8) | ConvertFrom-Json
+    if ($obj -and $obj.ok) { return $obj }
+  } catch {}
+  return $null
+}
+function Write-CrmCacheFile([string]$path, $obj) {
+  try {
+    $json = $obj | ConvertTo-Json -Depth 10 -Compress
+    [IO.File]::WriteAllText($path, $json, [Text.UTF8Encoding]::new($false))
+    return $true
+  } catch {
+    return $false
+  }
+}
+function Get-CrmSalesListCached([string]$project, [bool]$forceRefresh = $false) {
+  if ([string]::IsNullOrWhiteSpace($project)) { $project = 'Mawjan' }
+  $cachePath = Get-CrmCachePath 'sales' $project
+  if (-not $forceRefresh) {
+    $cached = Read-CrmCacheFile $cachePath
+    if ($cached) {
+      try { $cached | Add-Member -NotePropertyName source -NotePropertyValue 'cache' -Force } catch {}
+      try { $cached | Add-Member -NotePropertyName cachePath -NotePropertyValue $cachePath -Force } catch {}
+      return $cached
+    }
+  }
+  $result = Get-CrmSalesList -project $project
+  if ($result -and $result.ok) {
+    if ($result -is [hashtable]) {
+      $result['source'] = 'live'
+      $result['cachedAt'] = (Get-Date).ToUniversalTime().ToString('o')
+    } else {
+      try { $result | Add-Member -NotePropertyName source -NotePropertyValue 'live' -Force } catch {}
+      try { $result | Add-Member -NotePropertyName cachedAt -NotePropertyValue ((Get-Date).ToUniversalTime().ToString('o')) -Force } catch {}
+    }
+    $cnt = 0
+    try { $cnt = [int]$result.count } catch {}
+    # Avoid clobbering a good cache with an empty live pull
+    $prev = Read-CrmCacheFile $cachePath
+    $prevCnt = 0
+    try { if ($prev) { $prevCnt = [int]$prev.count } } catch {}
+    if ($cnt -gt 0 -or $prevCnt -le 0) {
+      [void](Write-CrmCacheFile $cachePath $result)
+    }
+  }
+  return $result
+}
+function Get-CrmUnitsListCached([string]$project, [string]$statusFilter, [bool]$forceRefresh = $false) {
+  if ([string]::IsNullOrWhiteSpace($project)) { $project = 'Mawjan' }
+  if ([string]::IsNullOrWhiteSpace($statusFilter)) { $statusFilter = 'all' }
+  $cachePath = Get-CrmCachePath ('units-' + $statusFilter) $project
+  if (-not $forceRefresh) {
+    $cached = Read-CrmCacheFile $cachePath
+    if ($cached) {
+      try { $cached | Add-Member -NotePropertyName source -NotePropertyValue 'cache' -Force } catch {}
+      return $cached
+    }
+  }
+  $result = Get-CrmUnitsList -project $project -statusFilter $statusFilter
+  if ($result -and $result.ok) {
+    if ($result -is [hashtable]) {
+      $result['source'] = 'live'
+      $result['cachedAt'] = (Get-Date).ToUniversalTime().ToString('o')
+    } else {
+      try { $result | Add-Member -NotePropertyName source -NotePropertyValue 'live' -Force } catch {}
+      try { $result | Add-Member -NotePropertyName cachedAt -NotePropertyValue ((Get-Date).ToUniversalTime().ToString('o')) -Force } catch {}
+    }
+    [void](Write-CrmCacheFile $cachePath $result)
+  }
+  return $result
+}
+function Get-CrmPeopleListCached([bool]$forceRefresh = $false) {
+  $cachePath = Get-CrmCachePath 'people' 'Mawjan'
+  if (-not $forceRefresh) {
+    $cached = Read-CrmCacheFile $cachePath
+    if ($cached) {
+      try { $cached | Add-Member -NotePropertyName source -NotePropertyValue 'cache' -Force } catch {}
+      return $cached
+    }
+  }
+  $result = Get-CrmPeopleList
+  if ($result -and $result.ok) {
+    if ($result -is [hashtable]) {
+      $result['source'] = 'live'
+      $result['cachedAt'] = (Get-Date).ToUniversalTime().ToString('o')
+    } else {
+      try { $result | Add-Member -NotePropertyName source -NotePropertyValue 'live' -Force } catch {}
+      try { $result | Add-Member -NotePropertyName cachedAt -NotePropertyValue ((Get-Date).ToUniversalTime().ToString('o')) -Force } catch {}
+    }
+    [void](Write-CrmCacheFile $cachePath $result)
+  }
+  return $result
+}
+
+function Get-CrmSalesList([string]$project) {
+  $access = Ensure-CrmAccessToken
+  if (-not $access.ok) {
+    return @{ ok = $false; error = [string]$access.error; authStatus = [string]$access.authStatus; message = [string]$access.message }
+  }
+  $cfg = $access.cfg
+  $org = Normalize-CrmOrgUrl ([string]$cfg.orgUrl)
+  if (-not $org) { $org = 'https://aqaar.crm15.dynamics.com' }
+  $token = [string]$cfg.accessToken
+  if ([string]::IsNullOrWhiteSpace($project)) { $project = 'Mawjan' }
+
+  $resolved = Resolve-UnitSaleEntity $org $token
+  if (-not $resolved.ok) {
+    return @{
+      ok = $false
+      error = 'unitsale_entity_not_found'
+      message = 'No EntityDefinitions LogicalName containing sale matched unitsale'
+      candidates = $resolved.candidates
+    }
+  }
+  $ent = $resolved.entity
+  $attrs = Get-EntityAttributeMeta $org $token ([string]$ent.logicalName)
+  $names = Get-AttrNames $attrs
+  $fmap = Map-SaleFields $names
+
+  # Build OData $select carefully: lookups only as _x_value (never bare lookup logical name)
+  $selectParts = @([string]$ent.primaryId)
+  if ($ent.primaryName) { $selectParts += [string]$ent.primaryName }
+  # Prefer md_unitsaleno if present (USL-*)
+  if (($names -contains 'md_unitsaleno') -and ($selectParts -notcontains 'md_unitsaleno')) { $selectParts += 'md_unitsaleno' }
+  foreach ($f in @($fmap.percentPaid, $fmap.guaranteeCheque, $fmap.installments, $fmap.contractSigned, 'statuscode', 'statecode', 'createdon', 'modifiedon', 'md_finalprice', 'aqr_realizedpercentage')) {
+    if ($f -and ($names -contains $f) -and ($selectParts -notcontains $f)) { $selectParts += $f }
+  }
+  foreach ($f in @($fmap.unit, $fmap.customer, $fmap.resident, $fmap.project)) {
+    if (-not $f) { continue }
+    if ($f.StartsWith('_') -and $f.EndsWith('_value')) {
+      if (($names -contains $f) -and ($selectParts -notcontains $f)) { $selectParts += $f }
+      continue
+    }
+    $lv = '_' + $f + '_value'
+    if (($names -contains $lv) -and ($selectParts -notcontains $lv)) { $selectParts += $lv }
+    elseif (($names -contains $f) -and ($f -notmatch 'id$') -and ($selectParts -notcontains $f)) { $selectParts += $f }
+  }
+  $select = [string]::Join(',', ($selectParts | Select-Object -Unique))
+  $selectMinimal = [string]::Join(',', (@([string]$ent.primaryId, [string]$ent.primaryName, 'md_unitsaleno', 'statuscode', $fmap.percentPaid, $fmap.guaranteeCheque, $fmap.contractSigned) | Where-Object { $_ } | Select-Object -Unique))
+
+  $unitSelect = 'md_unitid,md_name,aqr_projectname,md_subtype,statuscode,_md_relatedunitsaleid_value,_aqr_holdbysalesperson_value,_aqr_assistedbysalesperson_value'
+  $unitFilter = "contains(aqr_projectname,'" + ($project -replace "'","''") + "') and _md_relatedunitsaleid_value ne null"
+  $unitPath = '/md_units?$select=' + $unitSelect + '&$filter=' + [uri]::EscapeDataString($unitFilter)
+  $units = @()
+  try { $units = Invoke-DataverseGetPaged $org $token $unitPath 50 } catch { $units = @() }
+
+  $saleIds = @()
+  $unitBySale = @{}
+  foreach ($u in $units) {
+    $sid = ''
+    if ($u.PSObject.Properties['_md_relatedunitsaleid_value']) { $sid = [string]$u._md_relatedunitsaleid_value }
+    if (-not $sid) { continue }
+    if ($saleIds -notcontains $sid) { $saleIds += $sid }
+    $unitBySale[$sid] = @{
+      unitId = [string]$u.md_unitid
+      unitName = (Get-AttrFormatted $u 'md_name')
+      unitNumber = (Get-AttrFormatted $u 'md_name')
+      subtype = (Get-AttrFormatted $u 'md_subtype')
+      unitStatus = (Get-AttrFormatted $u 'statuscode')
+      unitStatusCode = [string]$u.statuscode
+      holdBy = (Get-AttrFormatted $u '_aqr_holdbysalesperson_value')
+      assistedBy = (Get-AttrFormatted $u '_aqr_assistedbysalesperson_value')
+      unitUrl = (Get-CrmRecordUrl $org 'md_unit' ([string]$u.md_unitid))
+    }
+  }
+
+  $salesRows = @()
+  $set = [string]$ent.entitySetName
+  $idField = [string]$ent.primaryId
+  $fetchMode = 'by_related_lookup'
+  $selectUsed = $select
+  $saleFetchErrors = @()
+  if ($saleIds.Count -gt 0) {
+    $chunkSize = 20
+    for ($i = 0; $i -lt $saleIds.Count; $i += $chunkSize) {
+      $end = [Math]::Min($i + $chunkSize - 1, $saleIds.Count - 1)
+      $chunk = $saleIds[$i..$end]
+      $ors = @()
+      foreach ($sid in $chunk) { $ors += ($idField + ' eq ' + $sid) }
+      $f = '(' + ([string]::Join(' or ', $ors)) + ')'
+      $p = '/' + $set + '?$select=' + $selectUsed + '&$filter=' + [uri]::EscapeDataString($f)
+      try {
+        $page = Invoke-DataverseGetPaged $org $token $p 5
+        if ($page) { $salesRows += @($page) }
+      } catch {
+        $saleFetchErrors += $_.Exception.Message
+        # Retry this chunk with minimal select once
+        try {
+          $selectUsed = $selectMinimal
+          $p2 = '/' + $set + '?$select=' + $selectUsed + '&$filter=' + [uri]::EscapeDataString($f)
+          $page2 = Invoke-DataverseGetPaged $org $token $p2 5
+          if ($page2) { $salesRows += @($page2) }
+        } catch {
+          $saleFetchErrors += $_.Exception.Message
+        }
+      }
+    }
+  } else {
+    $fetchMode = 'entity_scan'
+    $saleFilter = ''
+    if ($fmap.project) {
+      $saleFilter = 'contains(' + $fmap.project + ",'" + ($project -replace "'","''") + "')"
+    }
+    $p = '/' + $set + '?$select=' + [uri]::EscapeDataString($select) + '&$top=200'
+    if ($saleFilter) { $p += '&$filter=' + [uri]::EscapeDataString($saleFilter) }
+    try { $salesRows = Invoke-DataverseGetPaged $org $token $p 10 } catch { $salesRows = @() }
+  }
+
+  $out = @()
+  $incomplete = @()
+  foreach ($key in @('percentPaid','guaranteeCheque','installments','contractSigned','resident')) {
+    if (-not $fmap.$key) { $incomplete += $key }
+  }
+
+  foreach ($s in $salesRows) {
+    $sid = ''
+    if ($s.PSObject.Properties[$idField]) { $sid = [string]$s.$idField }
+    $uinfo = $null
+    if ($sid -and $unitBySale.ContainsKey($sid)) { $uinfo = $unitBySale[$sid] }
+
+    $raw = @{}
+    foreach ($f in @($selectParts)) {
+      if (-not $f) { continue }
+      $val = Get-AttrFormatted $s $f
+      if ($val) { $raw[$f] = $val }
+    }
+
+    $name = ''
+    if ($s.PSObject.Properties['md_unitsaleno'] -and $s.md_unitsaleno) { $name = [string]$s.md_unitsaleno }
+    elseif ($ent.primaryName) { $name = Get-AttrFormatted $s ([string]$ent.primaryName) }
+
+    $out += @{
+      id = $sid
+      name = $name
+      url = (Get-CrmRecordUrl $org ([string]$ent.logicalName) $sid)
+      unitId = $(if ($uinfo) { $uinfo.unitId } else { Get-AttrFormatted $s $fmap.unit })
+      unitName = $(if ($uinfo) { $uinfo.unitName } else { '' })
+      unitNumber = $(if ($uinfo) { $uinfo.unitNumber } else { '' })
+      unitSubtype = $(if ($uinfo) { $uinfo.subtype } else { '' })
+      unitStatus = $(if ($uinfo) { $uinfo.unitStatus } else { '' })
+      unitUrl = $(if ($uinfo) { $uinfo.unitUrl } else { '' })
+      customer = $(if ($fmap.customer) { Get-AttrFormatted $s $fmap.customer } else { '' })
+      percentPaid = $(if ($fmap.percentPaid) { Get-AttrFormatted $s $fmap.percentPaid } else { '' })
+      guaranteeCheque = $(if ($fmap.guaranteeCheque) { Get-AttrFormatted $s $fmap.guaranteeCheque } else { '' })
+      installments = $(if ($fmap.installments) { Get-AttrFormatted $s $fmap.installments } else { '' })
+      contractSigned = $(if ($fmap.contractSigned) { Get-AttrFormatted $s $fmap.contractSigned } else { '' })
+      resident = $(if ($fmap.resident) { Get-AttrFormatted $s $fmap.resident } else { '' })
+      holdBySalesperson = $(if ($uinfo) { $uinfo.holdBy } else { '' })
+      assistedBySalesperson = $(if ($uinfo) { $uinfo.assistedBy } else { '' })
+      statusLabel = (Get-AttrFormatted $s 'statuscode')
+      statuscode = $(if ($s.PSObject.Properties['statuscode']) { [string]$s.statuscode } else { '' })
+      raw = $raw
+      completion = @{
+        ruleHint = 'Target: 5pct paid + guarantee cheque OR 6 installments + contract signed (fields TBD if blank)'
+        percentPaidField = $fmap.percentPaid
+        guaranteeChequeField = $fmap.guaranteeCheque
+        installmentsField = $fmap.installments
+        contractSignedField = $fmap.contractSigned
+        residentField = $fmap.resident
+        incompleteFields = $incomplete
+      }
+    }
+  }
+
+  $candOut = @()
+  foreach ($c in @($resolved.candidates)) {
+    $candOut += @{
+      logicalName = [string]$c.logicalName
+      entitySetName = [string]$c.entitySetName
+      displayName = [string]$c.displayName
+    }
+  }
+
+  return @{
+    ok = $true
+    project = $project
+    count = $out.Count
+    relatedUnitCount = $units.Count
+    fetchMode = $fetchMode
+    entity = @{
+      logicalName = [string]$ent.logicalName
+      entitySetName = [string]$ent.entitySetName
+      primaryId = [string]$ent.primaryId
+      primaryName = [string]$ent.primaryName
+      displayName = [string]$ent.displayName
+    }
+    fieldMap = $fmap
+    incompleteForCompletionRules = $incomplete
+    saleEntityCandidates = $candOut
+    sales = $out
+    fetchedAt = (Get-Date).ToUniversalTime().ToString('o')
+  }
+}
+
+function Get-CrmPeopleList {
+  $access = Ensure-CrmAccessToken
+  if (-not $access.ok) {
+    return @{ ok = $false; error = [string]$access.error; authStatus = [string]$access.authStatus; message = [string]$access.message }
+  }
+  $cfg = $access.cfg
+  $org = Normalize-CrmOrgUrl ([string]$cfg.orgUrl)
+  if (-not $org) { $org = 'https://aqaar.crm15.dynamics.com' }
+  $token = [string]$cfg.accessToken
+
+  $select = 'md_unitid,md_name,aqr_projectname,md_subtype,statuscode,_aqr_holdbysalesperson_value,_aqr_assistedbysalesperson_value,_ownerid_value'
+  $filter = "contains(aqr_projectname,'Mawjan')"
+  $path = '/md_units?$select=' + [uri]::EscapeDataString($select) + '&$filter=' + [uri]::EscapeDataString($filter)
+  $rows = @()
+  try { $rows = Invoke-DataverseGetPaged $org $token $path 50 } catch { $rows = @() }
+
+  $people = @{}
+  foreach ($u in $rows) {
+    $entries = @()
+    $holdId = ''
+    $holdName = Get-AttrFormatted $u '_aqr_holdbysalesperson_value'
+    if ($u.PSObject.Properties['_aqr_holdbysalesperson_value'] -and $u._aqr_holdbysalesperson_value) {
+      $holdId = [string]$u._aqr_holdbysalesperson_value
+    }
+    if ($holdId -or $holdName) { $entries += @{ id = $holdId; name = $holdName; role = 'hold' } }
+
+    $assistId = ''
+    $assistName = Get-AttrFormatted $u '_aqr_assistedbysalesperson_value'
+    if ($u.PSObject.Properties['_aqr_assistedbysalesperson_value'] -and $u._aqr_assistedbysalesperson_value) {
+      $assistId = [string]$u._aqr_assistedbysalesperson_value
+    }
+    if ($assistId -or $assistName) { $entries += @{ id = $assistId; name = $assistName; role = 'assist' } }
+
+    $ownerId = ''
+    $ownerName = Get-AttrFormatted $u '_ownerid_value'
+    if ($u.PSObject.Properties['_ownerid_value'] -and $u._ownerid_value) {
+      $ownerId = [string]$u._ownerid_value
+    }
+    if ($ownerId -or $ownerName) { $entries += @{ id = $ownerId; name = $ownerName; role = 'owner' } }
+
+    foreach ($e in $entries) {
+      $id = [string]$e.id
+      $name = [string]$e.name
+      $role = [string]$e.role
+      if (-not $id -and -not $name) { continue }
+      $key = $(if ($id) { $id } else { 'name:' + $name })
+      if (-not $people.ContainsKey($key)) {
+        $people[$key] = @{
+          id = $id
+          name = $name
+          roles = @{}
+          holdCount = 0
+          assistCount = 0
+          ownerCount = 0
+          soldHold = 0
+          availableHold = 0
+          sampleUnits = @()
+          url = $(if ($id) { Get-CrmRecordUrl $org 'systemuser' $id } else { '' })
+        }
+      }
+      $p = $people[$key]
+      if ($name -and -not $p.name) { $p.name = $name }
+      if (-not $p.roles.ContainsKey($role)) { $p.roles[$role] = 0 }
+      $p.roles[$role] = [int]$p.roles[$role] + 1
+      $code = ''
+      if ($u.PSObject.Properties['statuscode']) { $code = [string]$u.statuscode }
+      if ($role -eq 'hold') {
+        $p.holdCount++
+        if ($code -eq '100000004') { $p.soldHold++ }
+        elseif ($code -eq '100000000') { $p.availableHold++ }
+      } elseif ($role -eq 'assist') { $p.assistCount++ }
+      elseif ($role -eq 'owner') { $p.ownerCount++ }
+      if ($p.sampleUnits.Count -lt 5) {
+        $p.sampleUnits += @{
+          id = [string]$u.md_unitid
+          name = (Get-AttrFormatted $u 'md_name')
+          status = (Get-AttrFormatted $u 'statuscode')
+          role = $role
+        }
+      }
+    }
+  }
+
+  $list = @()
+  foreach ($k in $people.Keys) {
+    $p = $people[$k]
+    $roleList = @()
+    foreach ($rk in $p.roles.Keys) { $roleList += ($rk + ':' + $p.roles[$rk]) }
+    $list += @{
+      id = $p.id
+      name = $p.name
+      holdCount = $p.holdCount
+      assistCount = $p.assistCount
+      ownerCount = $p.ownerCount
+      soldHold = $p.soldHold
+      availableHold = $p.availableHold
+      roles = $roleList
+      sampleUnits = $p.sampleUnits
+      url = $p.url
+      totalTouches = ([int]$p.holdCount + [int]$p.assistCount + [int]$p.ownerCount)
+    }
+  }
+  $list = @($list | Sort-Object @{Expression={ -$_.holdCount }}, @{Expression={ -$_.assistCount }}, @{Expression={ $_.name }})
+
+  $hasSales = @($list | Where-Object { $_.holdCount -gt 0 -or $_.assistCount -gt 0 }).Count -gt 0
+  if ($hasSales) {
+    $list = @($list | Where-Object { $_.holdCount -gt 0 -or $_.assistCount -gt 0 })
+  }
+
+  return @{
+    ok = $true
+    project = 'Mawjan'
+    count = $list.Count
+    unitRowsScanned = $rows.Count
+    sourceFields = @('aqr_holdbysalesperson','aqr_assistedbysalesperson','ownerid')
+    people = $list
+    fetchedAt = (Get-Date).ToUniversalTime().ToString('o')
+    note = 'Best-effort from md_unit salesperson lookups for Mawjan units'
+  }
+}
+
+
+
 while ($listener.IsListening) {
   $ctx = $listener.GetContext()
   $req = $ctx.Request
@@ -1630,6 +2622,230 @@ while ($listener.IsListening) {
       $null = $body | ConvertFrom-Json
       [IO.File]::WriteAllText($tasksPath, $body, [Text.UTF8Encoding]::new($false))
       Write-Json $res @{ ok = $true }
+      continue
+    }
+    
+function Get-TaskIndex {
+  $tasksPath = Join-Path $dataDir 'tasks.json'
+  $map = @{}
+  if (-not (Test-Path $tasksPath)) { return $map }
+  try {
+    $tj = [IO.File]::ReadAllText($tasksPath, [Text.Encoding]::UTF8) | ConvertFrom-Json
+    foreach ($t in @($tj.tasks)) {
+      if ($t.id) { $map[[string]$t.id] = $t }
+    }
+  } catch {}
+  return $map
+}
+
+function ConvertTo-EisItemFromTask($t, [string]$quad = 'inbox') {
+  if (-not $t) { return $null }
+  $src = ([string]$t.source).ToLowerInvariant()
+  if (-not $src) { $src = 'task' }
+  $title = [string]$(if ($t.title) { $t.title } elseif ($t.subject) { $t.subject } else { $t.id })
+  $entry = [string]$(if ($t.entryId) { $t.entryId } else { $t.entryID })
+  $mailQuery = ''
+  $sref = [string]$t.sourceRef
+  if ($sref -match '/\s*(.+)$') { $mailQuery = $Matches[1].Trim() }
+  elseif ($title) { $mailQuery = $title }
+  $crmUrl = [string]$t.crmUrl
+  $sourceUrl = [string]$t.sourceUrl
+  $teamsUrl = [string]$t.teamsUrl
+  if ($src -eq 'crm' -and -not $crmUrl -and $sref -match '^([a-z0-9_]+):([0-9a-fA-F-]{36})$') {
+    $crmUrl = "https://aqaar.crm15.dynamics.com/main.aspx?pagetype=entityrecord&etn=$($Matches[1])&id=$($Matches[2])"
+    $sourceUrl = $crmUrl
+  }
+  $now = (Get-Date).ToUniversalTime().ToString('o')
+  return [pscustomobject]@{
+    id = ('E-' + [guid]::NewGuid().ToString('n').Substring(0,12))
+    taskId = [string]$t.id
+    title = $title
+    source = $src
+    quad = $quad
+    done = $false
+    note = ''
+    entryId = $entry
+    sourceRef = $sref
+    fromEmail = [string]$t.fromEmail
+    mailQuery = $mailQuery
+    sourceUrl = $sourceUrl
+    crmUrl = $crmUrl
+    teamsUrl = $teamsUrl
+    url = [string]$t.url
+    createdAt = $now
+    updatedAt = $now
+  }
+}
+
+function Merge-EisItemWithTask($item, $t) {
+  if (-not $item -or -not $t) { return $item }
+  $isHash = $item -is [hashtable] -or $item -is [System.Collections.Specialized.OrderedDictionary]
+  function Set-Prop($o, $name, $val) {
+    if ($null -eq $val -or [string]$val -eq '') { return }
+    if ($o -is [hashtable] -or $o -is [System.Collections.Specialized.OrderedDictionary]) { $o[$name] = $val }
+    else { try { $o | Add-Member -NotePropertyName $name -NotePropertyValue $val -Force } catch {} }
+  }
+  $src = ([string]$t.source).ToLowerInvariant()
+  if ($src) { Set-Prop $item 'source' $src }
+  $entry = [string]$(if ($t.entryId) { $t.entryId } else { $t.entryID })
+  if ($entry) { Set-Prop $item 'entryId' $entry }
+  if ($t.sourceRef) { Set-Prop $item 'sourceRef' ([string]$t.sourceRef) }
+  if ($t.fromEmail) { Set-Prop $item 'fromEmail' ([string]$t.fromEmail) }
+  $mq = ''
+  $sref = [string]$t.sourceRef
+  if ($sref -match '/\s*(.+)$') { $mq = $Matches[1].Trim() }
+  elseif ($t.title) { $mq = [string]$t.title }
+  if ($mq) { Set-Prop $item 'mailQuery' $mq }
+  if ($t.sourceUrl) { Set-Prop $item 'sourceUrl' ([string]$t.sourceUrl) }
+  if ($t.crmUrl) { Set-Prop $item 'crmUrl' ([string]$t.crmUrl) }
+  if ($t.teamsUrl) { Set-Prop $item 'teamsUrl' ([string]$t.teamsUrl) }
+  if ($t.url) { Set-Prop $item 'url' ([string]$t.url) }
+  if ($src -eq 'crm') {
+    $crm = if ($isHash) { [string]$item['crmUrl'] } else { [string]$item.crmUrl }
+    if (-not $crm -and $sref -match '^([a-z0-9_]+):([0-9a-fA-F-]{36})$') {
+      $u = "https://aqaar.crm15.dynamics.com/main.aspx?pagetype=entityrecord&etn=$($Matches[1])&id=$($Matches[2])"
+      Set-Prop $item 'crmUrl' $u
+      Set-Prop $item 'sourceUrl' $u
+    }
+  }
+  return $item
+}
+
+function Enrich-EisPayload($payload) {
+  $map = Get-TaskIndex
+  $items = @()
+  if ($payload.items) { $items = @($payload.items) }
+  $out = @()
+  foreach ($it in $items) {
+    $tid = [string]$(if ($it.taskId) { $it.taskId } elseif ($it.PSObject.Properties['taskId']) { $it.taskId } else { '' })
+    if ($tid -and $map.ContainsKey($tid)) {
+      $it = Merge-EisItemWithTask $it $map[$tid]
+    }
+    $out += $it
+  }
+  if ($payload -is [hashtable]) { $payload['items'] = $out }
+  else { try { $payload | Add-Member -NotePropertyName items -NotePropertyValue $out -Force } catch { $payload.items = $out } }
+  return $payload
+}
+
+function Invoke-EisAutoFeed([bool]$force = $false) {
+  $map = Get-TaskIndex
+  $payload = @{ items = @(); updatedAt = ''; lastFeedAt = '' }
+  if (Test-Path $eisenhowerPath) {
+    try { $payload = [IO.File]::ReadAllText($eisenhowerPath, [Text.Encoding]::UTF8) | ConvertFrom-Json } catch {}
+  }
+  $items = New-Object System.Collections.Generic.List[object]
+  foreach ($it in @($payload.items)) { [void]$items.Add($it) }
+
+  $existingTask = @{}
+  $trashedTask = @{}
+  foreach ($it in $items) {
+    $tid = [string]$it.taskId
+    if (-not $tid) { continue }
+    if ([string]$it.quad -eq 'trash') { $trashedTask[$tid] = $true }
+    else { $existingTask[$tid] = $true }
+  }
+
+  $added = 0
+  $tasksPath = Join-Path $dataDir 'tasks.json'
+  if (-not (Test-Path $tasksPath)) {
+    return @{ ok = $true; added = 0; total = $items.Count; message = 'no_tasks' }
+  }
+  $tj = [IO.File]::ReadAllText($tasksPath, [Text.Encoding]::UTF8) | ConvertFrom-Json
+  foreach ($t in @($tj.tasks)) {
+    $st = ([string]$(if ($t.status) { $t.status } else { $t.state })).ToLowerInvariant()
+    if ($st -match 'done|closed|complet|archive') { continue }
+    $tid = [string]$t.id
+    if (-not $tid) { continue }
+    if ($existingTask.ContainsKey($tid) -or $trashedTask.ContainsKey($tid)) { continue }
+    $row = ConvertTo-EisItemFromTask $t 'inbox'
+    if ($row) {
+      if ($row -is [hashtable] -or $row -is [System.Collections.Specialized.OrderedDictionary]) { $row = [pscustomobject]$row }; [void]$items.Insert(0, $row)
+      $existingTask[$tid] = $true
+      $added++
+    }
+  }
+
+  $now = (Get-Date).ToUniversalTime().ToString('o')
+  $arr = New-Object object[] $items.Count
+  for ($i = 0; $i -lt $items.Count; $i++) { $arr[$i] = $items[$i] }
+  $outObj = @{
+    items = $arr
+    updatedAt = $now
+    lastFeedAt = $now
+    lastFeedAdded = $added
+  }
+  $json = ($outObj | ConvertTo-Json -Depth 10 -Compress)
+  [IO.File]::WriteAllText($eisenhowerPath, $json, [Text.UTF8Encoding]::new($false))
+  return @{ ok = $true; added = $added; total = $items.Count; lastFeedAt = $now; source = 'feed' }
+}
+
+
+    if ($path -eq '/api/signing-platforms' -and $req.HttpMethod -eq 'GET') {
+      $sp = Join-Path $dataDir 'signing-platforms.json'
+      if (Test-Path $sp) { Write-FileResp $res $sp; continue }
+      Write-Json $res @{ ok = $true; platforms = @(
+        @{ id = 'digiapi'; url = 'https://digiapi.aqaar.com:4443/reports/all'; kind = 'spa_contracts' },
+        @{ id = 'digisign'; url = 'https://digisign.aqaar.com/'; kind = 'internal_sign' }
+      ) }
+      continue
+    }if ($path -eq '/api/eisenhower/feed' -and $req.HttpMethod -eq 'POST') {
+  $force = $false
+  try {
+    $qb = [string]$req.QueryString['force']
+    if ($qb -and ($qb.Trim().ToLowerInvariant() -in @('1','true','yes'))) { $force = $true }
+  } catch {}
+  $result = Invoke-EisAutoFeed -force $force
+  Write-Json $res $result
+  continue
+}
+if ($path -eq '/api/eisenhower' -and $req.HttpMethod -eq 'GET') {
+  try {
+    $payload = $null
+    if (Test-Path $eisenhowerPath) { $payload = [IO.File]::ReadAllText($eisenhowerPath, [Text.Encoding]::UTF8) | ConvertFrom-Json }
+    if (-not $payload) { $payload = [pscustomobject]@{ items = @(); updatedAt = '' } }
+    $payload = Enrich-EisPayload $payload
+    try {
+      $payload | Add-Member -NotePropertyName enrichedAt -NotePropertyValue ((Get-Date).ToUniversalTime().ToString('o')) -Force
+      [IO.File]::WriteAllText($eisenhowerPath, ($payload | ConvertTo-Json -Depth 10 -Compress), [Text.UTF8Encoding]::new($false))
+    } catch {}
+    Write-Json $res $payload
+  } catch { Write-FileResp $res $eisenhowerPath }
+  continue
+}
+    if ($path -eq '/api/eisenhower' -and $req.HttpMethod -eq 'POST') {
+      $body = Read-Body $req
+      $incoming = $null
+      try { $incoming = $body | ConvertFrom-Json } catch { Write-Json $res @{ ok = $false; error = 'bad_json' }; continue }
+      # Preserve source linkage if browser posted older items without entryId/crmUrl
+      $prevMap = @{}
+      if (Test-Path $eisenhowerPath) {
+        try {
+          $prev = [IO.File]::ReadAllText($eisenhowerPath, [Text.Encoding]::UTF8) | ConvertFrom-Json
+          foreach ($p in @($prev.items)) {
+            if ($p.id) { $prevMap[[string]$p.id] = $p }
+            elseif ($p.taskId) { $prevMap[('task:' + [string]$p.taskId)] = $p }
+          }
+        } catch {}
+      }
+      $merged = @()
+      foreach ($it in @($incoming.items)) {
+        $old = $null
+        if ($it.id -and $prevMap.ContainsKey([string]$it.id)) { $old = $prevMap[[string]$it.id] }
+        elseif ($it.taskId -and $prevMap.ContainsKey(('task:' + [string]$it.taskId))) { $old = $prevMap[('task:' + [string]$it.taskId)] }
+        if ($old) {
+          foreach ($k in @('entryId','sourceUrl','crmUrl','teamsUrl','sourceRef','mailQuery','fromEmail','source')) {
+            $cur = [string]$it.$k
+            $prv = [string]$old.$k
+            if ((-not $cur) -and $prv) { try { $it | Add-Member -NotePropertyName $k -NotePropertyValue $prv -Force } catch {} }
+          }
+        }
+        $merged += $it
+      }
+      $incoming = Enrich-EisPayload ([pscustomobject]@{ items = $merged; updatedAt = (Get-Date).ToUniversalTime().ToString('o') })
+      $outJson = ($incoming | ConvertTo-Json -Depth 10 -Compress)
+      [IO.File]::WriteAllText($eisenhowerPath, $outJson, [Text.UTF8Encoding]::new($false))
+      Write-Json $res @{ ok = $true; count = @($incoming.items).Count }
       continue
     }
     if ($path -eq '/api/audit' -and $req.HttpMethod -eq 'GET') { Write-FileResp $res $auditPath; continue }
@@ -1689,7 +2905,43 @@ while ($listener.IsListening) {
       Write-Json $res (List-RecentJobs 30)
       continue
     }
-    if ($path -eq '/api/task' -and $req.HttpMethod -eq 'GET') {
+    
+        if ($path -eq '/api/task/box-note' -and $req.HttpMethod -eq 'POST') {
+      $bodyRaw = Read-Body $req
+      $body = $null
+      try { $body = $bodyRaw | ConvertFrom-Json } catch { Write-Json $res @{ ok = $false; error = 'bad_json' }; continue }
+      $taskId = [string]$body.taskId
+      $note = [string]$body.note
+      if (-not $taskId) { Write-Json $res @{ ok = $false; error = 'taskId_required' }; continue }
+      if (-not (Test-Path $tasksPath)) { Write-Json $res @{ ok = $false; error = 'no_tasks' }; continue }
+      $tj = [IO.File]::ReadAllText($tasksPath, [Text.Encoding]::UTF8) | ConvertFrom-Json
+      $found = $false
+      $now = (Get-Date).ToUniversalTime().ToString('o')
+      $newTasks = @()
+      foreach ($t in @($tj.tasks)) {
+        if ([string]$t.id -eq $taskId) {
+          $found = $true
+          try { $t | Add-Member -NotePropertyName boxNote -NotePropertyValue $note -Force } catch {}
+          try { $t | Add-Member -NotePropertyName updatedAt -NotePropertyValue $now -Force } catch {}
+          if (-not $t.timeline) { try { $t | Add-Member -NotePropertyName timeline -NotePropertyValue @() -Force } catch {} }
+          $noteText = if ($note) { 'Box note: ' + $note } else { 'Box note cleared' }
+          $ev = [pscustomobject]@{ id = ('TL-' + [guid]::NewGuid().ToString('n').Substring(0,10)); type = 'note'; text = $noteText; at = $now; actor = 'User' }
+          $tl = @($t.timeline) + @($ev)
+          try { $t | Add-Member -NotePropertyName timeline -NotePropertyValue $tl -Force } catch { $t.timeline = $tl }
+          if (-not $t.comments) { try { $t | Add-Member -NotePropertyName comments -NotePropertyValue @() -Force } catch {} }
+          $cm = @($t.comments) + @([pscustomobject]@{ text = $noteText; by = 'user'; at = $now })
+          try { $t | Add-Member -NotePropertyName comments -NotePropertyValue $cm -Force } catch { $t.comments = $cm }
+        }
+        $newTasks += $t
+      }
+      if (-not $found) { Write-Json $res @{ ok = $false; error = 'task_not_found' }; continue }
+      try { $tj | Add-Member -NotePropertyName tasks -NotePropertyValue $newTasks -Force } catch { $tj.tasks = $newTasks }
+      $json = ($tj | ConvertTo-Json -Depth 12 -Compress)
+      [IO.File]::WriteAllText($tasksPath, $json, [Text.UTF8Encoding]::new($false))
+      Write-Json $res @{ ok = $true; taskId = $taskId }
+      continue
+    }
+if ($path -eq '/api/task' -and $req.HttpMethod -eq 'GET') {
       $tid = [string]$req.QueryString['id']
       if (-not $tid) { Write-Json $res @{ ok = $false; error = 'id required' } 400; continue }
       $data = Load-TasksData
@@ -1938,7 +3190,79 @@ while ($listener.IsListening) {
     }
 
 
-    $rel = $path.TrimStart('/').Replace('/','\')
+
+    if ($path -eq '/api/crm/mawjan/summary' -and $req.HttpMethod -eq 'GET') {
+      $result = Get-MawjanCrmSummary
+      $code = 200
+      if (-not $result.ok) {
+        if ($result.error -eq 'pending_auth') { $code = 401 }
+        else { $code = 502 }
+      }
+      Write-Json $res $result $code
+      continue
+    }
+    if ($path -eq '/api/crm/mawjan/units' -and $req.HttpMethod -eq 'GET') {
+      $st = [string]$req.QueryString['status']
+      if ($st) { $st = $st.Trim().ToLowerInvariant() }
+      $result = Get-MawjanCrmUnits $st
+      $code = 200
+      if (-not $result.ok) {
+        if ($result.error -eq 'pending_auth') { $code = 401 }
+        else { $code = 502 }
+      }
+      Write-Json $res $result $code
+      continue
+    }
+
+    if ($path -eq '/api/crm/units' -and $req.HttpMethod -eq 'GET') {
+      $proj = [string]$req.QueryString['project']
+      if (-not $proj) { $proj = 'Mawjan' }
+      $st = [string]$req.QueryString['status']
+      if ($st) { $st = $st.Trim().ToLowerInvariant() } else { $st = 'all' }
+      $force = $false
+      $rf = [string]$req.QueryString['refresh']
+      if ($rf -and ($rf.Trim().ToLowerInvariant() -in @('1','true','yes','force'))) { $force = $true }
+      $result = Get-CrmUnitsListCached -project $proj -statusFilter $st -forceRefresh $force
+      $code = 200
+      if (-not $result.ok) {
+        if ($result.error -eq 'pending_auth') { $code = 401 }
+        else { $code = 502 }
+      }
+      Write-Json $res $result $code
+      continue
+    }
+
+    if ($path -eq '/api/crm/sales' -and $req.HttpMethod -eq 'GET') {
+      $proj = [string]$req.QueryString['project']
+      if (-not $proj) { $proj = 'Mawjan' }
+      $force = $false
+      $rf = [string]$req.QueryString['refresh']
+      if ($rf -and ($rf.Trim().ToLowerInvariant() -in @('1','true','yes','force'))) { $force = $true }
+      $result = Get-CrmSalesListCached -project $proj -forceRefresh $force
+      $code = 200
+      if (-not $result.ok) {
+        if ($result.error -eq 'pending_auth') { $code = 401 }
+        else { $code = 502 }
+      }
+      Write-Json $res $result $code
+      continue
+    }
+
+    if ($path -eq '/api/crm/people' -and $req.HttpMethod -eq 'GET') {
+      $force = $false
+      $rf = [string]$req.QueryString['refresh']
+      if ($rf -and ($rf.Trim().ToLowerInvariant() -in @('1','true','yes','force'))) { $force = $true }
+      $result = Get-CrmPeopleListCached -forceRefresh $force
+      $code = 200
+      if (-not $result.ok) {
+        if ($result.error -eq 'pending_auth') { $code = 401 }
+        else { $code = 502 }
+      }
+      Write-Json $res $result $code
+      continue
+    }
+
+$rel = $path.TrimStart('/').Replace('/','\')
     if ($rel.Contains('..')) { Write-Text $res 400 'text/plain' 'bad path'; continue }
     $full = [IO.Path]::GetFullPath((Join-Path $Root $rel))
     if (-not $full.StartsWith([IO.Path]::GetFullPath($Root))) { Write-Text $res 403 'text/plain' 'forbidden'; continue }

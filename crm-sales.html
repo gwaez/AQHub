@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>مبيعات الوحدات — CRM موجان</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+:root{--bg0:#070b12;--text:#e8eef8;--muted:#8b9bb3;--faint:#5d6d86;--accent:#5eead4;--accent2:#38bdf8;--warn:#fbbf24;--ok:#34d399;--danger:#fb7185;--stroke:rgba(148,163,184,.14);--stroke2:rgba(125,211,252,.28);--card:rgba(18,28,48,.72);--radius:22px}
+*{box-sizing:border-box}body{margin:0;font-family:"IBM Plex Sans Arabic",sans-serif;color:var(--text);background:radial-gradient(1100px 640px at 8% -12%,rgba(56,189,248,.18),transparent 55%),radial-gradient(900px 560px at 100% 0%,rgba(167,139,250,.16),transparent 50%),linear-gradient(180deg,var(--bg0),#0a101a);min-height:100vh}
+.shell{max-width:1240px;margin:0 auto;padding:28px 22px 70px}
+.top{display:flex;flex-wrap:wrap;gap:14px;justify-content:space-between;align-items:flex-start;margin-bottom:16px}
+h1{margin:0;font-size:1.4rem}h2{margin:0 0 10px;font-size:1rem}.muted{color:var(--muted);font-size:.9rem;line-height:1.55}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.btn{appearance:none;border:1px solid var(--stroke);background:rgba(255,255,255,.03);color:var(--text);border-radius:14px;padding:10px 14px;font:inherit;font-weight:600;cursor:pointer;text-decoration:none;display:inline-flex}
+.btn:hover{border-color:var(--stroke2);background:rgba(255,255,255,.06)}
+.btn.primary{background:linear-gradient(135deg,rgba(94,234,212,.95),rgba(56,189,248,.88));color:#062019;border:0;font-weight:700}
+.btn.active{border-color:var(--accent);color:var(--accent)}
+.glass{background:var(--card);border:1px solid var(--stroke);border-radius:var(--radius);padding:18px;backdrop-filter:blur(18px);box-shadow:0 24px 80px rgba(0,0,0,.35)}
+.badge{font-size:.75rem;font-weight:700;padding:5px 10px;border-radius:999px;border:1px solid var(--stroke)}
+.badge.on{color:var(--ok);border-color:rgba(52,211,153,.35);background:rgba(52,211,153,.08)}
+.badge.wait{color:var(--warn);border-color:rgba(251,191,36,.35);background:rgba(251,191,36,.08)}
+.badge.off{color:var(--muted)}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:14px 0}
+@media(max-width:900px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.stat .k{color:var(--muted);font-size:.8rem;font-weight:600}.stat .v{font-size:1.55rem;font-weight:700;margin-top:6px;word-break:break-word}
+table{width:100%;border-collapse:collapse;font-size:.84rem}th,td{padding:9px 7px;border-bottom:1px solid var(--stroke);text-align:right;vertical-align:top}
+th{color:var(--muted);font-weight:600;font-size:.72rem;white-space:nowrap}
+.pill{display:inline-block;padding:3px 8px;border-radius:999px;font-size:.72rem;font-weight:700;border:1px solid var(--stroke)}
+.pill.sold{color:var(--danger);background:rgba(251,113,133,.1);border-color:rgba(251,113,133,.3)}
+.pill.available{color:var(--ok);background:rgba(52,211,153,.1);border-color:rgba(52,211,153,.3)}
+.pill.other{color:var(--warn)}
+.mono{font-family:"JetBrains Mono",monospace;font-size:.7rem;color:var(--faint)}
+a.link{color:var(--accent2);text-decoration:none;font-weight:600}
+#note{margin:8px 0 14px;padding:12px 14px;border-radius:14px;border:1px dashed rgba(167,139,250,.35);background:rgba(167,139,250,.07);color:var(--muted);font-size:.85rem}
+input,select{background:rgba(0,0,0,.25);border:1px solid var(--stroke);color:var(--text);border-radius:12px;padding:9px 12px;font:inherit}
+.tbd{color:var(--warn);font-size:.72rem;font-weight:700}
+.raw{max-width:240px;max-height:72px;overflow:auto}
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="top">
+    <div>
+      <h1>مبيعات الوحدات · Unit Sale</h1>
+      <p class="muted">مبيعات مرتبطة بوحدات موجان — % مدفوع · شيك ضمان · أقساط · توقيع · مقيم</p>
+      <div class="row" style="margin-top:10px"><span class="badge wait" id="badge">…</span><span class="mono" id="meta">—</span></div>
+    </div>
+    <div class="row">
+      <button class="btn primary" type="button" id="btnRefresh">تحديث</button>
+      
+      <a class="btn" href="./crm-units.html">الوحدات</a>
+      <a class="btn" href="./crm-sales.html">المبيعات</a>
+      <a class="btn" href="./crm-ops.html">غرفة العمليات</a>
+      <a class="btn" href="./crm-people.html">الموظفون</a>
+      <a class="btn" href="./crm-mawjan.html">ملخص موجان</a>
+      <a class="btn" href="./crm.html">الاتصال</a>
+      <a class="btn" href="./panel.html">← التحكم</a>
+
+    </div>
+  </div>
+  <div id="note">جاري التحميل…</div>
+  <div class="stats">
+    <div class="glass stat"><div class="k">عدد المبيعات</div><div class="v" id="vCount">—</div></div>
+    <div class="glass stat"><div class="k">الكيان</div><div class="v" id="vEnt" style="font-size:1rem">—</div></div>
+    <div class="glass stat"><div class="k">حقول ناقصة لقاعدة الاكتمال</div><div class="v" id="vMiss" style="font-size:.95rem">—</div></div>
+    <div class="glass stat"><div class="k">وضع الجلب</div><div class="v" id="vMode" style="font-size:1rem">—</div></div>
+  </div>
+  <div class="glass" style="overflow:auto;margin-bottom:14px">
+    <h2>خريطة الحقول المكتشفة</h2>
+    <pre class="mono" id="fmap" style="white-space:pre-wrap;margin:0">—</pre>
+  </div>
+  <div class="glass" style="overflow:auto">
+    <table>
+      <thead>
+        <tr>
+          <th>البيع</th><th>الوحدة</th><th>العميل</th><th>% مدفوع</th><th>شيك ضمان</th><th>أقساط</th><th>عقد موقّع</th><th>مقيم</th><th>مندوب</th><th>خام</th><th>Dynamics</th>
+        </tr>
+      </thead>
+      <tbody id="rows"><tr><td colspan="11" class="muted">…</td></tr></tbody>
+    </table>
+  </div>
+</div>
+<script>
+const $ = (id) => document.getElementById(id);
+const cell = (v, known) => {
+  if (v===null||v===undefined||v==='') return known ? '<span class="tbd">فارغ</span>' : '<span class="tbd">TBD</span>';
+  return String(v);
+};
+function setBadge(s){
+  const map = { ready:['on','مباشر'], pending_auth:['wait','بانتظار الدخول'], error:['off','خطأ'] };
+  const [c,l] = map[s] || ['wait', s||'…'];
+  $('badge').className = 'badge '+c; $('badge').textContent = l;
+}
+async function load(){
+  $('note').textContent = 'جاري الجلب من /api/crm/sales?project=Mawjan …';
+  try {
+    const force = window.__crmForceRefresh === true; window.__crmForceRefresh = false;
+    const r = await fetch('/api/crm/sales?project=Mawjan' + (force ? '&refresh=1' : ''));
+    const j = await r.json();
+    if (!j.ok) {
+      setBadge(j.error==='pending_auth'?'pending_auth':'error');
+      $('note').textContent = (j.message||j.error||'فشل') + (j.candidates||j.saleEntityCandidates ? (' · '+JSON.stringify(j.candidates||j.saleEntityCandidates).slice(0,240)) : '');
+      return;
+    }
+    setBadge('ready');
+    const ent = j.entity || {};
+    const fmap = j.fieldMap || {};
+    const miss = j.incompleteForCompletionRules || [];
+    $('vCount').textContent = String(j.count ?? (j.sales||[]).length);
+    $('vEnt').textContent = (ent.logicalName||'—') + (ent.displayName?(' · '+ent.displayName):'');
+    $('vMiss').textContent = miss.length ? miss.join(', ') : 'لا نقص في الأسماء';
+    $('vMode').textContent = j.fetchMode || '—';
+    $('meta').textContent = 'set='+(ent.entitySetName||'')+' · relatedUnits='+(j.relatedUnitCount??'—');
+    $('fmap').textContent = JSON.stringify(fmap, null, 2);
+    $('note').textContent = ((j.source==='cache')?'من الكاش · ':'تحديث حي واتحفظ · ')+(j.cachedAt||j.fetchedAt||'')+' · قاعدة: مقيم 5%+شيك / غير مقيم 11%';
+    const sales = j.sales || [];
+    const tb = $('rows');
+    if (!sales.length) {
+      tb.innerHTML = '<tr><td colspan="11" class="muted">لا مبيعات مرتبطة عبر md_relatedunitsaleid ل وحدات موجان</td></tr>';
+      return;
+    }
+    tb.innerHTML = sales.map(s => {
+      const raw = s.raw ? JSON.stringify(s.raw) : '';
+      const unit = (s.unitName||s.unitNumber||'—') + '<div class="mono">'+(s.unitSubtype||'')+' · '+(s.unitStatus||'')+'</div>' +
+        (s.unitUrl?(' <a class="link" href="'+s.unitUrl+'" target="_blank">وحدة</a>'):'');
+      const people = s.holdBySalesperson || s.assistedBySalesperson || '—';
+      return '<tr>'+
+        '<td><strong>'+(s.name||s.id||'—')+'</strong><div class="mono">'+String(s.id||'').slice(0,8)+'</div></td>'+
+        '<td>'+unit+'</td>'+
+        '<td>'+cell(s.customer, !!fmap.customer)+'</td>'+
+        '<td>'+cell(s.percentPaid, !!fmap.percentPaid)+'</td>'+
+        '<td>'+cell(s.guaranteeCheque, !!fmap.guaranteeCheque)+'</td>'+
+        '<td>'+cell(s.installments, !!fmap.installments)+'</td>'+
+        '<td>'+cell(s.contractSigned, !!fmap.contractSigned)+'</td>'+
+        '<td>'+cell(s.resident, !!fmap.resident)+'</td>'+
+        '<td>'+people+'</td>'+
+        '<td><div class="raw mono">'+raw.replace(/[<>]/g,'')+'</div></td>'+
+        '<td>'+(s.url?('<a class="link" href="'+s.url+'" target="_blank">فتح</a>'):'—')+'</td></tr>';
+    }).join('');
+  } catch(e) { setBadge('error'); $('note').textContent = 'السيرفر غير متصل: '+e; }
+}
+$('btnRefresh').addEventListener('click', load);
+load();
+</script>
+</body>
+</html>

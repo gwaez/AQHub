@@ -1,10 +1,14 @@
 data/tasks.json
+data/eisenhower.json
 data/crm-config.json
+data/crm-cache-*.json
 data/audit.jsonl
 data/jobs/
-data/server.log
-data/watchdog.log
-data/crash-capture.txt
+data/*.log
 *.log
 .env
 .env.*
+*.bak
+*.bak-*
+Start-Board.ps1.bak*
+eisenhower.html.bak*

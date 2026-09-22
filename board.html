@@ -133,6 +133,9 @@ body{color:var(--text);font-family:"IBM Plex Sans Arabic",system-ui,sans-serif;b
       <button class="chipbtn" type="button" data-filter="hot">الحرج <b id="statHot">0</b></button>
       <button class="chipbtn" type="button" data-filter="done">تم <b id="statDone">0</b></button>
       <button class="chipbtn" type="button" data-filter="bot">أوامر بوت <b id="statBot">0</b></button>
+      <button class="chipbtn" type="button" data-filter="late">متأخر <b id="statLate">0</b></button>
+      <button class="chipbtn" type="button" data-filter="rejected">مرفوض <b id="statRejected">0</b></button>
+      <button class="chipbtn" type="button" data-filter="needs_reply">يحتاج رد <b id="statNeedsReply">0</b></button>
     </div>
     <div class="actions">
       <button class="btn icon" id="btnNotif" type="button">🔔<span class="badge" id="notifBadge" hidden>0</span></button>
@@ -251,7 +254,7 @@ function renderNotifs(){ const b=$('notifBadge'); if(unread>0){b.hidden=false;b.
   list.innerHTML=notifications.map(n=>'<div class="note"><div class="t">'+esc(n.title)+'</div><div class="d">'+esc(n.detail||'')+'</div></div>').join('') }
 function normalize(t){
   const status=['backlog','todo','doing','blocked','done'].includes(t.status)?t.status:(t.status==='in_progress'?'doing':'todo');
-  return {id:t.id,title:t.title||'',status,priority:t.priority||'medium',source:t.source||'manual',sourceRef:t.sourceRef||t.source_ref||'',entryId:t.entryId||t.entryID||'',tags:t.tags||[],notes:t.notes||'',botAction:t.botAction||'none',botInstruction:t.botInstruction||'',comments:Array.isArray(t.comments)?t.comments:[],suggestedReply:t.suggestedReply||'',due:t.due||null,assignee:t.assignee||'',checklist:Array.isArray(t.checklist)?t.checklist:[],progress:typeof t.progress==='number'?t.progress:0,createdAt:t.createdAt||null,updatedAt:t.updatedAt||null,createdBy:t.createdBy||'',chat:Array.isArray(t.chat)?t.chat:[],timeline:Array.isArray(t.timeline)?t.timeline:[],pendingSend:t.pendingSend||null,pendingTrash:!!t.pendingTrash};
+  return {id:t.id,title:t.title||'',status,priority:t.priority||'medium',source:t.source||'manual',sourceRef:t.sourceRef||t.source_ref||'',entryId:t.entryId||t.entryID||'',tags:t.tags||[],notes:t.notes||'',botAction:t.botAction||'none',botInstruction:t.botInstruction||'',comments:Array.isArray(t.comments)?t.comments:[],suggestedReply:t.suggestedReply||'',due:t.due||null,assignee:t.assignee||'',checklist:Array.isArray(t.checklist)?t.checklist:[],progress:typeof t.progress==='number'?t.progress:0,createdAt:t.createdAt||null,updatedAt:t.updatedAt||null,createdBy:t.createdBy||'',chat:Array.isArray(t.chat)?t.chat:[],timeline:Array.isArray(t.timeline)?t.timeline:[],pendingSend:t.pendingSend||null,pendingTrash:!!t.pendingTrash,mailClass:t.mailClass||null};
 }
 async function api(path,opts){const r=await fetch(path,opts); if(!r.ok) throw new Error(await r.text()||('HTTP '+r.status)); return r}
 async function reload(silent){
@@ -282,6 +285,9 @@ function filtered(){
     if(filter==='hot'&&!((t.priority==='high'||t.priority==='urgent')&&t.status!=='done')) return false;
     if(filter==='done'&&t.status!=='done') return false;
     if(filter==='bot'&&!(t.botAction&&t.botAction!=='none')) return false;
+    if(filter==='late'&&!(t.mailClass==='late'||(t.tags||[]).includes('mail-late'))) return false;
+    if(filter==='rejected'&&!(t.mailClass==='rejected'||(t.tags||[]).includes('mail-rejected'))) return false;
+    if(filter==='needs_reply'&&!(t.mailClass==='needs_reply'||(t.tags||[]).includes('mail-needs-reply'))) return false;
     if(src&&t.source!==src) return false; if(pr&&t.priority!==pr) return false; if(!q) return true;
     return [t.title,t.source,t.sourceRef,t.notes,t.botInstruction,t.assignee,...(t.tags||[])].join(' ').toLowerCase().includes(q);
   });
@@ -334,6 +340,9 @@ function render(){ const list=filtered();
   $('statHot').textContent=state.tasks.filter(t=>(t.priority==='high'||t.priority==='urgent')&&t.status!=='done').length;
   $('statDone').textContent=state.tasks.filter(t=>t.status==='done').length;
   $('statBot').textContent=state.tasks.filter(t=>t.botAction&&t.botAction!=='none').length;
+  if($('statLate')) $('statLate').textContent=state.tasks.filter(t=>t.mailClass==='late'||(t.tags||[]).includes('mail-late')).length;
+  if($('statRejected')) $('statRejected').textContent=state.tasks.filter(t=>t.mailClass==='rejected'||(t.tags||[]).includes('mail-rejected')).length;
+  if($('statNeedsReply')) $('statNeedsReply').textContent=state.tasks.filter(t=>t.mailClass==='needs_reply'||(t.tags||[]).includes('mail-needs-reply')).length;
   document.querySelectorAll('#viewSwitch .chipbtn').forEach(b=>b.classList.toggle('on',b.dataset.view===view));
   document.querySelectorAll('#statFilters .chipbtn').forEach(b=>b.classList.toggle('on',b.dataset.filter===filter));
   const main=$('main'); main.innerHTML='';

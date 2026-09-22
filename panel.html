@@ -313,24 +313,36 @@ const systems = [
     secondary: null
   },
   {
+    id: 'eisenhower',
+    icon: '▦',
+    name: 'صندوق أيزنهاور',
+    desc: 'عاجل/هام — ارمي الإيميلات والتاسكات أول اليوم وخد منها وأنت بتنفّذ.',
+    status: 'wait',
+    statusLabel: 'جديد',
+    primary: { label: 'افتح الصندوق', href: './eisenhower.html' },
+    secondary: { label: 'لوحة التاسكات', href: './board.html' }
+  },
+  {
     id: 'crm',
     icon: '▣',
-    name: 'CRM · Dynamics',
-    desc: 'Dynamics 365 Dataverse — prod aqaar.crm15 · وحدات/عروض/موافقات (بانتظار تسجيل الدخول).',
+    name: 'CRM · موجان',
+    desc: 'غرفة عمليات الشيت · وحدات · Unit Sale · موظفون — Dataverse.',
     status: 'wait',
-    statusLabel: 'بانتظار الدخول',
-    primary: { label: 'إعداد CRM', href: './crm.html' },
-    secondary: { label: 'الحالة', action: 'crm-status' }
+    statusLabel: 'CRM',
+    primary: { label: 'غرفة العمليات', href: './crm-ops.html' },
+    secondary: { label: 'المبيعات', href: './crm-sales.html' },
+    tertiary: { label: 'الوحدات', href: './crm-units.html' },
+    extra: { label: 'ملخص موجان', href: './crm-mawjan.html' }
   },
   {
     id: 'sign',
     icon: '✎',
     name: 'بوابة التوقيع',
-    desc: 'البورتال الخاص بالتوقيع الإلكتروني والعقود — يتربط لوحده بعد الـ CRM.',
-    status: 'off',
-    statusLabel: 'لاحقًا',
-    primary: { label: 'ربط التوقيع', action: 'sign', disabled: true },
-    secondary: null
+    desc: 'digiapi لعقود/SPA الشقق · digisign للإلغاء والريفند والأوراق الداخلية.',
+    status: 'wait',
+    statusLabel: 'توقيع',
+    primary: { label: 'عقود SPA', href: 'https://digiapi.aqaar.com:4443/reports/all' },
+    secondary: { label: 'توقيع داخلي', href: 'https://digisign.aqaar.com/' }
   },
   {
     id: 'teams',
@@ -360,8 +372,13 @@ function render(){
       ? `<a class="btn primary" href="${s.primary.href}">${s.primary.label}</a>`
       : `<button class="btn primary" type="button" data-action="${s.primary.action||''}" ${s.primary.disabled?'disabled':''}>${s.primary.label}</button>`;
     const secondary = s.secondary
-      ? `<button class="btn" type="button" data-action="${s.secondary.action}">${s.secondary.label}</button>`
+      ? (s.secondary.href
+        ? `<a class="btn" href="${s.secondary.href}">${s.secondary.label}</a>`
+        : `<button class="btn" type="button" data-action="${s.secondary.action||''}">${s.secondary.label}</button>`)
       : '';
+    const more = [s.tertiary, s.extra].filter(Boolean).map(x =>
+      x.href ? `<a class="btn" href="${x.href}">${x.label}</a>` : ''
+    ).join('');
     return `<article class="glass card" data-id="${s.id}">
       <div class="card-top">
         <div class="icon">${s.icon}</div>
@@ -369,7 +386,7 @@ function render(){
       </div>
       <h4>${s.name}</h4>
       <p>${s.desc}</p>
-      <div class="card-actions">${primary}${secondary}</div>
+      <div class="card-actions">${primary}${secondary}${more}</div>
     </article>`;
   }).join('');
 

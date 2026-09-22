@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>غرفة العمليات — Full View موجان</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+:root{--bg0:#070b12;--text:#e8eef8;--muted:#8b9bb3;--faint:#5d6d86;--accent:#5eead4;--accent2:#38bdf8;--warn:#fbbf24;--ok:#34d399;--danger:#fb7185;--stroke:rgba(148,163,184,.14);--stroke2:rgba(125,211,252,.28);--card:rgba(18,28,48,.72);--radius:22px}
+*{box-sizing:border-box}body{margin:0;font-family:"IBM Plex Sans Arabic",sans-serif;color:var(--text);background:radial-gradient(1100px 640px at 8% -12%,rgba(56,189,248,.18),transparent 55%),radial-gradient(900px 560px at 100% 0%,rgba(167,139,250,.16),transparent 50%),linear-gradient(180deg,var(--bg0),#0a101a);min-height:100vh}
+.shell{max-width:1320px;margin:0 auto;padding:28px 22px 70px}
+.top{display:flex;flex-wrap:wrap;gap:14px;justify-content:space-between;align-items:flex-start;margin-bottom:14px}
+h1{margin:0;font-size:1.45rem}h2{margin:0 0 10px;font-size:1rem}.muted{color:var(--muted);font-size:.9rem;line-height:1.55}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.btn{appearance:none;border:1px solid var(--stroke);background:rgba(255,255,255,.03);color:var(--text);border-radius:14px;padding:10px 14px;font:inherit;font-weight:600;cursor:pointer;text-decoration:none;display:inline-flex}
+.btn:hover{border-color:var(--stroke2);background:rgba(255,255,255,.06)}
+.btn.primary{background:linear-gradient(135deg,rgba(94,234,212,.95),rgba(56,189,248,.88));color:#062019;border:0;font-weight:700}
+.btn.active{border-color:var(--accent);color:var(--accent);background:rgba(94,234,212,.08)}
+.glass{background:var(--card);border:1px solid var(--stroke);border-radius:var(--radius);padding:18px;backdrop-filter:blur(18px);box-shadow:0 24px 80px rgba(0,0,0,.35)}
+.badge{font-size:.75rem;font-weight:700;padding:5px 10px;border-radius:999px;border:1px solid var(--stroke)}
+.badge.on{color:var(--ok);border-color:rgba(52,211,153,.35);background:rgba(52,211,153,.08)}
+.badge.wait{color:var(--warn);border-color:rgba(251,191,36,.35);background:rgba(251,191,36,.08)}
+.badge.off{color:var(--muted)}
+.stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin:14px 0}
+@media(max-width:1000px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.stat .k{color:var(--muted);font-size:.78rem;font-weight:600}.stat .v{font-size:1.5rem;font-weight:700;margin-top:6px}
+.rules{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+@media(max-width:800px){.rules{grid-template-columns:1fr}}
+.rules li{margin:4px 0;color:var(--muted);font-size:.86rem}
+table{width:100%;border-collapse:collapse;font-size:.82rem}th,td{padding:9px 7px;border-bottom:1px solid var(--stroke);text-align:right;vertical-align:top}
+th{color:var(--muted);font-weight:600;font-size:.7rem;white-space:nowrap;position:sticky;top:0;background:rgba(12,18,30,.95)}
+.pill{display:inline-block;padding:3px 8px;border-radius:999px;font-size:.7rem;font-weight:700;border:1px solid var(--stroke)}
+.pill.ok{color:var(--ok);background:rgba(52,211,153,.1);border-color:rgba(52,211,153,.3)}
+.pill.bad{color:var(--danger);background:rgba(251,113,133,.1);border-color:rgba(251,113,133,.3)}
+.pill.warn{color:var(--warn);background:rgba(251,191,36,.1);border-color:rgba(251,191,36,.3)}
+.pill.dim{color:var(--muted)}
+.mono{font-family:"JetBrains Mono",monospace;font-size:.68rem;color:var(--faint)}
+a.link{color:var(--accent2);text-decoration:none;font-weight:600}
+#note{margin:8px 0 0;padding:12px 14px;border-radius:14px;border:1px dashed rgba(167,139,250,.35);background:rgba(167,139,250,.07);color:var(--muted);font-size:.85rem}
+#updating{display:none;margin:10px 0 0;padding:12px 14px;border-radius:14px;border:1px solid rgba(56,189,248,.45);background:rgba(56,189,248,.12);color:var(--accent2);font-size:.9rem;font-weight:600}
+#updating.on{display:block}
+#updating .spin{display:inline-block;width:12px;height:12px;border:2px solid rgba(56,189,248,.25);border-top-color:var(--accent2);border-radius:50%;margin-left:8px;vertical-align:-1px;animation:spin 0.8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+input,select{background:rgba(0,0,0,.25);border:1px solid var(--stroke);color:var(--text);border-radius:12px;padding:9px 12px;font:inherit}
+.filters{display:flex;flex-wrap:wrap;gap:10px;margin:12px 0 4px;align-items:center}
+.table-wrap{overflow:auto;max-height:68vh}
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="top">
+    <div>
+      <h1>غرفة العمليات · Full View</h1>
+      <p class="muted">نفس منطق شيت التشغيل: أهلية البيع · نسبة التحصيل · شيك الضمان · التوقيع · جاهز للسند</p>
+      <div class="row" style="margin-top:10px"><span class="badge wait" id="badge">…</span><span class="mono" id="meta">—</span></div>
+    </div>
+    <div class="row">
+      <button class="btn primary" type="button" id="btnRefresh">تحديث من CRM</button>
+      <a class="btn" href="./crm-sales.html">المبيعات</a>
+      <a class="btn" href="./crm-units.html">الوحدات</a>
+      <a class="btn" href="./crm-people.html">الموظفون</a>
+      <a class="btn" href="./crm-mawjan.html">ملخص موجان</a>
+      <a class="btn" href="./panel.html">← التحكم</a>
+    </div>
+  </div>
+
+  <div class="rules">
+    <div class="glass">
+      <h2>مقيم · Resident</h2>
+      <ul>
+        <li>نسبة محصّلة ≥ <b style="color:var(--accent)">5%</b></li>
+        <li>+ شيك ضمان (G Cheque / RCT)</li>
+        <li>وإلا: Increase to 5% · Add Security Cheque</li>
+      </ul>
+    </div>
+    <div class="glass">
+      <h2>غير مقيم · Non Resident</h2>
+      <ul>
+        <li>نسبة محصّلة ≥ <b style="color:var(--accent)">11%</b> (مسار 6 شهور)</li>
+        <li>شيك الضمان عادة غير مطلوب</li>
+        <li>وإلا: Increase Payment to Minimum 11%</li>
+      </ul>
+    </div>
+  </div>
+
+  <div id="note">جاري التحميل من الكاش …</div>
+  <div id="updating"><span class="spin"></span>جاري التحديث من Dynamics CRM — استنى لحظة…</div>
+
+  <div class="stats">
+    <div class="glass stat"><div class="k">إجمالي البيوع</div><div class="v" id="vTotal">—</div></div>
+    <div class="glass stat"><div class="k">Eligible</div><div class="v" id="vOk" style="color:var(--ok)">—</div></div>
+    <div class="glass stat"><div class="k">Not Eligible</div><div class="v" id="vBad" style="color:var(--danger)">—</div></div>
+    <div class="glass stat"><div class="k">محتاج شيك</div><div class="v" id="vCheque">—</div></div>
+    <div class="glass stat"><div class="k">محتاج رفع %</div><div class="v" id="vPay">—</div></div>
+  </div>
+
+  <div class="filters">
+    <select id="fStatus"><option value="all">كل الحالات</option><option value="Eligible">Eligible</option><option value="Not Eligible">Not Eligible</option><option value="Unknown">غير محسوم</option></select>
+    <select id="fVisa"><option value="all">كل الإقامة</option><option value="Resident">مقيم</option><option value="Non Resident">غير مقيم</option><option value="Unknown">غير معروف</option></select>
+    <select id="fComment"><option value="all">كل التعليقات</option></select>
+    <input id="fQ" type="search" placeholder="بحث USL / وحدة / مندوب…" style="min-width:220px" />
+  </div>
+
+  <div class="glass table-wrap" style="margin-top:12px;padding:0 10px 10px">
+    <table>
+      <thead>
+        <tr>
+          <th>USL</th><th>الوحدة</th><th>النوع</th><th>الإقامة</th><th>%</th><th>شيك</th><th>توقيع</th><th>Comment</th><th>Full Status</th><th>مندوب</th><th>Dynamics</th>
+        </tr>
+      </thead>
+      <tbody id="rows"><tr><td colspan="11" class="muted">…</td></tr></tbody>
+    </table>
+  </div>
+</div>
+<script>
+const $ = (id) => document.getElementById(id);
+let ALL = [];
+
+function setBadge(s){
+  const map = { ready:['on','مباشر'], pending_auth:['wait','بانتظار الدخول'], error:['off','خطأ'] };
+  const [c,l] = map[s] || ['wait', s||'…'];
+  $('badge').className = 'badge '+c; $('badge').textContent = l;
+}
+
+function toNum(v){
+  if (v===null||v===undefined||v==='') return null;
+  const n = parseFloat(String(v).replace(/[,%\s]/g,'').replace(',','.'));
+  return Number.isFinite(n) ? n : null;
+}
+
+function hasCheque(v){
+  if (v===null||v===undefined||v==='') return false;
+  const s = String(v).trim().toLowerCase();
+  if (!s || s==='0' || s==='false' || s==='no' || s==='#n/a' || s==='n/a' || s==='null') return false;
+  return true;
+}
+
+function hasSigned(v){
+  if (v===null||v===undefined||v==='') return false;
+  const s = String(v).trim().toLowerCase();
+  if (['1','true','yes','signed','done','موقّع','موقع'].some(x => s===x || s.includes(x))) return true;
+  if (['0','false','no','pending','#n/a'].includes(s)) return false;
+  return hasCheque(v);
+}
+
+function classifyVisa(raw){
+  const s = String(raw||'').trim().toLowerCase();
+  if (!s) return 'Unknown';
+  if (s.includes('non') || s.includes('غير') || s.includes('non resident') || s.includes('non-resident')) return 'Non Resident';
+  if (s.includes('resident') || s.includes('مقيم') || s.includes('784-')) return 'Resident';
+  // country lookup guid alone → Unknown
+  if (/^[0-9a-f-]{20,}$/i.test(s)) return 'Unknown';
+  return 'Unknown';
+}
+
+/** Sheet Full View rules */
+function evaluate(sale){
+  const pct = toNum(sale.percentPaid);
+  const cheque = hasCheque(sale.guaranteeCheque);
+  const signed = hasSigned(sale.contractSigned);
+  const visa = classifyVisa(sale.resident);
+  const comments = [];
+  let eligible = false;
+
+  if (visa === 'Resident') {
+    if (pct === null || pct < 5) comments.push('Increase Payment to Minimum 5%');
+    if (!cheque) comments.push('Add Security Cheque');
+    if (comments.length === 0) { eligible = true; comments.push('No Action Required'); }
+  } else if (visa === 'Non Resident') {
+    if (pct === null || pct < 11) comments.push('Increase Payment to Minimum 11%');
+    if (cheque) comments.push('Issue: Non-Resident should not have a Security Cheque');
+    if (comments.length === 0) { eligible = true; comments.push('No Action Required'); }
+  } else {
+    // unknown visa: show soft guidance using both thresholds
+    if (pct === null) comments.push('Visa Type TBD · نسبة التحصيل غير معروفة');
+    else if (pct < 5) comments.push('Visa TBD · تحت 5%');
+    else if (pct < 11 && !cheque) comments.push('Visa TBD · إن كان مقيماً يحتاج شيك · إن غير مقيم يحتاج ≥11%');
+    else if (pct >= 11) { eligible = true; comments.push('No Action Required'); }
+    else if (pct >= 5 && cheque) { eligible = true; comments.push('No Action Required'); }
+    else comments.push('Visa Type TBD');
+  }
+
+  const comment = comments.join(' + ');
+  const full = eligible ? 'Eligible' : (comments.some(c => c.includes('TBD') || c.includes('Visa')) ? 'Unknown' : 'Not Eligible');
+  let stage = 'Payment';
+  if (eligible && signed) stage = 'Ready for Title Deed';
+  else if (eligible) stage = 'Signatures';
+  else if (visa === 'Resident' && pct !== null && pct >= 5 && !cheque) stage = 'G-Cheque';
+  else if (visa === 'Non Resident' && pct !== null && pct >= 11) stage = 'Signatures';
+
+  return { pct, cheque, signed, visa, comment, full, stage, eligible, fromApi: false };
+}
+
+/** Prefer API eligibility; local sheet rules are fallback only */
+function mergeEval(s){
+  const local = evaluate(s);
+  const hasApi = (typeof s.eligible === 'boolean') || (s.comment != null && String(s.comment).length > 0) || (s.stage != null && String(s.stage).length > 0);
+  if (!hasApi) return local;
+
+  const eligible = (typeof s.eligible === 'boolean') ? s.eligible : local.eligible;
+  const comment = (s.comment != null && String(s.comment).length) ? String(s.comment) : local.comment;
+  let stage = (s.opsPath && String(s.opsPath).length) ? String(s.opsPath) : ((s.stage != null && String(s.stage).length) ? String(s.stage) : local.stage);
+
+  let full = eligible ? 'Eligible' : 'Not Eligible';
+  const stageL = String(stage).toLowerCase();
+  if (stageL === 'eligible') { full = 'Eligible'; stage = s.ops || 'Ready'; }
+  else if (stageL.includes('not eligible')) { full = 'Not Eligible'; }
+  else if (comment.toLowerCase().includes('tbd') || comment.toLowerCase().includes('unknown')) { full = 'Unknown'; }
+
+  let visa = local.visa;
+  if (s.residency) {
+    const r = String(s.residency);
+    if (/non/i.test(r)) visa = 'Non Resident';
+    else if (/resident/i.test(r)) visa = 'Resident';
+  }
+
+  return { pct: local.pct, cheque: local.cheque, signed: local.signed, visa, comment, full, stage, eligible, fromApi: true };
+}
+
+function pill(cls, text){ return `<span class="pill ${cls}">${text}</span>`; }
+
+function render(){
+  const st = $('fStatus').value;
+  const visa = $('fVisa').value;
+  const com = $('fComment').value;
+  const q = ($('fQ').value || '').trim().toLowerCase();
+
+  let rows = ALL.slice();
+  if (st !== 'all') rows = rows.filter(r => r.eval.full === st);
+  if (visa !== 'all') rows = rows.filter(r => r.eval.visa === visa);
+  if (com !== 'all') rows = rows.filter(r => r.eval.comment === com);
+  if (q) rows = rows.filter(r => {
+    const hay = [r.name, r.id, r.unitName, r.unitNumber, r.holdBySalesperson, r.assistedBySalesperson, r.eval.comment].join(' ').toLowerCase();
+    return hay.includes(q);
+  });
+
+  const tb = $('rows');
+  if (!rows.length) {
+    tb.innerHTML = '<tr><td colspan="11" class="muted">لا نتائج لهذا الفلتر</td></tr>';
+    return;
+  }
+  tb.innerHTML = rows.map(r => {
+    const e = r.eval;
+    const usl = r.name || r.id || '—';
+    const unit = r.unitNumber || r.unitName || '—';
+    const pct = e.pct === null ? '<span class="mono">—</span>' : (e.pct.toFixed(2) + '%');
+    const ch = e.cheque ? pill('ok', String(r.guaranteeCheque).slice(0,18)) : pill('dim', 'لا');
+    const sg = e.signed ? pill('ok', 'موقّع') : pill('warn', 'Pending');
+    const fullCls = e.full === 'Eligible' ? 'ok' : (e.full === 'Unknown' ? 'warn' : 'bad');
+    const sp = r.holdBySalesperson || r.assistedBySalesperson || '—';
+    const link = r.url ? `<a class="link" href="${r.url}" target="_blank" rel="noopener">فتح</a>` : '—';
+    return `<tr>
+      <td><b>${usl}</b><div class="mono">${(r.id||'').slice(0,8)}</div></td>
+      <td>${unit}<div class="mono">${r.unitSubtype||''}</div></td>
+      <td>${r.unitSubtype||'—'}</td>
+      <td>${pill(e.visa==='Resident'?'ok':(e.visa==='Non Resident'?'warn':'dim'), e.visa)}</td>
+      <td>${pct}</td>
+      <td>${ch}</td>
+      <td>${sg}</td>
+      <td>${e.comment}</td>
+      <td>${pill(fullCls, e.full)}<div class="mono">${e.stage}</div></td>
+      <td>${sp}</td>
+      <td>${link}</td>
+    </tr>`;
+  }).join('');
+}
+
+function refreshStats(list){
+  $('vTotal').textContent = String(list.length);
+  $('vOk').textContent = String(list.filter(r => r.eval.full === 'Eligible').length);
+  $('vBad').textContent = String(list.filter(r => r.eval.full === 'Not Eligible').length);
+  $('vCheque').textContent = String(list.filter(r => r.eval.comment.includes('Security Cheque')).length);
+  $('vPay').textContent = String(list.filter(r => r.eval.comment.includes('Increase Payment')).length);
+
+  const comments = [...new Set(list.map(r => r.eval.comment))].sort();
+  const sel = $('fComment');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="all">كل التعليقات</option>' + comments.map(c => `<option value="${c.replace(/"/g,'&quot;')}">${c}</option>`).join('');
+  sel.value = [...sel.options].some(o => o.value === cur) ? cur : 'all';
+}
+
+function applyPayload(j, mode){
+  setBadge('ready');
+  const fmap = j.fieldMap || {};
+  ALL = (j.sales || []).map(s => ({ ...s, eval: mergeEval(s) }));
+  refreshStats(ALL);
+  const src = j.source || mode || '—';
+  const when = j.cachedAt || j.fetchedAt || '';
+  $('meta').textContent = `source=${src} · eligibleAPI=${j.eligibleCount??'—'} · entity=${(j.entity&&j.entity.logicalName)||'—'} · ${when}`;
+  if (src === 'cache') {
+    $('note').textContent = 'من الكاش · قواعد الأهلية من الـ API' + (ALL.some(x=>x.eval.fromApi)?'':' (fallback محلي)') + ' · زر التحديث يسحب من Dynamics';
+  } else {
+    $('note').textContent = 'تحديث حي واتحفظ · Eligible من الـ API=' + (j.eligibleCount ?? ALL.filter(x=>x.eval.eligible).length);
+  }
+  render();
+}
+
+async function load(force){
+  const updating = $('updating');
+  if (force) {
+    updating.classList.add('on');
+    $('btnRefresh').disabled = true;
+    $('btnRefresh').textContent = 'جاري التحديث…';
+    $('note').textContent = 'تحديث حي من Dynamics — البيانات القديمة لسه ظاهرة لحد ما يخلّص';
+  } else {
+    $('note').textContent = 'تحميل من كاش السيرفر…';
+  }
+  try {
+    const url = force
+      ? '/api/crm/sales?project=Mawjan&refresh=1'
+      : '/api/crm/sales?project=Mawjan';
+    const r = await fetch(url);
+    const j = await r.json();
+    if (!j.ok) {
+      setBadge(j.error === 'pending_auth' ? 'pending_auth' : 'error');
+      $('note').textContent = j.message || j.error || 'فشل الجلب';
+      return;
+    }
+    applyPayload(j, force ? 'live' : (j.source || 'cache'));
+  } catch (err) {
+    setBadge('error');
+    $('note').textContent = String(err && err.message || err);
+  } finally {
+    updating.classList.remove('on');
+    $('btnRefresh').disabled = false;
+    $('btnRefresh').textContent = 'تحديث من CRM';
+  }
+}
+
+$('btnRefresh').onclick = () => load(true);
+['fStatus','fVisa','fComment'].forEach(id => $(id).onchange = render);
+$('fQ').oninput = render;
+load(false);
+</script>
+</body>
+</html>

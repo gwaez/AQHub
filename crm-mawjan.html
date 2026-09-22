@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>CRM موجان — Aqaar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg0:#070b12; --text:#e8eef8; --muted:#8b9bb3; --faint:#5d6d86;
+    --accent:#5eead4; --accent-2:#38bdf8; --accent-3:#a78bfa;
+    --warn:#fbbf24; --ok:#34d399; --danger:#fb7185;
+    --stroke:rgba(148,163,184,.14); --stroke-strong:rgba(125,211,252,.28);
+    --card:rgba(18,28,48,.72); --radius:22px;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; font-family:"IBM Plex Sans Arabic",sans-serif; color:var(--text);
+    background:
+      radial-gradient(1100px 640px at 8% -12%, rgba(56,189,248,.18), transparent 55%),
+      radial-gradient(900px 560px at 100% 0%, rgba(167,139,250,.16), transparent 50%),
+      radial-gradient(700px 480px at 60% 110%, rgba(94,234,212,.10), transparent 45%),
+      linear-gradient(180deg, var(--bg0), #0a101a);
+    min-height:100vh;
+  }
+  body::before{
+    content:""; position:fixed; inset:0; pointer-events:none; opacity:.28;
+    background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.45'/%3E%3C/svg%3E");
+    mix-blend-mode:overlay;
+  }
+  .shell{position:relative; max-width:1180px; margin:0 auto; padding:28px 22px 70px}
+  .top{display:flex; flex-wrap:wrap; gap:14px; align-items:flex-start; justify-content:space-between; margin-bottom:22px}
+  .brand h1{margin:0; font-size:1.5rem; font-weight:700; letter-spacing:-.02em}
+  .brand p{margin:6px 0 0; color:var(--muted); font-size:.92rem; line-height:1.55}
+  .row{display:flex; flex-wrap:wrap; gap:10px; align-items:center}
+  .btn{
+    appearance:none; border:1px solid var(--stroke); background:rgba(255,255,255,.03);
+    color:var(--text); border-radius:14px; padding:10px 14px; font:inherit; font-weight:600;
+    cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; gap:8px;
+  }
+  .btn:hover{border-color:var(--stroke-strong); background:rgba(255,255,255,.06)}
+  .btn.primary{
+    background:linear-gradient(135deg, rgba(94,234,212,.95), rgba(56,189,248,.88));
+    color:#062019; border:0; font-weight:700;
+  }
+  .glass{
+    background:var(--card); border:1px solid var(--stroke); border-radius:var(--radius);
+    padding:20px; backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px);
+    box-shadow:0 24px 80px rgba(0,0,0,.35);
+  }
+  .badge{
+    font-size:.75rem; font-weight:700; padding:5px 10px; border-radius:999px;
+    border:1px solid var(--stroke);
+  }
+  .badge.wait{color:var(--warn); border-color:rgba(251,191,36,.35); background:rgba(251,191,36,.08)}
+  .badge.on{color:var(--ok); border-color:rgba(52,211,153,.35); background:rgba(52,211,153,.08)}
+  .badge.off{color:var(--muted)}
+  .badge.demo{color:var(--accent-3); border-color:rgba(167,139,250,.4); background:rgba(167,139,250,.1)}
+  .stats{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px; margin:18px 0}
+  @media (max-width:900px){ .stats{grid-template-columns:repeat(2,minmax(0,1fr))} }
+  @media (max-width:520px){ .stats{grid-template-columns:1fr} }
+  .stat{position:relative; overflow:hidden; padding:18px}
+  .stat::after{
+    content:""; position:absolute; inset:auto -20% -40% auto; width:120px; height:120px;
+    border-radius:50%; filter:blur(28px); opacity:.4; pointer-events:none;
+  }
+  .stat.total::after{background:var(--accent-2)}
+  .stat.sold::after{background:var(--danger)}
+  .stat.remain::after{background:var(--ok)}
+  .stat.mix::after{background:var(--accent-3)}
+  .stat .k{color:var(--muted); font-size:.82rem; font-weight:600; margin-bottom:8px}
+  .stat .v{font-size:2.05rem; font-weight:700; letter-spacing:-.03em; line-height:1.1}
+  .stat .s{margin-top:8px; color:var(--faint); font-size:.78rem}
+  .breakdown{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin-top:14px}
+  @media (max-width:700px){ .breakdown{grid-template-columns:1fr} }
+  .bucket{
+    border:1px solid var(--stroke); border-radius:16px; padding:14px 16px; background:rgba(0,0,0,.18);
+  }
+  .bucket .label{font-size:.85rem; color:var(--muted); font-weight:600}
+  .bucket .num{font-size:1.55rem; font-weight:700; margin-top:6px}
+  .bucket .bar{margin-top:10px; height:6px; border-radius:999px; background:rgba(255,255,255,.06); overflow:hidden}
+  .bucket .bar > i{display:block; height:100%; border-radius:999px; background:linear-gradient(90deg, var(--accent), var(--accent-2))}
+  .meta{display:grid; grid-template-columns:1.2fr .8fr; gap:14px; margin-top:16px}
+  @media (max-width:800px){ .meta{grid-template-columns:1fr} }
+  h2{margin:0 0 10px; font-size:1.05rem}
+  .muted{color:var(--muted); font-size:.88rem; line-height:1.65}
+  .mono{font-family:"JetBrains Mono",monospace; font-size:.78rem}
+  table{width:100%; border-collapse:collapse; font-size:.88rem}
+  th,td{padding:10px 8px; border-bottom:1px solid var(--stroke); text-align:right}
+  th{color:var(--muted); font-weight:600; font-size:.78rem}
+  .pill{
+    display:inline-block; padding:3px 8px; border-radius:999px; font-size:.72rem; font-weight:700;
+    border:1px solid var(--stroke);
+  }
+  .pill.sold{color:var(--danger); background:rgba(251,113,133,.1); border-color:rgba(251,113,133,.3)}
+  .pill.remain{color:var(--ok); background:rgba(52,211,153,.1); border-color:rgba(52,211,153,.3)}
+  #note{
+    margin-top:4px; margin-bottom:4px; padding:12px 14px; border-radius:14px;
+    border:1px dashed rgba(167,139,250,.35); background:rgba(167,139,250,.07);
+    color:var(--muted); font-size:.85rem; line-height:1.6;
+  }
+  #log{white-space:pre-wrap; font-family:"JetBrains Mono",monospace; font-size:.72rem; color:var(--faint); margin-top:12px; max-height:180px; overflow:auto}
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="top">
+    <div class="brand">
+      <h1>CRM · مشروع موجان</h1>
+      <p>لوحة وحدات موجان من Dataverse — إجمالي / مباع / متبقي + توزيع الأنواع</p>
+      <div class="row" style="margin-top:10px">
+        <span class="badge wait" id="badge">…</span>
+        <span class="mono" id="orgLabel">—</span>
+      </div>
+    </div>
+    <div class="row">
+      <button class="btn primary" type="button" id="btnRefresh">تحديث</button>
+      <a class="btn" href="./crm-units.html">الوحدات</a>
+      <a class="btn" href="./crm-sales.html">المبيعات</a>
+      <a class="btn" href="./crm-ops.html">غرفة العمليات</a>
+      <a class="btn" href="./crm-people.html">الموظفون</a>
+      <a class="btn" href="./crm.html">إعداد الاتصال</a>
+      <a class="btn" href="./panel.html">← التحكم</a>
+    </div>
+  </div>
+
+  <div id="note">جاري التحميل…</div>
+
+  <div class="stats">
+    <div class="glass stat total">
+      <div class="k">إجمالي وحدات موجان</div>
+      <div class="v" id="vTotal">—</div>
+      <div class="s" id="sTotal">total</div>
+    </div>
+    <div class="glass stat sold">
+      <div class="k">مباع</div>
+      <div class="v" id="vSold">—</div>
+      <div class="s" id="sSold">sold</div>
+    </div>
+    <div class="glass stat remain">
+      <div class="k">متبقي</div>
+      <div class="v" id="vRemain">—</div>
+      <div class="s" id="sRemain">remaining</div>
+    </div>
+    <div class="glass stat mix">
+      <div class="k">نسبة المتبقي</div>
+      <div class="v" id="vPct">—</div>
+      <div class="s" id="sPct">remaining / total</div>
+    </div>
+  </div>
+
+  <div class="glass">
+    <div class="row" style="justify-content:space-between">
+      <h2 style="margin:0">توزيع المتبقي حسب النوع</h2>
+      <span class="mono" id="bedField">bedroom field: —</span>
+    </div>
+    <div class="breakdown">
+      <div class="bucket">
+        <div class="label">استوديو</div>
+        <div class="num" id="bStudio">—</div>
+        <div class="bar"><i id="barStudio" style="width:0%"></i></div>
+      </div>
+      <div class="bucket">
+        <div class="label">غرفة واحدة</div>
+        <div class="num" id="b1">—</div>
+        <div class="bar"><i id="bar1" style="width:0%"></i></div>
+      </div>
+      <div class="bucket">
+        <div class="label">غرفتين</div>
+        <div class="num" id="b2">—</div>
+        <div class="bar"><i id="bar2" style="width:0%"></i></div>
+      </div>
+    </div>
+    <p class="muted" id="otherNote" style="margin:12px 0 0"></p>
+  </div>
+
+  <div class="meta">
+    <div class="glass">
+      <h2>عينة وحدات</h2>
+      <div class="row" style="margin-bottom:10px">
+        <button class="btn" type="button" id="btnRemain">المتبقي</button>
+        <button class="btn" type="button" id="btnSold">المباع</button>
+      </div>
+      <div style="overflow:auto">
+        <table>
+          <thead><tr><th>الوحدة</th><th>النوع</th><th>الحالة</th></tr></thead>
+          <tbody id="unitRows">
+            <tr><td colspan="3" class="muted">اضغط متبقي / مباع بعد جاهزية الـ API</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="glass">
+      <h2>اكتشاف الحقول</h2>
+      <div id="mapText" class="muted">—</div>
+      <div id="log"></div>
+    </div>
+  </div>
+</div>
+<script>
+const $ = (id) => document.getElementById(id);
+const log = (m) => { $('log').textContent = typeof m === 'string' ? m : JSON.stringify(m, null, 2); };
+
+const PLACEHOLDER = {
+  ok: true, demo: true, authStatus: 'demo', project: 'Mawjan',
+  projectFilterField: '(preview)', bedroomTypeField: '(preview)', soldField: '(preview)',
+  soldRule: 'preview — live Dataverse when token ready',
+  total: 128, sold: 47, remaining: 81,
+  remainingBreakdown: {
+    studio: 22, '1bedroom': 39, '2bedroom': 18, other: {},
+    rawBuckets: { Studio: 22, '1 Bedroom': 39, '2 Bedroom': 18 }
+  },
+  message: 'Preview placeholders — not live CRM counts'
+};
+
+function setBadge(status){
+  const map = {
+    ready: ['on','مباشر'],
+    demo: ['demo','معاينة'],
+    pending_auth: ['wait','بانتظار الدخول'],
+    wait: ['wait','انتظار'],
+    error: ['off','خطأ']
+  };
+  const [cls, label] = map[status] || ['wait', status || '…'];
+  $('badge').className = 'badge ' + cls;
+  $('badge').textContent = label;
+}
+
+function fill(data){
+  const total = Number(data.total ?? 0);
+  const sold = Number(data.sold ?? 0);
+  const rem = Number(data.remaining ?? 0);
+  const rb = data.remainingBreakdown || data.remaining_breakdown || {};
+  const studio = Number(rb.studio ?? rb.Studio ?? 0);
+  const b1 = Number(rb['1bedroom'] ?? rb.oneBedroom ?? rb['1_bedroom'] ?? 0);
+  const b2 = Number(rb['2bedroom'] ?? rb.twoBedroom ?? rb['2_bedroom'] ?? 0);
+  const max = Math.max(studio, b1, b2, 1);
+
+  $('vTotal').textContent = data.total == null ? '—' : String(total);
+  $('vSold').textContent = data.sold == null ? '—' : String(sold);
+  $('vRemain').textContent = data.remaining == null ? '—' : String(rem);
+  $('vPct').textContent = total ? (Math.round((rem / total) * 100) + '%') : '—';
+  $('sTotal').textContent = data.project || 'Mawjan';
+  $('sSold').textContent = data.soldField ? ('field: ' + data.soldField) : 'sold';
+  $('sRemain').textContent = data.projectFilterField ? ('filter: ' + data.projectFilterField) : 'remaining';
+  $('sPct').textContent = total ? (rem + ' / ' + total) : 'remaining / total';
+
+  $('bStudio').textContent = String(studio);
+  $('b1').textContent = String(b1);
+  $('b2').textContent = String(b2);
+  $('barStudio').style.width = Math.round(studio / max * 100) + '%';
+  $('bar1').style.width = Math.round(b1 / max * 100) + '%';
+  $('bar2').style.width = Math.round(b2 / max * 100) + '%';
+  $('bedField').textContent = 'bedroom field: ' + (data.bedroomTypeField || data.bedroomTypeField || '—');
+
+  const other = rb.other || {};
+  const raw = rb.rawBuckets || {};
+  const otherKeys = Object.keys(other);
+  if (otherKeys.length) {
+    $('otherNote').textContent = 'أخرى: ' + otherKeys.map(k => k + '=' + other[k]).join(' · ');
+  } else if (Object.keys(raw).length) {
+    $('otherNote').textContent = 'Buckets خام: ' + Object.keys(raw).map(k => k + '=' + raw[k]).join(' · ');
+  } else {
+    $('otherNote').textContent = '';
+  }
+
+  const auth = data.authStatus || (data.demo ? 'demo' : (data.ok ? 'ready' : 'wait'));
+  setBadge(auth);
+
+  if (data.demo) {
+    $('note').textContent = 'معاينة واجهة (أرقام تجريبية) — العدادات الحية تظهر بعد جاهزية توكن Dataverse على الجهاز.';
+  } else if (!data.ok && (data.error === 'pending_auth' || data.authStatus === 'pending_auth')) {
+    $('note').textContent = 'بانتظار المصادقة: أكمل MSAL أو الصق التوكن من إعداد CRM. ' + (data.message || '');
+  } else if (!data.ok) {
+    $('note').textContent = 'تعذّر الجلب: ' + (data.message || data.error || 'unknown');
+  } else {
+    $('note').textContent = 'مباشر من Dataverse · ' + (data.fetchedAt || '') + ' · قاعدة البيع: ' + (data.soldRule || '—');
+  }
+
+  $('mapText').innerHTML = [
+    '<div><strong>Project filter:</strong> <span class="mono">' + (data.projectFilterField || '—') + '</span></div>',
+    '<div style="margin-top:8px"><strong>Bedroom / type:</strong> <span class="mono">' + (data.bedroomTypeField || data.bedroomTypeField || '—') + '</span></div>',
+    '<div style="margin-top:8px"><strong>Sold field:</strong> <span class="mono">' + (data.soldField || '—') + '</span></div>',
+    '<div style="margin-top:8px" class="muted">' + (data.soldRule || '') + '</div>'
+  ].join('');
+}
+
+async function loadSummary(){
+  async function tryUrl(url){
+    const r = await fetch(url);
+    if (!r.ok) throw new Error('HTTP '+r.status);
+    return r.json();
+  }
+  try {
+    let j = null;
+    try { j = await tryUrl('/api/crm/mawjan/summary'); } catch (_) {}
+    if (!j || !j.ok) {
+      try { j = await tryUrl('/data/mawjan-summary.json'); } catch (_) {}
+    }
+    if (!j) throw new Error('no summary source');
+    // normalize remainingByType -> remainingBreakdown
+    if (!j.remainingBreakdown && j.remainingByType) {
+      const t = j.remainingByType;
+      j.remainingBreakdown = {
+        studio: t.studio||0,
+        '1bedroom': t.br1||t['1bedroom']||0,
+        '2bedroom': t.br2||t['2bedroom']||0,
+        other: t.br3 ? { '3bedroom': t.br3 } : (t.other||{})
+      };
+    }
+    if (j.totalResidential && !j.total) j.total = j.totalResidential;
+    if (!j.ok && (j.error === 'pending_auth' || j.authStatus === 'pending_auth')) {
+      fill(Object.assign({}, PLACEHOLDER, { demo: true, authStatus: 'pending_auth', message: j.message || 'pending_auth' }));
+      setBadge('pending_auth');
+      log(j);
+      return;
+    }
+    if (j.ok === false && j.demo !== false) {
+      fill(Object.assign({}, PLACEHOLDER, { demo: true, authStatus: 'demo' }));
+      $('note').textContent = 'تعذّر الاتصال بالـ API — معاينة محلية. ' + (j.message || j.error || '');
+      log(j);
+      return;
+    }
+    j.ok = true; j.demo = false; j.authStatus = j.authStatus || 'ready';
+    fill(j);
+    log(j);
+  } catch (e) {
+    fill(PLACEHOLDER);
+    setBadge('demo');
+    $('note').textContent = 'السيرفر غير متصل — معاينة واجهة بأرقام تجريبية.';
+    log(String(e));
+  }
+}
+
+async function loadUnits(status){
+  try {
+    const r = await fetch('/api/crm/mawjan/units?status=' + encodeURIComponent(status || ''));
+    const j = await r.json();
+    const tb = $('unitRows');
+    if (!j.ok || !j.units) {
+      tb.innerHTML = '<tr><td colspan="3" class="muted">' + (j.message || j.error || 'لا توجد بيانات') + '</td></tr>';
+      log(j);
+      return;
+    }
+    if (!j.units.length) {
+      tb.innerHTML = '<tr><td colspan="3" class="muted">لا وحدات في هذا الفلتر</td></tr>';
+      return;
+    }
+    tb.innerHTML = j.units.slice(0, 40).map(u => {
+      const st = u.status === 'sold' ? 'sold' : 'remain';
+      const label = u.status === 'sold' ? 'مباع' : 'متبقي';
+      return '<tr><td>' + (u.name || u.unitNumber || u.id || '—') + '</td><td>' + (u.bedroomRaw || u.bedroomBucket || '—') + '</td><td><span class="pill ' + st + '">' + label + '</span></td></tr>';
+    }).join('');
+    log({ filter: status, count: j.count });
+  } catch (e) {
+    $('unitRows').innerHTML = '<tr><td colspan="3" class="muted">' + String(e) + '</td></tr>';
+  }
+}
+
+$('btnRefresh').onclick = () => loadSummary();
+$('btnRemain').onclick = () => loadUnits('remaining');
+$('btnSold').onclick = () => loadUnits('sold');
+
+fetch('/api/crm/status').then(r=>r.json()).then(s=>{
+  $('orgLabel').textContent = s.orgUrl || 'https://aqaar.crm15.dynamics.com';
+}).catch(()=>{ $('orgLabel').textContent = 'https://aqaar.crm15.dynamics.com'; });
+
+fill(PLACEHOLDER);
+setBadge('demo');
+$('note').textContent = 'معاينة واجهة (أرقام تجريبية) — جاري محاولة الجلب الحي…';
+loadSummary();
+</script>
+</body>
+</html>
