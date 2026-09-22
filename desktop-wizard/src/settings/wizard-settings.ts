@@ -37,7 +37,7 @@ export class WizardSettingsStore {
     const next: WizardSettings = normalizeSettings({
       ...this.current,
       ...partial,
-      characterId: this.current.characterId,
+      characterId: partial.characterId ?? this.current.characterId,
       technicalId: this.current.technicalId,
       window: { ...this.current.window, ...(partial.window || {}) },
       reminders: partial.reminders ?? this.current.reminders,

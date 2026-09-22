@@ -80,9 +80,9 @@ function ConvertTo-WizardPermissionMap {
 function Get-WizardDefaultSettings {
   return [ordered]@{
     version = 1
-    characterId = 'old-wizard'
+    characterId = 'secretary'
     technicalId = 'AQWizard'
-    displayName = 'Old Wizard'
+    displayName = 'Secretary'
     window = [ordered]@{
       x = $null
       y = $null
@@ -123,7 +123,10 @@ function Read-WizardSettings {
     $obj = $raw | ConvertFrom-Json
     if (-not $obj) { return $defaults }
     if ($obj.displayName) { $defaults.displayName = [string]$obj.displayName }
-    if ($obj.characterId) { $defaults.characterId = [string]$obj.characterId }
+    if ($obj.characterId) {
+      $cid = [string]$obj.characterId
+      if ($cid -in @('secretary','old-wizard')) { $defaults.characterId = $cid }
+    }
     if ($obj.technicalId) { $defaults.technicalId = [string]$obj.technicalId }
     if ($obj.PSObject.Properties['visible']) { $defaults.visible = [bool]$obj.visible }
     if ($obj.version) { $defaults.version = [int]$obj.version }
@@ -215,7 +218,11 @@ function Merge-WizardSettings {
     if ($dn.Length -gt 80) { $dn = $dn.Substring(0, 80) }
     if ($dn.Length -gt 0) { $Current.displayName = $dn }
   }
-  # characterId / technicalId stay pack/app ids; ignore rename attempts
+  # technicalId stays the app id. characterId may switch among known packs.
+  if ($Incoming.PSObject.Properties['characterId'] -and $null -ne $Incoming.characterId) {
+    $cid = [string]$Incoming.characterId
+    if ($cid -in @('secretary','old-wizard')) { $Current.characterId = $cid }
+  }
   if ($Incoming.PSObject.Properties['visible'] -and $null -ne $Incoming.visible) {
     $Current.visible = [bool]$Incoming.visible
   }

@@ -13,7 +13,7 @@ AQHub يبقى محليًا: PowerShell `HttpListener` على `http://127.0.0.1:
 
 - نافذة شخصية: `transparent`, `decorations: false`, `alwaysOnTop`, `skipTaskbar`
 - صينية: إظهار / إخفاء / فتح AQHub / خروج
-- حزمة `characters/old-wizard/` — SVG احترافي + CSS للحالات
+- حزمة `characters/secretary/` — PNG متعدد الوضعيات (الافتراضي) + `characters/old-wizard/` SVG؛ الإعدادات تبدّل بينهما
 - `WizardStateMachine` مع enter/update/exit:
   IDLE, WATCHING, THINKING, SPEAKING, ALERT, WORKING, SUCCESS, ERROR, DRAGGING, SLEEPING, HIDDEN, **MATRIX**, **TRASH**  
   (WAND / NOTE: stub يسجّل الحالة)
@@ -27,7 +27,7 @@ AQHub يبقى محليًا: PowerShell `HttpListener` على `http://127.0.0.1:
 - **ملاحظة سريعة:** إنشاء تاسك ثم `POST /api/task/box-note`
 - **تذكير:** داخل `wizard-settings.json` عبر الجسر؛ فقاعة ALERT عند الاستحقاق
 - **أيزنهاور:** `GET/POST /api/eisenhower` — أربعة أرباع + سحب/إفلات + تراش ناعم مع تراجع
-- **إعدادات P9:** لغة AR/EN (stub)، بدء مصغّر، دائمًا فوق، حزمة `old-wizard`، اسم العرض، الحجم، الشفافية، الحركة، تتبع المؤشر، الزاوية، فقاعات استباقية، نوم الخمول، حجم/خط الفقاعة، اختصارات للعرض فقط، زر الإغلاق Hide vs Exit
+- **إعدادات P9:** لغة AR/EN (stub)، بدء مصغّر، دائمًا فوق، حزمة `secretary` (أو `old-wizard`)، اسم العرض، الحجم، الشفافية، الحركة، تتبع المؤشر، الزاوية، فقاعات استباقية، نوم الخمول، حجم/خط الفقاعة، اختصارات للعرض فقط، زر الإغلاق Hide vs Exit
 - **صلاحيات P11:** لوحة Allow / Ask / Never. Ask → فقاعة تأكيد. Never يمنع. Outlook Send والحذف الخارجي دائمًا تأكيد أو رفض (لا Allow صامت، ولا استدعاء approve-send)
 - **بريد P10:** فقاعة تنبيه لآخر مهمة مصدرها إيميل. القراءة عبر AQHub فقط. Outlook Read = Ask، Draft = Ask، Send = Never. المسودة `POST /api/task/chat` بالنص `draft` — **لا** `/api/task/approve-send`
 - **أول تشغيل P12:** فقاعة غير حاجبة لاسم العرض والحجم والزاوية وصلاحيات البريد — تُتخطى إذا كانت الإعدادات موجودة مسبقًا

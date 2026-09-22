@@ -9,7 +9,7 @@ import { applyAnimation } from "./engines/animation-engine.ts";
 import { IdleDirector } from "./engines/idle-director.ts";
 import { RoamEngine } from "./engines/roam-engine.ts";
 import { BubbleEngine } from "./engines/bubble-engine.ts";
-import { injectWizardSvg, loadCharacterPack } from "./ui/character.ts";
+import { applyCharacterVisual, loadCharacterPack } from "./ui/character.ts";
 import { EisenhowerPanel } from "./ui/eisenhower-panel.ts";
 import { SettingsPanel } from "./ui/settings-panel.ts";
 import { measureAndPlaceMenu } from "./ui/place-menu.ts";
@@ -173,9 +173,9 @@ async function main() {
   const bubbleMail = el("bubbleMail");
   const stage = el("stage");
 
-  const pack = await loadCharacterPack("old-wizard");
+  let pack = await loadCharacterPack();
   try {
-    await injectWizardSvg(character, pack.svgUrl);
+    await applyCharacterVisual(character, pack, "IDLE");
   } catch {
     character.innerHTML = "<p class='hint'>missing pack</p>";
   }
@@ -226,6 +226,7 @@ async function main() {
     applyDocumentLocale(settings.current.language);
     settingsUi.setCopy(ui);
     applyAnimation(character, machine.hint, look, settings.current.animationLevel);
+    void applyCharacterVisual(character, pack, machine.state);
     nameBtn.textContent = settings.current.displayName;
     techId.textContent = `${settings.current.technicalId} · ${settings.current.characterId}`;
     const s = Math.round((settings.current.window.scale || 1) * 100);
@@ -382,6 +383,15 @@ async function main() {
       const stay = Boolean(result.ok && "bubbleActions" in result && result.bubbleActions?.length);
       if (result.bubble?.text) speak(result.bubble.kind, result.bubble.text, stay ? 0 : undefined);
     }
+    if (action.type === "PATCH_SETTINGS" && action.patch.characterId && settings.current.characterId !== pack.id) {
+      pack = await loadCharacterPack(settings.current.characterId);
+      character.dataset.asset = "";
+      try {
+        await applyCharacterVisual(character, pack, machine.state);
+      } catch {
+        character.innerHTML = "<p class='hint'>missing pack</p>";
+      }
+    }
     if (isTransientState(machine.state)) {
       window.clearTimeout(idleReturnTimer);
       const back = result.ok && "returnTo" in result && result.returnTo === "MATRIX" ? "MATRIX" : "IDLE";
@@ -444,6 +454,14 @@ async function main() {
   }
 
   await run({ type: "LOAD_SETTINGS" });
+  if (settings.current.characterId !== pack.id) {
+    pack = await loadCharacterPack(settings.current.characterId);
+    try {
+      await applyCharacterVisual(character, pack, machine.state);
+    } catch {
+      character.innerHTML = "<p class='hint'>missing pack</p>";
+    }
+  }
   const loadedSnapshot = {
     firstRunComplete: settings.current.firstRunComplete,
     updatedAt: settings.current.updatedAt,

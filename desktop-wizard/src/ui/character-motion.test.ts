@@ -55,6 +55,17 @@ test("pet hit plate is visually invisible but keeps pointer hits", () => {
   assert.doesNotMatch(css, /rgba\(\s*8\s*,\s*16\s*,\s*28\s*,\s*0\.0[45]\s*\)/);
 });
 
+test("PNG character art uses object-fit contain on an img, while SVG inject stays", () => {
+  assert.match(css, /\.character img,/);
+  assert.match(css, /\.character \.character-art/);
+  assert.match(css, /\.character \.character-art \{[\s\S]*object-fit:\s*contain/);
+  const character = readFileSync(join(src, "ui", "character.ts"), "utf8");
+  assert.match(character, /isRasterAsset/);
+  assert.match(character, /injectWizardRaster/);
+  assert.match(character, /injectWizardSvg/);
+  assert.match(main, /applyCharacterVisual\(character, pack, machine\.state\)/);
+});
+
 test("settings open enlarges the companion window then restores on close", () => {
   const rust = readFileSync(join(src, "..", "src-tauri", "src", "window_ctl.rs"), "utf8");
   assert.match(rust, /pub fn set_settings_layout/);

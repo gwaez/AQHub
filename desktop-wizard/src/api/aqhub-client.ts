@@ -57,10 +57,18 @@ export interface WizardSettings {
   firstRunComplete: boolean;
 }
 
-export function defaultSettings(displayName = "الساحر العتيق"): WizardSettings {
+export const DEFAULT_CHARACTER_ID = "secretary";
+export const KNOWN_CHARACTER_IDS = ["secretary", "old-wizard"] as const;
+
+export function normalizeCharacterId(id: unknown): string {
+  if (id === "old-wizard" || id === "secretary") return id;
+  return DEFAULT_CHARACTER_ID;
+}
+
+export function defaultSettings(displayName = "السكرتيرة"): WizardSettings {
   return {
     version: 1,
-    characterId: "old-wizard",
+    characterId: DEFAULT_CHARACTER_ID,
     technicalId: "AQWizard",
     displayName,
     window: { x: null, y: null, scale: 1 },
@@ -112,7 +120,7 @@ export function normalizeSettings(raw: Partial<WizardSettings> | Record<string, 
   return {
     ...base,
     ...s,
-    characterId: base.characterId,
+    characterId: normalizeCharacterId(s.characterId ?? base.characterId),
     technicalId: base.technicalId,
     displayName: String(s.displayName || base.displayName),
     window: { ...base.window, ...(s.window || {}), scale },

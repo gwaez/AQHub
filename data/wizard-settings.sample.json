@@ -1,8 +1,8 @@
 {
   "version": 1,
-  "characterId": "old-wizard",
+  "characterId": "secretary",
   "technicalId": "AQWizard",
-  "displayName": "الساحر العتيق",
+  "displayName": "السكرتيرة",
   "window": { "x": null, "y": null, "scale": 1 },
   "visible": true,
   "animationLevel": "normal",

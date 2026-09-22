@@ -123,9 +123,9 @@ fn read_settings() -> Result<WizardSettings, String> {
     if !path.is_file() {
         return Ok(WizardSettings {
             version: Some(1),
-            character_id: Some("old-wizard".into()),
+            character_id: Some("secretary".into()),
             technical_id: Some("AQWizard".into()),
-            display_name: Some("Old Wizard".into()),
+            display_name: Some("Secretary".into()),
             window: Some(WindowSettings {
                 x: None,
                 y: None,

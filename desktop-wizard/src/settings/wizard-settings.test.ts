@@ -13,8 +13,10 @@ test("normalizeSettings fills P9 defaults and clamps", () => {
     closeAction: "exit",
     permissions: { "eisenhower.trash": "never", "outlook.send": "allow" },
   });
-  assert.equal(s.characterId, "old-wizard");
+  assert.equal(s.characterId, "secretary");
   assert.equal(s.technicalId, "AQWizard");
+  assert.equal(normalizeSettings({ characterId: "old-wizard" }).characterId, "old-wizard");
+  assert.equal(normalizeSettings({ characterId: "not-a-pack" }).characterId, "secretary");
   assert.equal(s.opacity, 1);
   assert.equal(s.bubbleScale, 0.7);
   assert.equal(s.idleSleepMs, 5000);
@@ -65,4 +67,8 @@ test("store save merges permissions without resetting others", async () => {
   assert.deepEqual(store.current.mailIgnored, ["T-009"]);
   await store.save({ opacity: 0.8 });
   assert.deepEqual(store.current.mailIgnored, ["T-009"]);
+  await store.save({ characterId: "old-wizard" });
+  assert.equal(store.current.characterId, "old-wizard");
+  await store.save({ opacity: 0.9 });
+  assert.equal(store.current.characterId, "old-wizard");
 });

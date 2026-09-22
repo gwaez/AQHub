@@ -133,6 +133,9 @@ export class SettingsPanel {
       case "displayName":
         patch.displayName = el.value;
         break;
+      case "characterId":
+        patch.characterId = el.value === "old-wizard" ? "old-wizard" : "secretary";
+        break;
       case "scale":
         patch.window = {
           ...(this.last?.window || { x: null, y: null, scale: 1 }),
@@ -189,6 +192,7 @@ export class SettingsPanel {
     setVal("startMinimized", settings.startMinimized);
     setVal("alwaysOnTop", settings.alwaysOnTop);
     setVal("displayName", settings.displayName);
+    setVal("characterId", settings.characterId);
     setVal("scale", String(Math.round((settings.window.scale || 1) * 100)));
     setVal("opacity", String(Math.round(settings.opacity * 100)));
     setVal("animationLevel", settings.animationLevel);
@@ -278,8 +282,9 @@ export class SettingsPanel {
         </section>
         <section data-settings-section="character">
           <label>${esc(c.packSelect)}
-            <select disabled>
-              <option selected>old-wizard</option>
+            <select data-set="characterId">
+              <option value="secretary" ${sel(settings.characterId === "secretary")}>secretary — السكرتيرة</option>
+              <option value="old-wizard" ${sel(settings.characterId === "old-wizard")}>old-wizard — الساحر العتيق</option>
             </select>
           </label>
           <label>${esc(c.displayNameLabel)}
