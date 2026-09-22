@@ -11,6 +11,8 @@ $Port = 8766
 $dataDir = Join-Path $Root 'data'
 $tasksPath = Join-Path $dataDir 'tasks.json'
 $eisenhowerPath = Join-Path $dataDir 'eisenhower.json'
+$dashboardLayoutPath = Join-Path $dataDir 'dashboard-layout.json'
+$notesPath = Join-Path $dataDir 'notes.json'
 $auditPath = Join-Path $dataDir 'audit.jsonl'
 $jobsDir = Join-Path $dataDir 'jobs'
 $crmConfigPath = Join-Path $dataDir 'crm-config.json'
@@ -2936,6 +2938,34 @@ if ($path -eq '/api/eisenhower' -and $req.HttpMethod -eq 'GET') {
       continue
     }
     
+    if ($path -eq '/api/dashboard-layout' -and $req.HttpMethod -eq 'GET') {
+      if (Test-Path $dashboardLayoutPath) { Write-FileResp $res $dashboardLayoutPath; continue }
+      Write-Json $res @{ ok = $true; layout = $null }
+      continue
+    }
+    if ($path -eq '/api/dashboard-layout' -and $req.HttpMethod -eq 'POST') {
+      $body = Read-Body $req
+      $parsed = $null
+      try { $parsed = $body | ConvertFrom-Json } catch { Write-Json $res @{ ok = $false; error = 'bad_json' }; continue }
+      if (-not $parsed) { Write-Json $res @{ ok = $false; error = 'bad_json' }; continue }
+      [IO.File]::WriteAllText($dashboardLayoutPath, $body, [Text.UTF8Encoding]::new($false))
+      Write-Json $res @{ ok = $true }
+      continue
+    }
+    if ($path -eq '/api/notes' -and $req.HttpMethod -eq 'GET') {
+      if (Test-Path $notesPath) { Write-FileResp $res $notesPath; continue }
+      Write-Json $res @{ ok = $true; notes = @(); updatedAt = '' }
+      continue
+    }
+    if ($path -eq '/api/notes' -and $req.HttpMethod -eq 'POST') {
+      $body = Read-Body $req
+      $parsed = $null
+      try { $parsed = $body | ConvertFrom-Json } catch { Write-Json $res @{ ok = $false; error = 'bad_json' }; continue }
+      if (-not $parsed) { Write-Json $res @{ ok = $false; error = 'bad_json' }; continue }
+      [IO.File]::WriteAllText($notesPath, $body, [Text.UTF8Encoding]::new($false))
+      Write-Json $res @{ ok = $true }
+      continue
+    }
         if ($path -eq '/api/task/box-note' -and $req.HttpMethod -eq 'POST') {
       $bodyRaw = Read-Body $req
       $body = $null

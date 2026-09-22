@@ -1,5 +1,7 @@
 data/tasks.json
 data/eisenhower.json
+data/dashboard-layout.json
+data/notes.json
 data/crm-config.json
 data/wizard-settings.json
 data/crm-cache-*.json
