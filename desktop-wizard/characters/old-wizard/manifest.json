@@ -1,0 +1,20 @@
+{
+  "id": "old-wizard",
+  "technicalId": "AQWizard",
+  "version": "0.1.0",
+  "defaultDisplayName": "الساحر العتيق",
+  "displayNameAr": "الساحر العتيق",
+  "displayNameEn": "Old Wizard",
+  "license": "placeholder-p1",
+  "states": {
+    "IDLE": { "asset": "idle.svg", "loop": true },
+    "WATCHING": { "asset": "idle.svg", "loop": true },
+    "HIDDEN": { "asset": null, "loop": false }
+  },
+  "bubble": {
+    "dir": "rtl",
+    "lang": "ar",
+    "side": "start"
+  },
+  "notes": "P1 silhouette pack. Full art and per-state sprites come in later phases."
+}

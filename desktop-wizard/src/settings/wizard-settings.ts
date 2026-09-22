@@ -1,0 +1,57 @@
+import { createAqHubClient, defaultSettings, type AqHubApi, type WizardSettings } from "../api/aqhub-client.ts";
+
+export type { WizardSettings };
+
+/**
+ * Settings module: GET/PUT when the AQHub bridge exists.
+ * Canonical live path is AQHub `data/wizard-settings.json` — never tasks.json.
+ * Optional file fallback goes through a Tauri command that only writes that filename.
+ */
+export interface SettingsFilePort {
+  loadFile(): Promise<WizardSettings | null>;
+  saveFile(settings: WizardSettings): Promise<void>;
+}
+
+export class WizardSettingsStore {
+  private api: AqHubApi;
+  private file: SettingsFilePort | null;
+  current: WizardSettings;
+
+  constructor(api: AqHubApi = createAqHubClient(), file: SettingsFilePort | null = null) {
+    this.api = api;
+    this.file = file;
+    this.current = defaultSettings();
+  }
+
+  async load(): Promise<WizardSettings> {
+    try {
+      this.current = await this.api.getSettings();
+      return this.current;
+    } catch {
+      const fromFile = this.file ? await this.file.loadFile() : null;
+      if (fromFile) this.current = fromFile;
+      return this.current;
+    }
+  }
+
+  async save(partial: Partial<WizardSettings>): Promise<WizardSettings> {
+    const next: WizardSettings = {
+      ...this.current,
+      ...partial,
+      characterId: this.current.characterId,
+      technicalId: this.current.technicalId,
+      window: { ...this.current.window, ...(partial.window || {}) },
+    };
+    if (partial.displayName !== undefined) {
+      next.displayName = partial.displayName.trim().slice(0, 80) || this.current.displayName;
+    }
+    try {
+      this.current = await this.api.putSettings(next);
+      return this.current;
+    } catch {
+      this.current = next;
+      if (this.file) await this.file.saveFile(next);
+      return this.current;
+    }
+  }
+}

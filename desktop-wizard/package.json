@@ -1,0 +1,25 @@
+{
+  "name": "aqwizard",
+  "private": true,
+  "version": "0.1.0",
+  "description": "AQWizard — native Windows companion for AQHub (Tauri 2)",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "test": "node --experimental-strip-types --test src/state/wizard-state-machine.test.ts src/actions/wizard-action.test.ts",
+    "tauri": "tauri",
+    "copy-characters": "node scripts/copy-characters.mjs"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.11.1",
+    "@tauri-apps/plugin-opener": "^2.5.5"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.11.5",
+    "typescript": "~5.8.3",
+    "vite": "^6.3.5"
+  }
+}

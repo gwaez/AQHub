@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AQWizard</title>
+    <link rel="stylesheet" href="/src/styles.css" />
+  </head>
+  <body>
+    <div id="stage" data-tauri-drag-region>
+      <div id="bubble" class="bubble" dir="rtl" lang="ar" hidden>
+        <p id="bubbleText">فقاعات لاحقًا — الاتجاه من اليمين لليسار</p>
+      </div>
+      <div id="character" class="character" data-state="IDLE" data-motion="bob">
+        <img id="sprite" alt="الساحر العتيق" draggable="false" />
+      </div>
+      <div class="nameplate" data-tauri-drag-region="false">
+        <button type="button" id="displayName" class="display-name" title="انقر نقرًا مزدوجًا لإعادة تسمية العرض">
+          الساحر العتيق
+        </button>
+        <span id="techId" class="tech-id">AQWizard · old-wizard</span>
+      </div>
+    </div>
+
+    <div id="chrome" class="chrome" hidden>
+      <p class="chrome-title">AQWizard · معاينة</p>
+      <div class="chrome-row">
+        <button type="button" data-act="SHOW">إظهار</button>
+        <button type="button" data-act="HIDE">إخفاء</button>
+        <button type="button" data-act="WATCH">يراقب</button>
+        <button type="button" data-act="IDLE">خامل</button>
+        <button type="button" data-act="OPEN_AQHUB">فتح AQHub</button>
+      </div>
+      <label class="scale-label">الحجم
+        <input id="scale" type="range" min="50" max="200" value="100" />
+      </label>
+      <p id="hubStatus" class="hub">جاري فحص AQHub…</p>
+      <p class="hint">معاينة المتصفح: الشفافية والصينية تُختبران على ويندوز داخل Tauri.</p>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
