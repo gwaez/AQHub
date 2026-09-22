@@ -1,4 +1,5 @@
 # ASCII-only watchdog: keeps Start-Board.ps1 alive on http://127.0.0.1:8766
+# Does not open a browser. Start-Board.ps1 is launched without -OpenBrowser.
 $ErrorActionPreference = 'Continue'
 $Root = Split-Path -Parent $MyInvocation.MyCommand.Path
 if (-not $Root) { $Root = (Get-Location).Path }
@@ -14,7 +15,7 @@ function Write-Log([string]$msg) {
 
 function Test-BoardUp {
   try {
-    $r = Invoke-WebRequest -UseBasicParsing 'http://127.0.0.1:8766/board.html' -TimeoutSec 3
+    $r = Invoke-WebRequest -UseBasicParsing 'http://127.0.0.1:8766/' -TimeoutSec 3
     return ($r.StatusCode -eq 200)
   } catch { return $false }
 }
@@ -28,13 +29,19 @@ function Stop-BoardProcs {
 }
 
 function Start-BoardServer {
-  Write-Log 'Starting Start-Board.ps1'
+  Write-Log 'Starting Start-Board.ps1 (hidden, no browser)'
   Start-Process -FilePath 'powershell.exe' -ArgumentList @(
-    '-NoProfile','-ExecutionPolicy','Bypass','-File', $BoardPs1
-  ) -WorkingDirectory $Root -WindowStyle Minimized | Out-Null
+    '-NoProfile','-ExecutionPolicy','Bypass','-WindowStyle','Hidden','-File', $BoardPs1, '-NoBrowser'
+  ) -WorkingDirectory $Root -WindowStyle Hidden | Out-Null
 }
 
 Write-Log 'Watchdog started'
+$dup = Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" -ErrorAction SilentlyContinue |
+  Where-Object { $_.CommandLine -and ($_.CommandLine -match 'Watch-Board\.ps1') -and $_.ProcessId -ne $PID }
+if ($dup) {
+  Write-Log 'Another watchdog already running - exiting'
+  exit 0
+}
 Start-BoardServer
 Start-Sleep -Seconds 4
 

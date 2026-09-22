@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AQWizard</title>
+    <link rel="stylesheet" href="/src/styles.css" />
+  </head>
+  <body>
+    <div id="stage">
+      <div class="drag-strip" data-tauri-drag-region></div>
+      <div id="bubble" class="bubble" dir="rtl" lang="ar" hidden>
+        <p id="bubbleText"></p>
+        <div id="bubbleConfirm" class="bubble-confirm" hidden>
+          <button type="button" id="bubbleYes">تأكيد</button>
+          <button type="button" id="bubbleNo">رفض</button>
+        </div>
+        <div id="bubbleMail" class="bubble-confirm bubble-mail" hidden>
+          <button type="button" data-mail="open">فتح</button>
+          <button type="button" data-mail="task">تاسك</button>
+          <button type="button" data-mail="remind">ذكّرني</button>
+          <button type="button" data-mail="draft">مسودة</button>
+          <button type="button" data-mail="ignore">تجاهل</button>
+        </div>
+      </div>
+      <div id="petHit" class="pet-hit" data-tauri-drag-region>
+        <div class="pet-plate" aria-hidden="true"></div>
+        <div id="character" class="character" data-state="IDLE" data-motion="breathe" data-tauri-drag-region></div>
+        <div class="nameplate">
+          <button type="button" id="displayName" class="display-name" data-tauri-drag-region="false" title="انقر نقرًا مزدوجًا لإعادة تسمية العرض">
+            السكرتيرة
+          </button>
+          <span id="techId" class="tech-id">AQWizard · secretary</span>
+        </div>
+      </div>
+    </div>
+
+    <form id="composer" class="composer" hidden>
+      <p class="composer-title">أمر سريع</p>
+      <div class="composer-modes">
+        <label><input type="radio" name="mode" value="task" checked /> تاسك جديد</label>
+        <label><input type="radio" name="mode" value="note" /> ملاحظة</label>
+        <label><input type="radio" name="mode" value="reminder" /> تذكير</label>
+      </div>
+      <input id="composerTitle" type="text" maxlength="80" placeholder="العنوان" />
+      <textarea id="composerBody" rows="3" placeholder="النص"></textarea>
+      <input id="composerDue" type="datetime-local" hidden />
+      <div class="composer-actions">
+        <button type="submit" class="primary">حفظ</button>
+        <button type="button" id="composerCancel">إلغاء</button>
+      </div>
+      <p class="hint">يُرسل عبر HTTP إلى AQHub — بدون كتابة tasks.json من هنا. الأمر <code>/matrix</code> يفتح أيزنهاور في المتصفح.</p>
+    </form>
+
+    <div id="settingsPanel" class="settings-panel" hidden></div>
+
+    <nav id="ctx" class="ctx-menu" hidden>
+      <button type="button" data-ctx="NEW_TASK">تاسك جديد</button>
+      <button type="button" data-ctx="QUICK_NOTE">ملاحظة سريعة</button>
+      <button type="button" data-ctx="MATRIX">أيزنهاور</button>
+      <button type="button" data-ctx="OPEN_AQHUB">فتح AQHub</button>
+      <!-- ASK stays disabled. Later PR: tag each message as conversational chat vs execute-order, optional Grok Bot / agent bridge. Do not implement the chat pipeline in this slice. -->
+      <button type="button" data-ctx="ASK" disabled title="لاحقًا: دردشة أو أوامر، مع جسر وكيل اختياري">اسأل الساحر</button>
+      <button type="button" data-ctx="SETTINGS">إعدادات</button>
+      <button type="button" data-ctx="HIDE">إخفاء للصينية</button>
+      <button type="button" data-ctx="EXIT">خروج</button>
+    </nav>
+
+    <div id="chrome" class="chrome" hidden>
+      <p class="chrome-title">AQWizard · معاينة</p>
+      <div class="chrome-row">
+        <button type="button" data-act="SHOW">إظهار</button>
+        <button type="button" data-act="HIDE">إخفاء</button>
+        <button type="button" data-act="WATCH">يراقب</button>
+        <button type="button" data-act="IDLE">خامل</button>
+        <button type="button" data-act="SLEEP">نوم</button>
+        <button type="button" data-act="THINK">يفكر</button>
+        <button type="button" data-act="ALERT">تنبيه</button>
+        <button type="button" data-act="MATRIX">مصفوفة</button>
+        <button type="button" data-act="MAIL">بريد</button>
+        <button type="button" data-act="SETTINGS">إعدادات</button>
+        <button type="button" data-act="OPEN_AQHUB">فتح AQHub</button>
+      </div>
+      <label class="scale-label">الحجم
+        <input id="scale" type="range" min="50" max="200" value="100" />
+      </label>
+      <p id="hubStatus" class="hub">جاري فحص AQHub…</p>
+      <p id="stateLabel" class="hint">الحالة: IDLE</p>
+      <p class="hint">معاينة المتصفح: الشفافية والصينية تُختبران على ويندوز داخل Tauri.</p>
+    </div>
+
+    <aside id="matrixPanel" class="matrix-panel" hidden dir="rtl" lang="ar"></aside>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

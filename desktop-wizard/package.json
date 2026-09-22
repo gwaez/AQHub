@@ -1,0 +1,25 @@
+{
+  "name": "aqwizard",
+  "private": true,
+  "version": "0.5.0",
+  "description": "AQWizard — native Windows companion for AQHub (Tauri 2)",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "test": "node --experimental-strip-types --test src/state/wizard-state-machine.test.ts src/actions/wizard-action.test.ts src/engines/idle-director.test.ts src/engines/bubble-engine.test.ts src/api/tasks.test.ts src/api/eisenhower.test.ts src/ui/permissions.test.ts src/settings/wizard-settings.test.ts src/settings/character-id.test.ts src/api/audit.test.ts src/api/mail.test.ts src/settings/first-run.test.ts src/setup/setup-script.test.ts src/ui/character-motion.test.ts src/ui/character.test.ts src/engines/roam-engine.test.ts src/setup/board-launch.test.ts src/ui/place-menu.test.ts src/ui/open-eisenhower.test.ts src/ui/wizard-control-panel.test.ts",
+    "tauri": "tauri",
+    "copy-characters": "node scripts/copy-characters.mjs"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.11.1",
+    "@tauri-apps/plugin-opener": "^2.5.5"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.11.5",
+    "typescript": "~5.8.3",
+    "vite": "^6.3.5"
+  }
+}

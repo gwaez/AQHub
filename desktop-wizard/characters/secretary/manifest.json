@@ -1,0 +1,36 @@
+{
+  "id": "secretary",
+  "technicalId": "AQWizard",
+  "version": "0.1.0",
+  "defaultDisplayName": "السكرتيرة",
+  "displayNameAr": "السكرتيرة",
+  "displayNameEn": "Secretary",
+  "license": "placeholder",
+  "tone": "professional-assistant",
+  "states": {
+    "IDLE": { "asset": "idle.png", "loop": true, "motion": "breathe" },
+    "WATCHING": { "asset": "watch.png", "loop": true, "motion": "glance" },
+    "THINKING": { "asset": "think.png", "loop": true, "motion": "ponder" },
+    "SPEAKING": { "asset": "speak.png", "loop": true, "motion": "speak" },
+    "ALERT": { "asset": "speak.png", "loop": false, "motion": "alert" },
+    "WORKING": { "asset": "work.png", "loop": true, "motion": "work" },
+    "SUCCESS": { "asset": "success.png", "loop": false, "motion": "success" },
+    "ERROR": { "asset": "error.png", "loop": false, "motion": "error" },
+    "DRAGGING": { "asset": "drag.png", "loop": false, "motion": "lift" },
+    "SLEEPING": { "asset": "sleep.png", "loop": true, "motion": "sleep" },
+    "HIDDEN": { "asset": null, "loop": false, "motion": "fade-out" },
+    "WAND": { "asset": "work.png", "stub": true },
+    "NOTE": { "asset": "work.png", "stub": true },
+    "MATRIX": { "asset": "work.png", "loop": true, "motion": "work" },
+    "TRASH": { "asset": "work.png", "loop": false, "motion": "work" }
+  },
+  "anchors": {
+    "bubble": { "x": 430, "y": 210, "dir": "rtl" },
+    "wand": { "x": 780, "y": 620 }
+  },
+  "bubble": {
+    "dir": "rtl",
+    "lang": "ar",
+    "side": "start"
+  }
+}

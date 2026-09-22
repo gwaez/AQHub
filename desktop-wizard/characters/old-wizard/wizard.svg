@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 280" width="220" height="280" class="wizard-svg" role="img" aria-label="Old Wizard">
+  <defs>
+    <linearGradient id="ow-robe" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#243b5a"/>
+      <stop offset="55%" stop-color="#122033"/>
+      <stop offset="100%" stop-color="#0a121c"/>
+    </linearGradient>
+    <linearGradient id="ow-hat" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#3f3a72"/>
+      <stop offset="100%" stop-color="#1a1738"/>
+    </linearGradient>
+    <radialGradient id="ow-star" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#fff6c2"/>
+      <stop offset="100%" stop-color="#d4a017"/>
+    </radialGradient>
+    <filter id="ow-glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="2.4" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <ellipse class="ground-shadow" cx="110" cy="264" rx="46" ry="7" fill="rgba(0,0,0,.4)"/>
+  <g class="wizard-body">
+    <path class="hat" d="M110 28 L166 116 Q110 104 54 116 Z" fill="url(#ow-hat)"/>
+    <ellipse class="hat-brim" cx="110" cy="118" rx="64" ry="9" fill="#15122c"/>
+    <path class="hat-band" d="M78 104 Q110 96 142 104" fill="none" stroke="#c6a15b" stroke-width="3.5"/>
+    <path class="hat-curl" d="M150 68 Q168 50 184 42" fill="none" stroke="#b7a4e6" stroke-width="4" stroke-linecap="round"/>
+    <g class="head">
+      <circle class="face" cx="110" cy="136" r="26" fill="#e4c2a2"/>
+      <g class="eye eye-l">
+        <ellipse class="eye-white" cx="100" cy="132" rx="6.5" ry="5" fill="#f8fafc"/>
+        <circle class="pupil" cx="101" cy="133" r="2.4" fill="#0f172a"/>
+        <rect class="lid" x="93" y="126" width="14" height="12" rx="4" fill="#e4c2a2"/>
+      </g>
+      <g class="eye eye-r">
+        <ellipse class="eye-white" cx="120" cy="132" rx="6.5" ry="5" fill="#f8fafc"/>
+        <circle class="pupil" cx="121" cy="133" r="2.4" fill="#0f172a"/>
+        <rect class="lid" x="113" y="126" width="14" height="12" rx="4" fill="#e4c2a2"/>
+      </g>
+      <path class="brow" d="M93 124 H107 M113 124 H127" stroke="#3f3a72" stroke-width="1.6" stroke-linecap="round"/>
+      <path class="beard" d="M88 144 Q110 186 132 144 Q124 198 110 202 Q96 198 88 144 Z" fill="#d7dce5"/>
+      <path class="mustache" d="M96 148 Q110 156 124 148" fill="none" stroke="#c5ccd6" stroke-width="3" stroke-linecap="round"/>
+    </g>
+    <path class="robe" d="M68 168 Q110 156 152 168 L164 250 Q110 272 56 250 Z" fill="url(#ow-robe)"/>
+    <path class="robe-trim" d="M110 172 L110 250" stroke="#7dd3fc" stroke-width="1.6" opacity=".45"/>
+    <path class="sleeve" d="M56 198 Q36 168 46 138" fill="none" stroke="#1e293b" stroke-width="8" stroke-linecap="round"/>
+    <circle class="hand" cx="44" cy="132" r="7.5" fill="#e4c2a2"/>
+    <g class="wand" filter="url(#ow-glow)">
+      <line x1="152" y1="204" x2="198" y2="96" stroke="#94a3b8" stroke-width="3.5" stroke-linecap="round"/>
+      <polygon class="wand-star" points="198,80 205,96 198,91 191,96" fill="url(#ow-star)"/>
+      <circle class="wand-core" cx="198" cy="74" r="5.5" fill="#fde68a"/>
+    </g>
+    <g class="spark" opacity="0">
+      <circle cx="148" cy="92" r="2.2" fill="#fde68a"/>
+      <circle cx="162" cy="108" r="1.5" fill="#67e8f9"/>
+    </g>
+    <circle class="alert-ring" cx="110" cy="150" r="78" fill="none" stroke="#fbbf24" stroke-width="2" opacity="0"/>
+    <g class="zzz" opacity="0" fill="#94a3b8" font-family="Georgia, serif" font-size="14" font-weight="700">
+      <text x="148" y="78">z</text>
+      <text x="160" y="62" font-size="18">z</text>
+    </g>
+  </g>
+</svg>

@@ -7,7 +7,8 @@ Local-first Jarvis-style command board for Aqaar ops (HTML + PowerShell).
 
 **Honest stack:** local HTML + PowerShell `HttpListener` + Outlook COM. No heavy npm/cloud runtime.  
 **Repo:** https://github.com/gwaez/AQHub  
-**Default URL:** http://127.0.0.1:8766/board.html  
+**Default URL:** http://127.0.0.1:8766/ (control home `index.html`)  
+**Task board:** http://127.0.0.1:8766/board.html — not auto-opened on start.
 **English setup:** [SETUP.md](SETUP.md)
 
 ## Requirements / المتطلبات
@@ -41,9 +42,9 @@ cd AQHub
 powershell -ExecutionPolicy Bypass -File .\Setup-AQHub.ps1
 ```
 
-Or double-click `Start-Board-KeepAlive.bat`.
+Or double-click `Start-Board-Background.bat` (hidden server; no leftover PowerShell window).
 
-5. Browser opens http://127.0.0.1:8766/board.html — allow any Outlook/Windows COM prompts if you started AQHub.
+5. Server listens on http://127.0.0.1:8766/ (control home). Starting KeepAlive / Watch-Board / Start-Board does **not** auto-open `board.html`. Open the homepage yourself, or pass `-OpenBrowser` to `Start-Board.ps1` to open `/` once. Allow any Outlook/Windows COM prompts if you started AQHub.
 
 First run creates `data/tasks.json` and `data/crm-config.json` from the sample files if they are missing.
 
@@ -60,14 +61,17 @@ First run creates `data/tasks.json` and `data/crm-config.json` from the sample f
 | `SETUP-AR.md` | Arabic step-by-step setup (copy-paste) |
 | `SETUP.md` | English setup twin |
 | `Setup-AQHub.ps1` | One-shot installer with visible progress |
+| `Setup-AQWizard.ps1` | Wizard toolchain check + `npm install` (autostart off by default) |
+| `desktop-wizard/` | AQWizard Tauri companion — [WINDOWS-SETUP.md](desktop-wizard/docs/WINDOWS-SETUP.md) |
 | `board.html` | Kanban / list / matrix / focus board |
 | `task.html` | Per-task room (timeline + agent chat) |
 | `index.html` / `panel.html` | Control panel |
 | `crm.html` | Dynamics CRM connector UI |
 | `Start-Board.ps1` | Local HttpListener + Outlook COM |
-| `Watch-Board.ps1` | Keepalive watchdog |
+| `Watch-Board.ps1` | Hidden keepalive watchdog |
+| `Start-Board-Background.vbs` / `.bat` | Daily launcher — no leftover console |
 | `data/tasks.sample.json` | Empty sample board |
 
 ## Another PC / جهاز تاني
 
-Clone → run `Setup-AQHub.ps1` or the bat → sign into Outlook on that PC → open the board URL. Live tasks are local files and are not in git.
+Clone → run `Setup-AQHub.ps1` or the bat → sign into Outlook on that PC → open the board URL. For the desktop companion, install Node/Rust/WebView2/Build Tools then `Setup-AQWizard.ps1` (see [desktop-wizard/docs/WINDOWS-SETUP.md](desktop-wizard/docs/WINDOWS-SETUP.md)). Live tasks are local files and are not in git.

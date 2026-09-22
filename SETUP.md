@@ -18,7 +18,7 @@ There is **no** heavy Node.js stack, no cloud server, and no invented OAuth flow
 | Git missing | `winget` downloads Git with visible progress |
 | Mail features | Outlook desktop must already be installed and signed in |
 | First run | Windows/Outlook may show COM security prompts — allow if you started AQHub |
-| After start | Browser opens `http://127.0.0.1:8766/board.html` |
+| After start | Server listens on `http://127.0.0.1:8766/` (homepage). The task board is **not** auto-opened |
 
 **Mail safety:** email **never auto-sends**. Drafts stay local until you manually approve send.
 
@@ -117,24 +117,28 @@ The script prints stages such as checking Git, preparing data files, starting th
 In File Explorer inside `AQHub`, double-click:
 
 ```text
-Start-Board-KeepAlive.bat
+Start-Board-Background.bat
 ```
+
+(The server runs hidden. `Start-Board-KeepAlive.bat` still works; it now calls the same hidden launcher.)
 
 Or from PowerShell:
 
 ```powershell
-.\Start-Board-KeepAlive.bat
+.\Start-Board-Background.bat
 ```
 
 ---
 
 ## Step 6 — Board in the browser + Outlook prompts
 
-1. After a few seconds the browser opens:
+1. After a few seconds the server is up. Open the control home yourself (the board is not auto-opened):
 
 ```text
-http://127.0.0.1:8766/board.html
+http://127.0.0.1:8766/
 ```
+
+   Optional: `powershell -File .\Start-Board.ps1 -OpenBrowser` opens the homepage once.
 
 2. If Windows or Outlook asks for permission to access mail — **Allow** if you started AQHub yourself.
 3. If the browser did not open, paste the URL manually.
@@ -143,12 +147,35 @@ When that works, the system is ready locally.
 
 ---
 
+## Optional: AQWizard desktop companion
+
+Native Windows Tauri 2 app (not Electron). Needs **Node 20+**, **Rust**, **WebView2**, and **VS 2022 Build Tools** (Desktop development with C++). Typical path:
+
+```text
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools
+```
+
+`Setup-AQWizard.ps1` does **not** auto-install Build Tools. Full runbook: [desktop-wizard/docs/WINDOWS-SETUP.md](desktop-wizard/docs/WINDOWS-SETUP.md).
+
+After the board answers on port 8766:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\Setup-AQWizard.ps1
+cd desktop-wizard
+npm run tauri dev
+```
+
+Windows autostart stays **off** unless you later pass `-Autostart` (after `npm run tauri build`). The wizard never auto-sends mail.
+
+---
+
 ## What runs under the hood
 
 | Component | Role |
 |-----------|------|
 | `Start-Board.ps1` | Local HttpListener + Outlook COM |
-| `Watch-Board.ps1` | Keepalive watchdog |
+| `Watch-Board.ps1` | Keepalive watchdog (hidden via Background launcher) |
+| `Start-Board-Background.bat` | Daily start — no leftover PowerShell window |
 | `board.html` | Board UI |
 | `data/tasks.json` | Local tasks (seeded from sample if missing) — **not committed** |
 | `data/crm-config.json` | Local CRM settings — **do not commit secrets** |
@@ -170,7 +197,7 @@ When that works, the system is ready locally.
 |-------|-----|
 | `git` not recognized after install | Close and reopen PowerShell, then `git --version` |
 | `git clone` fails / asks for login | Sign in to GitHub in the popup/browser; confirm repo access |
-| Board does not open | Re-run `Start-Board-KeepAlive.bat`; close old board PowerShell windows |
+| Board does not open | Re-run `Start-Board-Background.bat`; close leftover board PowerShell windows if any |
 | Mail features fail | Open Outlook desktop and sign in on this PC |
 | ExecutionPolicy warning | Use the Step 5 command with `-ExecutionPolicy Bypass` as written |
 
@@ -193,6 +220,6 @@ cd AQHub
 powershell -ExecutionPolicy Bypass -File .\Setup-AQHub.ps1
 ```
 
-Then wait for: `http://127.0.0.1:8766/board.html`
+Then open: `http://127.0.0.1:8766/` (control home; the task board is not auto-opened)
 
 Arabic guide: [SETUP-AR.md](SETUP-AR.md)

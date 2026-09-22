@@ -18,7 +18,7 @@ AQHub **لوحة أوامر محلية** على جهازك فقط:
 | Git غير مثبت | `winget` يحمّل Git مع شريط تقدم واضح |
 | ميزات البريد | Outlook يجب أن يكون مثبتًا ومسجّل الدخول مسبقًا |
 | أول تشغيل | ويندوز/Outlook قد يطلب إذن COM — اسمح إذا وثقت |
-| بعد التشغيل | المتصفح يفتح `http://127.0.0.1:8766/board.html` |
+| بعد التشغيل | السيرفر يسمع على `http://127.0.0.1:8766/` (الصفحة الرئيسية). لوحة التاسكات **مش** بتفتح لوحدها |
 
 **أمان البريد:** الإيميل **لا يُرسل تلقائيًا أبدًا**. المسودات تبقى محلية حتى تضغط موافقة يدويًا.
 
@@ -125,24 +125,28 @@ powershell -ExecutionPolicy Bypass -File .\Setup-AQHub.ps1
 من مستكشف الملفات داخل مجلد `AQHub`، انقر نقرًا مزدوجًا على:
 
 ```text
-Start-Board-KeepAlive.bat
+Start-Board-Background.bat
 ```
+
+(الخادم يعمل مخفيًا بدون نافذة PowerShell. `Start-Board-KeepAlive.bat` ما زال يعمل ويستدعي نفس المشغّل المخفي.)
 
 أو من PowerShell:
 
 ```powershell
-.\Start-Board-KeepAlive.bat
+.\Start-Board-Background.bat
 ```
 
 ---
 
 ## الخطوة 6 — اللوحة في المتصفح + أذونات Outlook
 
-1. بعد ثوانٍ قليلة يفتح المتصفح على:
+1. بعد ثوانٍ قليلة السيرفر يبقى شغال. افتح الصفحة الرئيسية بنفسك (اللوحة مش بتتفتح لوحدها):
 
 ```text
-http://127.0.0.1:8766/board.html
+http://127.0.0.1:8766/
 ```
+
+   اختياري: `powershell -File .\Start-Board.ps1 -OpenBrowser` يفتح الصفحة الرئيسية مرة واحدة.
 
 2. إن ظهرت نوافذ ويندوز أو Outlook تطلب السماح لبرنامج بالوصول إلى البريد — **اسمح** إذا كنت أنت من شغّلت AQHub.
 3. إن لم يفتح المتصفح تلقائيًا، انسخ الرابط أعلاه والصقه يدويًا.
@@ -151,12 +155,35 @@ http://127.0.0.1:8766/board.html
 
 ---
 
+## رفيق سطح المكتب AQWizard (اختياري)
+
+الساحر تطبيق ويندوز أصلي (Tauri 2) بجانب اللوحة — **ليس Electron**. يحتاج **Node 20+** و **Rust** و **WebView2** و **Visual Studio Build Tools** (حمل عمل Desktop development with C++). المسار الشائع:
+
+```text
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools
+```
+
+سكربت الإعداد **لا** يثبّت Build Tools تلقائيًا. الدليل الكامل: [desktop-wizard/docs/WINDOWS-SETUP.md](desktop-wizard/docs/WINDOWS-SETUP.md).
+
+بعد أن تعمل اللوحة على `8766`:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\Setup-AQWizard.ps1
+cd desktop-wizard
+npm run tauri dev
+```
+
+التشغيل مع بدء ويندوز **مغلق افتراضيًا** (`-Autostart` لاحقًا بعد `npm run tauri build`). لا إرسال بريد من الساحر. العصا السحرية / UIA لاحقًا.
+
+---
+
 ## ماذا يفعل النظام فعليًا؟
 
 | المكوّن | الدور |
 |---------|--------|
 | `Start-Board.ps1` | خادم محلي بسيط (HttpListener) + ربط Outlook COM |
-| `Watch-Board.ps1` | يراقب اللوحة ويعيد تشغيلها إن توقفت |
+| `Watch-Board.ps1` | يراقب اللوحة ويعيد تشغيلها إن توقفت (مخفي) |
+| `Start-Board-Background.bat` | التشغيل اليومي — بدون نافذة PowerShell متبقية |
 | `board.html` | واجهة اللوحة (كانبان / قائمة / تركيز) |
 | `data/tasks.json` | مهامك المحلية (تُنشأ من العينة إن نقصت) — **لا تُرفع إلى git** |
 | `data/crm-config.json` | إعدادات CRM محلية — **لا ترفع أسرارًا** |
@@ -178,7 +205,7 @@ http://127.0.0.1:8766/board.html
 |---------|-----------|
 | `git` غير معروف بعد التثبيت | أغلق PowerShell وافتحه من جديد، ثم `git --version` |
 | فشل `git clone` / طلب دخول | سجّل دخول GitHub في النافذة/المتصفح، أو تأكد أن لديك صلاحية على المستودع |
-| المنفذ مشغول / اللوحة لا تفتح | أعد تشغيل `Start-Board-KeepAlive.bat` أو أغلق نوافذ PowerShell القديمة للوحة |
+| المنفذ مشغول / اللوحة لا تفتح | أعد تشغيل `Start-Board-Background.bat` أو أغلق نوافذ PowerShell القديمة للوحة إن وُجدت |
 | البريد لا يعمل | تأكد أن Outlook للكمبيوتر مفتوح ومسجّل الدخول على نفس الجهاز |
 | تحذير ExecutionPolicy | استخدم أمر الخطوة 5 مع `-ExecutionPolicy Bypass` كما هو مكتوب |
 
@@ -201,6 +228,6 @@ cd AQHub
 powershell -ExecutionPolicy Bypass -File .\Setup-AQHub.ps1
 ```
 
-ثم انتظر فتح: `http://127.0.0.1:8766/board.html`
+ثم افتح: `http://127.0.0.1:8766/` (الصفحة الرئيسية؛ لوحة التاسكات مش بتتفتح لوحدها)
 
 للنسخة الإنجليزية الموازية: [SETUP.md](SETUP.md)

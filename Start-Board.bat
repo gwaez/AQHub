@@ -1,9 +1,6 @@
 @echo off
 cd /d "%~dp0"
-title AQAAR Board Watchdog
-echo Starting AQAAR board watchdog on http://127.0.0.1:8766 ...
-start "AQAAR-Watchdog" /min powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0Watch-Board.ps1"
-timeout /t 4 /nobreak >nul
-start "" "http://127.0.0.1:8766/board.html"
-echo Board should be open. Watchdog keeps it alive.
+REM Prefer Start-Board-Background.bat for daily use (no leftover console).
+REM Hidden watchdog. Does not auto-open the task board.
+wscript.exe //nologo "%~dp0Start-Board-Background.vbs"
 exit /b 0

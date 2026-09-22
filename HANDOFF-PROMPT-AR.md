@@ -13,10 +13,10 @@
 - GitHub (personal): **https://github.com/gwaez/AQHub** (Private) — أو الريبو الذي يُسلَّم لك باسم `AqaarWorkBoard` تحت نفس الحساب `gwaez`.
 - Checkout محلي شائع: `C:\Users\AMahmoud\Documents\AQHub` و/أو `C:\Users\AMahmoud\Documents\AqaarWorkBoard`
 - **ممنوع** رفع: توكنات CRM، `tasks.json` الحي، `eisenhower.json` الحي، كاش CRM، أسرار `.env`.
-- المسموح: سورس HTML/PS1، `*.sample.json`، `SETUP-AR.md` / `SETUP.md` / `Setup-AQHub.ps1`.
+- المسموح: سورس HTML/PS1، `*.sample.json`، `SETUP-AR.md` / `SETUP.md` / `Setup-AQHub.ps1` / `Setup-AQWizard.ps1`.
 
 ## التشغيل المحلي
-1. من مجلد اللوحة: `Start-Board-KeepAlive.bat` أو `.\Start-Board.ps1`
+1. من مجلد اللوحة: `Start-Board-Background.bat` (مخفي) أو `.\Start-Board.ps1`
 2. افتح `http://127.0.0.1:8766/` — البورد، التاسكات، CRM، صندوق أيزنهاور.
 3. CRM login عند الحاجة: سكربتات `Interactive-CrmToken.ps1` / `Login-Crm-Now.bat` (توكن ساعة تقريبًا؛ لا ترفع التوكن).
 
@@ -29,6 +29,19 @@
 | `eisenhower.html` | صندوق أيزنهاور (وارد / مصفوفة / تراش / نوت / يمين) |
 | `crm-ops.html` + `crm-*.html` | غرفة عمليات المبيعات/الوحدات/الناس |
 | `data/signing-platforms.json` | digiapi (SPA/عقود) + digisign (إلغاء/ريفند/داخلي) |
+| `desktop-wizard/` | AQWizard (Tauri 2) — رفيق ويندوز؛ **لا** يكتب `tasks.json` مباشرة |
+| `wizard/Wizard-Bridge.ps1` | جسر رفيع: health + settings + permissions + mail status |
+| `Setup-AQWizard.ps1` | فحص Node/Rust/WebView2/MSVC + npm install؛ autostart اختياري |
+
+## AQWizard (P12 setup foundations; P0–P11 done except P7/P8)
+- فرع العمل: `feat/aqhub-wizard-companion`. التشغيل: `desktop-wizard/docs/WINDOWS-SETUP.md` + `Setup-AQWizard.ps1`.
+- الاسم الظاهر قابل للتغيير؛ المعرّف التقني `AQWizard` / حزمة `old-wizard`.
+- تاسك/نوت عبر HTTP + مصفوفة أيزنهاور `GET/POST /api/eisenhower`. تراش ناعم + تراجع. لا كتابة `eisenhower.json` من Tauri.
+- إعدادات حيّة عبر `GET/PUT /api/v1/wizard/settings`. أول تشغيل: فقاعة غير حاجبة؛ الملفات الموجودة لا تُستبدل.
+- صلاحيات Allow/Ask/Never. Outlook Read/Draft = Ask؛ Send والحذف الخارجي تأكيد أو رفض فقط — لا `/api/task/approve-send`.
+- بريد عبر طبقة AQHub الموجودة فقط.
+- **P7 Magic Wand/UIA و P8 Follow My Work و P13 NSIS موقّع: معلّقة.** Build Tools (MSVC) على جهاز ويندوز: `C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools` + حمل عمل Desktop development with C++. لا Electron.
+
 
 ## قواعد أعمال مهمة (CRM / أهلية)
 - مشروع موجان / Mawjan على Dynamics: `https://aqaar.crm15.dynamics.com`
