@@ -1,0 +1,18 @@
+{
+  "updatedAt": "",
+  "digiapi": {
+    "reports": []
+  },
+  "digisign": {
+    "dashboard": {
+      "myTasks": 0,
+      "mySigned": 0,
+      "done": 0,
+      "pending": 0,
+      "cancelled": 0,
+      "rejected": 0
+    },
+    "tasks": []
+  },
+  "_comment": "Local cache for offline board queries. Copy to signing-cache.json or POST /api/signing/cache. Store GetDocuments rows (title, docName, initiatorName, requestType, createdDate, status) and digisign dashboard stats. Never commit live PII."
+}
