@@ -1,0 +1,13 @@
+{
+  "digiapiCookie": "",
+  "digisignCookie": "",
+  "digiapiBaseUrl": "https://digiapi.aqaar.com:4443",
+  "digisignBaseUrl": "https://digisign.aqaar.com",
+  "digiapiGetDocumentsPath": "/api/Documents/GetDocuments",
+  "digisignDashboardPath": "/api/Account/GetDashboardStatistics",
+  "digisignGetDocumentsPath": "/api/Documents/GetDocuments",
+  "digisignGetStatisticsPath": "/api/Documents/GetStatistics",
+  "getDocumentsBodyJson": "{}",
+  "updatedAt": "",
+  "_comment": "Local only. Copy to signing-session.local.json (gitignored). Paste Cookie header values from a logged-in browser DevTools request to digiapi/digisign. Board proxies POST GetDocuments and GET GetDashboardStatistics with these cookies. Never commit the live file."
+}

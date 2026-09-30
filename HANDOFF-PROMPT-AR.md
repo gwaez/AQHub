@@ -12,7 +12,7 @@
 ## الريبو (Source of Truth)
 - GitHub (personal): **https://github.com/gwaez/AQHub** (Private) — أو الريبو الذي يُسلَّم لك باسم `AqaarWorkBoard` تحت نفس الحساب `gwaez`.
 - Checkout محلي شائع: `C:\Users\AMahmoud\Documents\AQHub` و/أو `C:\Users\AMahmoud\Documents\AqaarWorkBoard`
-- **ممنوع** رفع: توكنات CRM، `tasks.json` الحي، `eisenhower.json` الحي، كاش CRM، أسرار `.env`.
+- **ممنوع** رفع: توكنات CRM، `tasks.json` الحي، `eisenhower.json` الحي، كاش CRM، `signing-session.local.json`، `signing-cache.json`، أسرار `.env`.
 - المسموح: سورس HTML/PS1، `*.sample.json`، `SETUP-AR.md` / `SETUP.md` / `Setup-AQHub.ps1`.
 
 ## التشغيل المحلي
@@ -45,10 +45,20 @@
 - التراش: لا تُعاد تغذيتها من التاسكات المفتوحة
 - فتح المصدر ≠ فتح التاسك؛ فتح التوقيع يستخدم digiapi/digisign حسب النوع
 
-## منصات التوقيع
-- SPA/عقود: `https://digiapi.aqaar.com:4443/reports/all`
-- داخلي (إلغاء/ريفند/أوراق): `https://digisign.aqaar.com/`
-- API: `GET /api/signing-platforms`
+## منصات التوقيع (digiapi / digisign)
+- SPA/عقود (UI): `https://digiapi.aqaar.com:4443/reports/all`
+- داخلي (UI): `https://digisign.aqaar.com/`
+- كتالوج الروابط: `GET /api/signing-platforms` + `data/signing-platforms.json` (بدون أسرار)
+- جلسة محلية (كوكيز فقط على الجهاز): انسخ `data/signing-session.local.sample.json` → `data/signing-session.local.json` والصق قيمة هيدر `Cookie` من طلب XHR مسجّل الدخول في المتصفح (DevTools → Network). **لا ترفع الملف الحي.**
+- كاش محلي للأوفلاين: `data/signing-cache.json` (gitignore) أو `POST /api/signing/cache` بعد سكرابينج/مزامنة.
+- استعلامات اللوحة:
+  - `GET /api/signing/status` — منصات + booleans فقط (لا يعيد الكوكيز)
+  - `GET/POST /api/signing/cache` — قراءة/دمج الكاش
+  - `GET /api/signing/digiapi/reports` — يفضّل بروكسي حي `POST {digiapi}/api/Documents/GetDocuments` إن وُجد كوكي؛ وإلا الكاش (`source`: live|cache|offline)
+  - `GET /api/signing/digisign/dashboard` — بروكسي `GET {digisign}/api/Account/GetDashboardStatistics`
+  - `GET /api/signing/digisign/tasks` — بروكسي `POST {digisign}/api/Documents/GetDocuments`
+- حقول صف التقارير الشائعة: `title`, `docName`, `initiatorName`, `requestType`, `createdDate`, `status`
+- إحصائيات الداشبورد: `myTasks`, `mySigned`, `done`, `pending`, `cancelled`, `rejected`
 
 ## قيود ثابتة
 - **لا ترسل إيميل تلقائيًا** — مسودات + موافقة المستخدم فقط.

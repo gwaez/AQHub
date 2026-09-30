@@ -160,6 +160,16 @@ http://127.0.0.1:8766/board.html
 | `board.html` | واجهة اللوحة (كانبان / قائمة / تركيز) |
 | `data/tasks.json` | مهامك المحلية (تُنشأ من العينة إن نقصت) — **لا تُرفع إلى git** |
 | `data/crm-config.json` | إعدادات CRM محلية — **لا ترفع أسرارًا** |
+| `data/signing-session.local.json` | كوكيز المتصفح لبروكسي digiapi/digisign — **gitignore** |
+| `data/signing-cache.json` | مرآة محلية لنتائج GetDocuments + إحصائيات الداشبورد — **gitignore** |
+
+### بوابات التوقيع (بروكسي + كاش)
+
+1. انسخ `data/signing-session.local.sample.json` → `data/signing-session.local.json`.
+2. سجّل دخول digiapi / digisign في المتصفح، افتح DevTools → Network، وانسخ هيدر `Cookie` إلى `digiapiCookie` / `digisignCookie`.
+3. مسارات اللوحة (مع الكوكي) تستدعي الـ XHR المؤكدة: digiapi `POST /api/Documents/GetDocuments`، digisign `GET /api/Account/GetDashboardStatistics` و`POST /api/Documents/GetDocuments`.
+4. بدون كوكي تُخدم الاستعلامات من `signing-cache.json` (`source: cache|offline`). يمكن للوكيل `POST /api/signing/cache` بعد السكرابينج.
+5. `GET /api/signing/status` يعيد flags فقط — **بدون** طباعة الكوكيز.
 
 ---
 
@@ -167,7 +177,7 @@ http://127.0.0.1:8766/board.html
 
 - **لا إرسال تلقائي للبريد.** وافق يدويًا فقط عند الإرسال.
 - لا تضع كلمات مرور أو توكنات داخل المستودع.
-- لا تعمل `git commit` لملفات `data/tasks.json` أو `data/crm-config.json` أو `.env`.
+- لا تعمل `git commit` لملفات `data/tasks.json` أو `data/crm-config.json` أو `data/signing-session.local.json` أو `data/signing-cache.json` أو `.env`.
 - كل شيء lokal على `127.0.0.1` — لا يُنشر على الإنترنت بهذا الإعداد.
 
 ---

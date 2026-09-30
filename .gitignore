@@ -2,6 +2,8 @@ data/tasks.json
 data/eisenhower.json
 data/crm-config.json
 data/crm-cache-*.json
+data/signing-session.local.json
+data/signing-cache.json
 data/audit.jsonl
 data/jobs/
 data/*.log

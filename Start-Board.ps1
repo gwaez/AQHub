@@ -9,6 +9,9 @@ $eisenhowerPath = Join-Path $dataDir 'eisenhower.json'
 $auditPath = Join-Path $dataDir 'audit.jsonl'
 $jobsDir = Join-Path $dataDir 'jobs'
 $crmConfigPath = Join-Path $dataDir 'crm-config.json'
+$signingSessionPath = Join-Path $dataDir 'signing-session.local.json'
+$signingCachePath = Join-Path $dataDir 'signing-cache.json'
+$signingPlatformsPath = Join-Path $dataDir 'signing-platforms.json'
 New-Item -ItemType Directory -Force -Path $dataDir | Out-Null
 if (-not (Test-Path $eisenhowerPath)) {
   [IO.File]::WriteAllText($eisenhowerPath, '{"items":[],"updatedAt":""}', [Text.UTF8Encoding]::new($false))
@@ -2600,7 +2603,465 @@ function Get-CrmPeopleList {
   }
 }
 
+# --- Signing portals (digiapi / digisign): verified XHR proxy + local cache ---
+# Verified browser XHR paths (do not invent others):
+#   digiapi  base https://digiapi.aqaar.com:4443
+#     POST /api/Documents/GetDocuments
+#     GET  /api/Account/GetInits | GetConfig | GetUserDetails
+#     GET  /api/Setup/GetAppSettings
+#   digisign base https://digisign.aqaar.com
+#     GET  /api/Account/GetDashboardStatistics
+#     POST /api/Documents/GetDocuments | GetStatistics
+#     GET  /api/Signer/GetAllSigners
+function Get-DefaultSigningSession {
+  return [ordered]@{
+    digiapiCookie = ''
+    digisignCookie = ''
+    digiapiBaseUrl = 'https://digiapi.aqaar.com:4443'
+    digisignBaseUrl = 'https://digisign.aqaar.com'
+    digiapiGetDocumentsPath = '/api/Documents/GetDocuments'
+    digisignDashboardPath = '/api/Account/GetDashboardStatistics'
+    digisignGetDocumentsPath = '/api/Documents/GetDocuments'
+    digisignGetStatisticsPath = '/api/Documents/GetStatistics'
+    getDocumentsBodyJson = '{}'
+    updatedAt = ''
+  }
+}
+function Get-EmptySigningCache {
+  return [ordered]@{
+    updatedAt = ''
+    digiapi = [ordered]@{ reports = @() }
+    digisign = [ordered]@{ dashboard = @{}; tasks = @() }
+  }
+}
+function Load-SigningSession {
+  $c = Get-DefaultSigningSession
+  if (-not (Test-Path $signingSessionPath)) { return $c }
+  try {
+    $obj = [IO.File]::ReadAllText($signingSessionPath, [Text.Encoding]::UTF8) | ConvertFrom-Json
+    foreach ($k in @($c.Keys)) {
+      if ($obj.PSObject.Properties[$k]) { $c[$k] = [string]$obj.$k }
+    }
+    # Backward-compatible aliases from earlier sample shape
+    if ($obj.PSObject.Properties['digiapiReportsUrl'] -and [string]$obj.digiapiReportsUrl) {
+      try {
+        $u = [Uri]([string]$obj.digiapiReportsUrl)
+        if ($u.AbsolutePath -match '/api/') { $c.digiapiGetDocumentsPath = $u.AbsolutePath }
+      } catch {}
+    }
+    if ($obj.PSObject.Properties['digisignDashboardUrl'] -and [string]$obj.digisignDashboardUrl) {
+      try {
+        $u = [Uri]([string]$obj.digisignDashboardUrl)
+        if ($u.AbsolutePath -match '/api/') { $c.digisignDashboardPath = $u.AbsolutePath }
+      } catch {}
+    }
+    if ($obj.PSObject.Properties['digisignTasksUrl'] -and [string]$obj.digisignTasksUrl) {
+      try {
+        $u = [Uri]([string]$obj.digisignTasksUrl)
+        if ($u.AbsolutePath -match '/api/') { $c.digisignGetDocumentsPath = $u.AbsolutePath }
+      } catch {}
+    }
+  } catch {}
+  return $c
+}
+function Load-SigningCache {
+  $empty = Get-EmptySigningCache
+  if (-not (Test-Path $signingCachePath)) { return $empty }
+  try {
+    $obj = [IO.File]::ReadAllText($signingCachePath, [Text.Encoding]::UTF8) | ConvertFrom-Json
+    if (-not $obj) { return $empty }
+    $out = [ordered]@{
+      updatedAt = ''
+      digiapi = [ordered]@{ reports = @() }
+      digisign = [ordered]@{ dashboard = @{}; tasks = @() }
+    }
+    if ($obj.PSObject.Properties['updatedAt']) { $out.updatedAt = [string]$obj.updatedAt }
+    if ($obj.digiapi) {
+      if ($obj.digiapi.PSObject.Properties['reports'] -and $null -ne $obj.digiapi.reports) {
+        $out.digiapi.reports = @($obj.digiapi.reports)
+      }
+    }
+    if ($obj.digisign) {
+      if ($obj.digisign.PSObject.Properties['dashboard'] -and $null -ne $obj.digisign.dashboard) {
+        $out.digisign.dashboard = $obj.digisign.dashboard
+      }
+      if ($obj.digisign.PSObject.Properties['tasks'] -and $null -ne $obj.digisign.tasks) {
+        $out.digisign.tasks = @($obj.digisign.tasks)
+      }
+    }
+    return $out
+  } catch {
+    return $empty
+  }
+}
+function Save-SigningCache($cache) {
+  $now = (Get-Date).ToUniversalTime().ToString('o')
+  if ($cache -is [hashtable] -or $cache -is [System.Collections.Specialized.OrderedDictionary]) {
+    $cache['updatedAt'] = $now
+  } else {
+    try { $cache | Add-Member -NotePropertyName updatedAt -NotePropertyValue $now -Force } catch {}
+  }
+  $json = $cache | ConvertTo-Json -Depth 12 -Compress
+  [IO.File]::WriteAllText($signingCachePath, $json, [Text.UTF8Encoding]::new($false))
+}
+function Merge-SigningCacheBody($incoming) {
+  $cache = Load-SigningCache
+  if (-not $incoming) { return $cache }
+  if ($incoming.PSObject.Properties['updatedAt'] -and [string]$incoming.updatedAt) {
+    $cache.updatedAt = [string]$incoming.updatedAt
+  }
+  if ($incoming.PSObject.Properties['digiapi'] -and $incoming.digiapi) {
+    if ($incoming.digiapi.PSObject.Properties['reports']) {
+      $cache.digiapi.reports = @($incoming.digiapi.reports)
+    }
+  }
+  if ($incoming.PSObject.Properties['digisign'] -and $incoming.digisign) {
+    if ($incoming.digisign.PSObject.Properties['dashboard'] -and $null -ne $incoming.digisign.dashboard) {
+      $cache.digisign.dashboard = $incoming.digisign.dashboard
+    }
+    if ($incoming.digisign.PSObject.Properties['tasks']) {
+      $cache.digisign.tasks = @($incoming.digisign.tasks)
+    }
+  }
+  # Allow flat shorthand: { reports: [] } or { tasks: [], dashboard: {} }
+  if ($incoming.PSObject.Properties['reports'] -and -not ($incoming.PSObject.Properties['digiapi'])) {
+    $cache.digiapi.reports = @($incoming.reports)
+  }
+  if ($incoming.PSObject.Properties['tasks'] -and -not ($incoming.PSObject.Properties['digisign'])) {
+    $cache.digisign.tasks = @($incoming.tasks)
+  }
+  if ($incoming.PSObject.Properties['dashboard'] -and -not ($incoming.PSObject.Properties['digisign'])) {
+    $cache.digisign.dashboard = $incoming.dashboard
+  }
+  Save-SigningCache $cache
+  return (Load-SigningCache)
+}
+function Load-SigningPlatformsCatalog {
+  if (Test-Path $signingPlatformsPath) {
+    try {
+      return ([IO.File]::ReadAllText($signingPlatformsPath, [Text.Encoding]::UTF8) | ConvertFrom-Json)
+    } catch {}
+  }
+  return [pscustomobject]@{
+    updatedAt = ''
+    platforms = @(
+      [pscustomobject]@{ id = 'digiapi'; name = 'DigiAPI SPA/Contracts'; kind = 'spa_contracts'; url = 'https://digiapi.aqaar.com:4443/reports/all' },
+      [pscustomobject]@{ id = 'digisign'; name = 'DigiSign Internal'; kind = 'internal_sign'; url = 'https://digisign.aqaar.com/' }
+    )
+  }
+}
+function Get-SigningStatus {
+  $session = Load-SigningSession
+  $cache = Load-SigningCache
+  $platforms = Load-SigningPlatformsCatalog
+  $hasSessionFile = Test-Path $signingSessionPath
+  $hasCacheFile = Test-Path $signingCachePath
+  $hasDigiapiCookie = -not [string]::IsNullOrWhiteSpace([string]$session.digiapiCookie)
+  $hasDigisignCookie = -not [string]::IsNullOrWhiteSpace([string]$session.digisignCookie)
+  $cacheReports = 0
+  $cacheTasks = 0
+  try { $cacheReports = @($cache.digiapi.reports).Count } catch {}
+  try { $cacheTasks = @($cache.digisign.tasks).Count } catch {}
+  $platList = @()
+  try {
+    foreach ($p in @($platforms.platforms)) {
+      $platList += @{
+        id = [string]$p.id
+        name = [string]$p.name
+        kind = [string]$p.kind
+        url = [string]$p.url
+      }
+    }
+  } catch {}
+  return @{
+    ok = $true
+    platforms = $platList
+    hasSessionFile = [bool]$hasSessionFile
+    hasCacheFile = [bool]$hasCacheFile
+    hasDigiapiCookie = [bool]$hasDigiapiCookie
+    hasDigisignCookie = [bool]$hasDigisignCookie
+    cacheUpdatedAt = [string]$cache.updatedAt
+    cacheReportCount = [int]$cacheReports
+    cacheTaskCount = [int]$cacheTasks
+    digiapiBaseUrl = [string]$session.digiapiBaseUrl
+    digisignBaseUrl = [string]$session.digisignBaseUrl
+    endpoints = @{
+      digiapiGetDocuments = 'POST /api/Documents/GetDocuments'
+      digisignDashboard = 'GET /api/Account/GetDashboardStatistics'
+      digisignGetDocuments = 'POST /api/Documents/GetDocuments'
+    }
+  }
+}
+function Join-SigningUrl([string]$baseUrl, [string]$apiPath) {
+  $b = ([string]$baseUrl).Trim().TrimEnd('/')
+  $p = ([string]$apiPath).Trim()
+  if (-not $p.StartsWith('/')) { $p = '/' + $p }
+  return ($b + $p)
+}
+function Extract-SigningDocumentList($data) {
+  if ($null -eq $data) { return @() }
+  if ($data -is [System.Array]) { return @($data) }
+  foreach ($key in @('data','items','result','documents','reports','tasks','rows','value')) {
+    if ($data.PSObject.Properties[$key] -and $null -ne $data.$key) {
+      $v = $data.$key
+      if ($v -is [System.Array]) { return @($v) }
+      if ($v.PSObject.Properties['data'] -and ($v.data -is [System.Array])) { return @($v.data) }
+      if ($v.PSObject.Properties['items'] -and ($v.items -is [System.Array])) { return @($v.items) }
+    }
+  }
+  # Single object that looks like a document row
+  if ($data.PSObject.Properties['title'] -or $data.PSObject.Properties['docName'] -or $data.PSObject.Properties['status']) {
+    return @($data)
+  }
+  return @($data)
+}
+function Invoke-SigningProxy([string]$method, [string]$url, [string]$cookieHeader, [string]$bodyJson) {
+  if ([string]::IsNullOrWhiteSpace($url)) {
+    return @{ ok = $false; error = 'url_missing' }
+  }
+  if ([string]::IsNullOrWhiteSpace($cookieHeader)) {
+    return @{ ok = $false; error = 'cookie_missing' }
+  }
+  $m = ([string]$method).ToUpperInvariant()
+  if ($m -ne 'GET' -and $m -ne 'POST') { $m = 'GET' }
+  try {
+    $headers = @{
+      Cookie = $cookieHeader
+      Accept = 'application/json, text/plain, */*'
+      'User-Agent' = 'AQHub-SigningProxy/1.0'
+    }
+    $params = @{
+      Uri = $url
+      Method = $m
+      Headers = $headers
+      TimeoutSec = 45
+      UseBasicParsing = $true
+    }
+    if ($m -eq 'POST') {
+      if ([string]::IsNullOrWhiteSpace($bodyJson)) { $bodyJson = '{}' }
+      $params['ContentType'] = 'application/json; charset=utf-8'
+      $params['Body'] = [string]$bodyJson
+    }
+    $resp = Invoke-WebRequest @params
+    $raw = [string]$resp.Content
+    $parsed = $null
+    $contentType = ''
+    try { $contentType = [string]$resp.Headers['Content-Type'] } catch {}
+    try { $parsed = $raw | ConvertFrom-Json } catch { $parsed = $null }
+    return @{
+      ok = $true
+      statusCode = [int]$resp.StatusCode
+      contentType = $contentType
+      data = $parsed
+      raw = $(if ($null -eq $parsed) { $raw } else { $null })
+      fetchedAt = (Get-Date).ToUniversalTime().ToString('o')
+      url = $url
+      method = $m
+    }
+  } catch {
+    $msg = $_.Exception.Message
+    $code = 0
+    try { if ($_.Exception.Response) { $code = [int]$_.Exception.Response.StatusCode } } catch {}
+    return @{ ok = $false; error = 'proxy_failed'; message = $msg; statusCode = $code; url = $url; method = $m }
+  }
+}
+function Get-SigningDigiapiReports {
+  $session = Load-SigningSession
+  $cache = Load-SigningCache
+  $cookie = [string]$session.digiapiCookie
+  $base = [string]$session.digiapiBaseUrl
+  if ([string]::IsNullOrWhiteSpace($base)) { $base = 'https://digiapi.aqaar.com:4443' }
+  $apiPath = [string]$session.digiapiGetDocumentsPath
+  if ([string]::IsNullOrWhiteSpace($apiPath)) { $apiPath = '/api/Documents/GetDocuments' }
+  $url = Join-SigningUrl $base $apiPath
+  $bodyJson = [string]$session.getDocumentsBodyJson
+  if ([string]::IsNullOrWhiteSpace($bodyJson)) { $bodyJson = '{}' }
+  $reports = @()
+  try { $reports = @($cache.digiapi.reports) } catch { $reports = @() }
 
+  if (-not [string]::IsNullOrWhiteSpace($cookie)) {
+    $live = Invoke-SigningProxy 'POST' $url $cookie $bodyJson
+    if ($live.ok -and $null -ne $live.data) {
+      $liveReports = Extract-SigningDocumentList $live.data
+      try {
+        $cache.digiapi.reports = $liveReports
+        Save-SigningCache $cache
+      } catch {}
+      return @{
+        ok = $true
+        source = 'live'
+        reports = $liveReports
+        count = @($liveReports).Count
+        fetchedAt = $live.fetchedAt
+        endpoint = 'POST /api/Documents/GetDocuments'
+        url = $url
+      }
+    }
+    $err = 'proxy_failed'
+    if ($live) {
+      if ($live.message) { $err = [string]$live.message }
+      elseif ($live.error) { $err = [string]$live.error }
+      elseif ($live.ok -and $null -eq $live.data) { $err = 'live_response_not_json' }
+    }
+    return @{
+      ok = $true
+      source = 'cache'
+      reports = $reports
+      count = $reports.Count
+      updatedAt = [string]$cache.updatedAt
+      syncError = $err
+      endpoint = 'POST /api/Documents/GetDocuments'
+      url = $url
+    }
+  }
+
+  if ((Test-Path $signingCachePath) -or $reports.Count -gt 0) {
+    return @{
+      ok = $true
+      source = 'cache'
+      reports = $reports
+      count = $reports.Count
+      updatedAt = [string]$cache.updatedAt
+    }
+  }
+  return @{
+    ok = $true
+    source = 'offline'
+    reports = @()
+    count = 0
+    updatedAt = ''
+    note = 'no_session_cookie_and_no_cache'
+  }
+}
+function Get-SigningDigisignDashboard {
+  $session = Load-SigningSession
+  $cache = Load-SigningCache
+  $cookie = [string]$session.digisignCookie
+  $base = [string]$session.digisignBaseUrl
+  if ([string]::IsNullOrWhiteSpace($base)) { $base = 'https://digisign.aqaar.com' }
+  $apiPath = [string]$session.digisignDashboardPath
+  if ([string]::IsNullOrWhiteSpace($apiPath)) { $apiPath = '/api/Account/GetDashboardStatistics' }
+  $url = Join-SigningUrl $base $apiPath
+  $dashboard = @{}
+  try { if ($null -ne $cache.digisign.dashboard) { $dashboard = $cache.digisign.dashboard } } catch {}
+
+  if (-not [string]::IsNullOrWhiteSpace($cookie)) {
+    $live = Invoke-SigningProxy 'GET' $url $cookie $null
+    if ($live.ok -and $null -ne $live.data) {
+      try {
+        $cache.digisign.dashboard = $live.data
+        Save-SigningCache $cache
+      } catch {}
+      return @{
+        ok = $true
+        source = 'live'
+        dashboard = $live.data
+        fetchedAt = $live.fetchedAt
+        endpoint = 'GET /api/Account/GetDashboardStatistics'
+        url = $url
+      }
+    }
+    $err = 'proxy_failed'
+    if ($live) {
+      if ($live.message) { $err = [string]$live.message }
+      elseif ($live.error) { $err = [string]$live.error }
+      elseif ($live.ok -and $null -eq $live.data) { $err = 'live_response_not_json' }
+    }
+    return @{
+      ok = $true
+      source = 'cache'
+      dashboard = $dashboard
+      updatedAt = [string]$cache.updatedAt
+      syncError = $err
+      endpoint = 'GET /api/Account/GetDashboardStatistics'
+      url = $url
+    }
+  }
+
+  if (Test-Path $signingCachePath) {
+    return @{
+      ok = $true
+      source = 'cache'
+      dashboard = $dashboard
+      updatedAt = [string]$cache.updatedAt
+    }
+  }
+  return @{
+    ok = $true
+    source = 'offline'
+    dashboard = @{}
+    updatedAt = ''
+    note = 'no_session_cookie_and_no_cache'
+  }
+}
+function Get-SigningDigisignTasks {
+  $session = Load-SigningSession
+  $cache = Load-SigningCache
+  $cookie = [string]$session.digisignCookie
+  $base = [string]$session.digisignBaseUrl
+  if ([string]::IsNullOrWhiteSpace($base)) { $base = 'https://digisign.aqaar.com' }
+  $apiPath = [string]$session.digisignGetDocumentsPath
+  if ([string]::IsNullOrWhiteSpace($apiPath)) { $apiPath = '/api/Documents/GetDocuments' }
+  $url = Join-SigningUrl $base $apiPath
+  $bodyJson = [string]$session.getDocumentsBodyJson
+  if ([string]::IsNullOrWhiteSpace($bodyJson)) { $bodyJson = '{}' }
+  $tasks = @()
+  try { $tasks = @($cache.digisign.tasks) } catch { $tasks = @() }
+
+  if (-not [string]::IsNullOrWhiteSpace($cookie)) {
+    $live = Invoke-SigningProxy 'POST' $url $cookie $bodyJson
+    if ($live.ok -and $null -ne $live.data) {
+      $liveTasks = Extract-SigningDocumentList $live.data
+      try {
+        $cache.digisign.tasks = $liveTasks
+        Save-SigningCache $cache
+      } catch {}
+      return @{
+        ok = $true
+        source = 'live'
+        tasks = $liveTasks
+        count = @($liveTasks).Count
+        fetchedAt = $live.fetchedAt
+        endpoint = 'POST /api/Documents/GetDocuments'
+        url = $url
+      }
+    }
+    $err = 'proxy_failed'
+    if ($live) {
+      if ($live.message) { $err = [string]$live.message }
+      elseif ($live.error) { $err = [string]$live.error }
+      elseif ($live.ok -and $null -eq $live.data) { $err = 'live_response_not_json' }
+    }
+    return @{
+      ok = $true
+      source = 'cache'
+      tasks = $tasks
+      count = $tasks.Count
+      updatedAt = [string]$cache.updatedAt
+      syncError = $err
+      endpoint = 'POST /api/Documents/GetDocuments'
+      url = $url
+    }
+  }
+
+  if ((Test-Path $signingCachePath) -or $tasks.Count -gt 0) {
+    return @{
+      ok = $true
+      source = 'cache'
+      tasks = $tasks
+      count = $tasks.Count
+      updatedAt = [string]$cache.updatedAt
+    }
+  }
+  return @{
+    ok = $true
+    source = 'offline'
+    tasks = @()
+    count = 0
+    updatedAt = ''
+    note = 'no_session_cookie_and_no_cache'
+  }
+}
 
 while ($listener.IsListening) {
   $ctx = $listener.GetContext()
@@ -2789,7 +3250,53 @@ function Invoke-EisAutoFeed([bool]$force = $false) {
         @{ id = 'digisign'; url = 'https://digisign.aqaar.com/'; kind = 'internal_sign' }
       ) }
       continue
-    }if ($path -eq '/api/eisenhower/feed' -and $req.HttpMethod -eq 'POST') {
+    }
+    if ($path -eq '/api/signing/status' -and $req.HttpMethod -eq 'GET') {
+      Write-Json $res (Get-SigningStatus)
+      continue
+    }
+    if ($path -eq '/api/signing/cache' -and $req.HttpMethod -eq 'GET') {
+      $cache = Load-SigningCache
+      Write-Json $res @{
+        ok = $true
+        updatedAt = [string]$cache.updatedAt
+        digiapi = @{ reports = @($cache.digiapi.reports) }
+        digisign = @{ dashboard = $cache.digisign.dashboard; tasks = @($cache.digisign.tasks) }
+        hasCacheFile = [bool](Test-Path $signingCachePath)
+      }
+      continue
+    }
+    if ($path -eq '/api/signing/cache' -and $req.HttpMethod -eq 'POST') {
+      $body = Read-Body $req
+      $incoming = $null
+      try { $incoming = $body | ConvertFrom-Json } catch { Write-Json $res @{ ok = $false; error = 'bad_json' } 400; continue }
+      $saved = Merge-SigningCacheBody $incoming
+      Write-Audit @{ at = (Get-Date).ToUniversalTime().ToString('o'); actor = 'Agent'; action = 'signing.cache.write' }
+      Write-Json $res @{
+        ok = $true
+        updatedAt = [string]$saved.updatedAt
+        digiapi = @{ reports = @($saved.digiapi.reports); reportCount = @($saved.digiapi.reports).Count }
+        digisign = @{
+          dashboard = $saved.digisign.dashboard
+          tasks = @($saved.digisign.tasks)
+          taskCount = @($saved.digisign.tasks).Count
+        }
+      }
+      continue
+    }
+    if ($path -eq '/api/signing/digiapi/reports' -and $req.HttpMethod -eq 'GET') {
+      Write-Json $res (Get-SigningDigiapiReports)
+      continue
+    }
+    if ($path -eq '/api/signing/digisign/dashboard' -and $req.HttpMethod -eq 'GET') {
+      Write-Json $res (Get-SigningDigisignDashboard)
+      continue
+    }
+    if ($path -eq '/api/signing/digisign/tasks' -and $req.HttpMethod -eq 'GET') {
+      Write-Json $res (Get-SigningDigisignTasks)
+      continue
+    }
+    if ($path -eq '/api/eisenhower/feed' -and $req.HttpMethod -eq 'POST') {
   $force = $false
   try {
     $qb = [string]$req.QueryString['force']

@@ -152,6 +152,16 @@ When that works, the system is ready locally.
 | `board.html` | Board UI |
 | `data/tasks.json` | Local tasks (seeded from sample if missing) — **not committed** |
 | `data/crm-config.json` | Local CRM settings — **do not commit secrets** |
+| `data/signing-session.local.json` | Browser Cookie headers for digiapi/digisign proxy — **gitignored** |
+| `data/signing-cache.json` | Local mirror of GetDocuments + dashboard stats — **gitignored** |
+
+### Signing portals (proxy + cache)
+
+1. Copy `data/signing-session.local.sample.json` → `data/signing-session.local.json`.
+2. Log into digiapi / digisign in the browser, open DevTools → Network, copy the request `Cookie` header into `digiapiCookie` / `digisignCookie`.
+3. Board routes (with cookies) proxy verified XHRs: digiapi `POST /api/Documents/GetDocuments`, digisign `GET /api/Account/GetDashboardStatistics` and `POST /api/Documents/GetDocuments`.
+4. Without cookies, `GET /api/signing/digiapi/reports` (and digisign dashboard/tasks) serve `signing-cache.json` (`source: cache|offline`). Agents may `POST /api/signing/cache` after scraping.
+5. Status: `GET /api/signing/status` returns booleans only — never cookies.
 
 ---
 
@@ -159,7 +169,7 @@ When that works, the system is ready locally.
 
 - **Never auto-sends email.** Approve only.
 - Do not put passwords or tokens in the repo.
-- Do not commit `data/tasks.json`, `data/crm-config.json`, or `.env`.
+- Do not commit `data/tasks.json`, `data/crm-config.json`, `data/signing-session.local.json`, `data/signing-cache.json`, or `.env`.
 - Everything binds to `127.0.0.1` — local only.
 
 ---
