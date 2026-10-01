@@ -204,8 +204,30 @@ function Ensure-DataFiles {
     Write-Ok 'data\crm-config.json already exists (left unchanged)'
   }
 
+  $themesDir = Join-Path $dataDir 'themes'
+  $themesCustom = Join-Path $themesDir 'custom'
+  if (-not (Test-Path $themesDir)) {
+    New-Item -ItemType Directory -Path $themesDir -Force | Out-Null
+  }
+  if (-not (Test-Path $themesCustom)) {
+    New-Item -ItemType Directory -Path $themesCustom -Force | Out-Null
+  }
+  $themesState = Join-Path $dataDir 'themes-state.json'
+  $themesStateSample = Join-Path $dataDir 'themes-state.sample.json'
+  if (-not (Test-Path $themesState)) {
+    if (Test-Path $themesStateSample) {
+      Copy-Item $themesStateSample $themesState -Force
+      Write-Ok 'Created data\themes-state.json from themes-state.sample.json (active: jarvis-hud)'
+    } else {
+      [IO.File]::WriteAllText($themesState, '{"version":1,"activeThemeId":"jarvis-hud","updatedAt":""}', [Text.UTF8Encoding]::new($false))
+      Write-Ok 'Created data\themes-state.json stub'
+    }
+  } else {
+    Write-Ok 'data\themes-state.json already exists (left unchanged)'
+  }
+
   Write-WarnLine 'Email never auto-sends. Approve send only when you choose to.'
-  Write-WarnLine 'Do not commit data\tasks.json, data\crm-config.json, tokens, or .env files.'
+  Write-WarnLine 'Do not commit data\tasks.json, data\crm-config.json, data\themes-state.json, data\themes\custom\, tokens, or .env files.'
 }
 
 function Start-BoardKeepAlive {

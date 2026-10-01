@@ -66,6 +66,10 @@ First run creates `data/tasks.json` and `data/crm-config.json` from the sample f
 | `board.html` | Kanban / list / matrix / focus board |
 | `task.html` | Per-task room (timeline + agent chat) |
 | `index.html` / `panel.html` | Control panel |
+| `themes.html` | Theme editor (save / switch / import / export) |
+| `theme.js` | Applies active theme CSS variables on `:root` |
+| `data/themes/` | Portable design-system theme JSON (+ `_schema.md`) |
+| `wizard/Theme-Bridge.ps1` | `/api/themes*` routes |
 | `crm.html` | Dynamics CRM connector UI |
 | `Start-Board.ps1` | Local HttpListener + Outlook COM |
 | `Watch-Board.ps1` | Hidden keepalive watchdog |

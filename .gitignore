@@ -4,6 +4,8 @@ data/dashboard-layout.json
 data/notes.json
 data/crm-config.json
 data/wizard-settings.json
+data/themes-state.json
+data/themes/custom/
 data/crm-cache-*.json
 data/audit.jsonl
 data/jobs/

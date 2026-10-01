@@ -2631,6 +2631,15 @@ if (Test-Path $wizardBridgePath) {
   . $wizardBridgePath
 }
 
+# Optional theme bridge (data/themes + themes-state.json).
+$themeBridgePath = Join-Path (Join-Path $Root 'wizard') 'Theme-Bridge.ps1'
+if (Test-Path $themeBridgePath) {
+  . $themeBridgePath
+  if (Get-Command Initialize-ThemeStorage -ErrorAction SilentlyContinue) {
+    Initialize-ThemeStorage -DataDir $dataDir
+  }
+}
+
 while ($listener.IsListening) {
   $ctx = $listener.GetContext()
   $req = $ctx.Request
@@ -2640,7 +2649,7 @@ while ($listener.IsListening) {
     if ($path -eq '/' -or $path -eq '') { $path = '/index.html' }
     if ($req.HttpMethod -eq 'OPTIONS') {
       $res.AddHeader('Access-Control-Allow-Origin','*')
-      $res.AddHeader('Access-Control-Allow-Methods','GET,POST,PUT,OPTIONS')
+      $res.AddHeader('Access-Control-Allow-Methods','GET,POST,PUT,DELETE,OPTIONS')
       $res.AddHeader('Access-Control-Allow-Headers','Content-Type')
       Write-Text $res 204 'text/plain' ''
       continue
@@ -2648,6 +2657,12 @@ while ($listener.IsListening) {
     if ($path.StartsWith('/api/v1/wizard/')) {
       if (Get-Command Invoke-WizardBridge -ErrorAction SilentlyContinue) {
         $handled = Invoke-WizardBridge -Req $req -Res $res -Path $path -DataDir $dataDir -Root $Root
+        if ($handled) { continue }
+      }
+    }
+    if ($path.StartsWith('/api/themes')) {
+      if (Get-Command Invoke-ThemeBridge -ErrorAction SilentlyContinue) {
+        $handled = Invoke-ThemeBridge -Req $req -Res $res -Path $path -DataDir $dataDir
         if ($handled) { continue }
       }
     }
