@@ -73,7 +73,7 @@ From the AQHub clone:
 powershell -ExecutionPolicy Bypass -File .\Setup-AQHub.ps1
 ```
 
-Wait for `http://127.0.0.1:8766/board.html`. Daily start: double-click `Start-Board-Background.bat` (hidden watchdog, no leftover PowerShell window). Details: [SETUP.md](../../SETUP.md) / [SETUP-AR.md](../../SETUP-AR.md).
+Wait for `http://127.0.0.1:8766/` (control home). Daily start: double-click `Start-Board-Background.bat` (hidden watchdog, no leftover PowerShell window). Task board is `board.html` only when you open it. Details: [SETUP.md](../../SETUP.md) / [SETUP-AR.md](../../SETUP-AR.md).
 
 ### 2) Wizard toolchain + npm
 
@@ -162,7 +162,7 @@ Do not commit the live `wizard-settings.json`.
 | `node` / `cargo` not recognized | Reopen PowerShell after winget; confirm `node -v` / `cargo -v` |
 | `link.exe not found` / LNK errors | Install Build Tools C++ workload; use VS Native Tools prompt |
 | Blank Tauri window | Install WebView2 runtime |
-| Companion cannot reach the board | Start `Start-Board-Background.bat`; open `http://127.0.0.1:8766/board.html` |
+| Companion cannot reach AQHub | Start `Start-Board-Background.bat`; open `http://127.0.0.1:8766/` |
 | Mail bubble “unavailable” | Outlook desktop not running / not signed in — expected; no crash |
 
 ---

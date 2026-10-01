@@ -40,7 +40,7 @@ All of these already exist on the single-threaded listener in `Start-Board.ps1`.
 | GET | `/api/crm/units` `?project&status&refresh=` | Cached units; `refresh=1` hits Dynamics | Adapter. Cache-first; do not spam `refresh=1`. |
 | GET | `/api/crm/sales` `?project&refresh=` | Sales list + eligibility fields | Adapter. Same cache rule. |
 | GET | `/api/crm/people` `?refresh=` | People rollup | Adapter. |
-| GET | `/*.html` | Static files from repo root | Tray “Open AQHub” → `http://127.0.0.1:8766/board.html` (not a custom host). |
+| GET | `/*.html` | Static files from repo root | Tray “Open AQHub” → `http://127.0.0.1:8766/index.html` (control home; not the task board). |
 | OPTIONS | `*` | CORS preflight | P1 adds `PUT` to Allow-Methods for settings. |
 
 ### Task document shape (from `board.html` `normalize`)

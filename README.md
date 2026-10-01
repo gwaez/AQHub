@@ -66,9 +66,10 @@ First run creates `data/tasks.json` and `data/crm-config.json` from the sample f
 | `board.html` | Kanban / list / matrix / focus board |
 | `task.html` | Per-task room (timeline + agent chat) |
 | `index.html` / `panel.html` | Control panel |
-| `themes.html` | Theme editor (save / switch / import / export) |
-| `theme.js` | Applies active theme CSS variables on `:root` |
-| `data/themes/` | Portable design-system theme JSON (+ `_schema.md`) |
+| `themes.html` | Theme Studio host (full design-system editor) |
+| `theme-studio/` | Drop-in Theme Studio module (schema, apply, editor, AI prompt, recipes) |
+| `theme.js` | Shim → `theme-studio/aq-theme-apply.js` |
+| `data/themes/` | Portable theme JSON packages |
 | `wizard/Theme-Bridge.ps1` | `/api/themes*` routes |
 | `crm.html` | Dynamics CRM connector UI |
 | `Start-Board.ps1` | Local HttpListener + Outlook COM |

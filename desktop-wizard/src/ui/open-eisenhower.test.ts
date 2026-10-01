@@ -25,6 +25,15 @@ test("wizard menu Eisenhower opens AQHub in the browser, not the in-app matrix",
   assert.match(engine, /case "OPEN_MATRIX"/);
 });
 
+test("open_aqhub defaults to control home index.html, not board.html", () => {
+  const rust = read("src-tauri/src/aqhub.rs");
+  const main = read("src/main.ts");
+  assert.match(rust, /aqhub_url\("\/index\.html"\)/);
+  assert.doesNotMatch(rust, /aqhub_url\("\/board\.html"\)/);
+  assert.match(main, /127\.0\.0\.1:8766\/index\.html/);
+  assert.doesNotMatch(main, /127\.0\.0\.1:8766\/board\.html/);
+});
+
 test("tray Open AQHub uses open_aqhub, not the removed open_in_browser", () => {
   const tray = read("src-tauri/src/tray.rs");
   assert.match(tray, /aqhub::open_aqhub\(app\.clone\(\)\)/);

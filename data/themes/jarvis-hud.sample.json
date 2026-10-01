@@ -2,9 +2,9 @@
   "meta": {
     "id": "jarvis-hud",
     "name": "Jarvis HUD (sample)",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "author": "AQHub",
-    "description": "SAMPLE / portable design-system theme. Paste this JSON to an AI and say: build a UI theme with these specs. Import via themes.html or POST /api/themes/import.",
+    "description": "SAMPLE / portable Theme Studio design-system package. Paste this JSON (or a screenshot + theme-studio AI prompt) to any model and say: build a complete Theme Studio theme with these specs. Import via Theme Studio.",
     "styleKeywords": [
       "Jarvis",
       "dark",
@@ -14,7 +14,8 @@
       "glass",
       "ops"
     ],
-    "mode": "dark"
+    "mode": "dark",
+    "studio": "theme-studio"
   },
   "color": {
     "bg": "#050a12",
@@ -43,23 +44,29 @@
       "md": "0.95rem",
       "lg": "1.15rem",
       "xl": "1.45rem"
-    }
+    },
+    "lineHeight": "1.5",
+    "letterSpacing": "0"
   },
   "shape": {
     "radiusSm": "10px",
     "radiusMd": "14px",
     "radiusLg": "22px",
-    "borderWidth": "1px"
+    "borderWidth": "1px",
+    "radiusPill": "999px"
   },
   "elevation": {
     "shadowSm": "0 10px 30px rgba(0, 0, 0, 0.28)",
     "shadowMd": "0 24px 80px rgba(0, 0, 0, 0.45)",
-    "glowBlur": "18px"
+    "glowBlur": "18px",
+    "shadowLg": "0 24px 80px rgba(0, 0, 0, 0.45)"
   },
   "motion": {
     "fast": "120ms",
     "normal": "180ms",
-    "slow": "280ms"
+    "slow": "280ms",
+    "easing": "cubic-bezier(0.2, 0.8, 0.2, 1)",
+    "hoverLift": "translateY(-1px)"
   },
   "cssVariables": {
     "--aq-bg": "#050a12",
@@ -126,6 +133,139 @@
     "--do": "rgba(52, 211, 153, 0.18)",
     "--sched": "rgba(96, 165, 250, 0.16)",
     "--deleg": "rgba(167, 139, 250, 0.16)",
-    "--elim": "rgba(251, 113, 133, 0.16)"
+    "--elim": "rgba(251, 113, 133, 0.16)",
+    "--aq-space-unit": "4px",
+    "--aq-space-0": "0",
+    "--aq-space-1": "4px",
+    "--aq-space-2": "8px",
+    "--aq-space-3": "12px",
+    "--aq-space-4": "16px",
+    "--aq-space-5": "24px",
+    "--aq-space-6": "32px",
+    "--aq-space-7": "48px",
+    "--aq-space-8": "64px",
+    "--aq-density": "comfortable",
+    "--aq-density-mult": "1",
+    "--aq-shell-max": "1280px",
+    "--aq-shell-pad": "28px 22px",
+    "--aq-section-gap": "16px",
+    "--aq-card-pad": "16px",
+    "--aq-grid-gap": "10px",
+    "--aq-sidebar-width": "286px",
+    "--aq-hud-glow-strength": "0.45",
+    "--aq-hud-glow-spread": "18px",
+    "--aq-hud-scanline": "0.05",
+    "--aq-hud-grid": "0.04",
+    "--aq-icon-stroke": "1.75",
+    "--aq-icon-sm": "14px",
+    "--aq-icon-md": "18px",
+    "--aq-icon-lg": "24px",
+    "--aq-radius-pill": "999px",
+    "--aq-easing": "cubic-bezier(0.2, 0.8, 0.2, 1)",
+    "--aq-hover-lift": "translateY(-1px)",
+    "--aq-comp-shell-pattern": "glass",
+    "--aq-comp-shell-blur": "18px",
+    "--aq-comp-card-radius": "var(--aq-radius-md)",
+    "--aq-comp-card-padding": "var(--aq-space-4)",
+    "--aq-comp-card-backdrop-blur": "14px",
+    "--aq-comp-button-radius": "var(--aq-radius-md)",
+    "--aq-comp-button-padding": "10px 14px",
+    "--aq-comp-button-font-weight": "600",
+    "--aq-comp-button-primary-style": "gradient",
+    "--aq-comp-input-radius": "12px",
+    "--aq-comp-input-padding": "9px 11px",
+    "--aq-comp-input-background": "rgba(7,11,18,.55)",
+    "--aq-comp-chip-radius": "999px",
+    "--aq-comp-chip-padding": "3px 8px",
+    "--aq-comp-chip-font-size": "0.72rem",
+    "--aq-comp-nav-height": "52px",
+    "--aq-comp-nav-blur": "12px",
+    "--aq-comp-nav-gap": "8px",
+    "--aq-comp-table-row-height": "40px",
+    "--aq-comp-table-header-weight": "700",
+    "--aq-comp-table-cell-padding": "8px 10px",
+    "--aq-comp-sheet-radius": "18px",
+    "--aq-comp-sheet-max-width": "500px",
+    "--aq-comp-sheet-backdrop": "rgba(2,8,16,.55)"
+  },
+  "spacing": {
+    "unit": "4px",
+    "scale": {
+      "0": "0",
+      "1": "4px",
+      "2": "8px",
+      "3": "12px",
+      "4": "16px",
+      "5": "24px",
+      "6": "32px",
+      "7": "48px",
+      "8": "64px"
+    }
+  },
+  "layout": {
+    "density": "comfortable",
+    "shellMaxWidth": "1280px",
+    "shellPadding": "28px 22px",
+    "sectionGap": "16px",
+    "cardPadding": "16px",
+    "gridGap": "10px",
+    "sidebarWidth": "286px"
+  },
+  "hud": {
+    "glowStrength": "0.45",
+    "glowSpread": "18px",
+    "scanlineOpacity": "0.05",
+    "gridOpacity": "0.04",
+    "accentPulse": true
+  },
+  "iconography": {
+    "style": "line",
+    "strokeWidth": "1.75",
+    "sizeSm": "14px",
+    "sizeMd": "18px",
+    "sizeLg": "24px"
+  },
+  "components": {
+    "shell": {
+      "pattern": "glass",
+      "blur": "18px",
+      "border": "1px solid var(--aq-border)"
+    },
+    "card": {
+      "radius": "var(--aq-radius-md)",
+      "padding": "var(--aq-space-4)",
+      "backdropBlur": "14px"
+    },
+    "button": {
+      "radius": "var(--aq-radius-md)",
+      "padding": "10px 14px",
+      "fontWeight": "600",
+      "primaryStyle": "gradient"
+    },
+    "input": {
+      "radius": "12px",
+      "padding": "9px 11px",
+      "background": "rgba(7,11,18,.55)"
+    },
+    "chip": {
+      "radius": "999px",
+      "padding": "3px 8px",
+      "fontSize": "0.72rem"
+    },
+    "nav": {
+      "height": "52px",
+      "blur": "12px",
+      "gap": "8px"
+    },
+    "table": {
+      "rowHeight": "40px",
+      "headerWeight": "700",
+      "cellPadding": "8px 10px"
+    },
+    "sheet": {
+      "radius": "18px",
+      "maxWidth": "500px",
+      "backdrop": "rgba(2,8,16,.55)"
+    }
   }
 }
