@@ -865,7 +865,8 @@ function render(){
   const inboxList = listForQuad('inbox', f);
   fillHost($('inbox'), inboxList);
   const inboxAll = items.filter(i => i.quad==='inbox').length;
-  $('inboxCount').textContent = inboxList.length + ' ظاهر · إجمالي الوارد ' + inboxAll;
+  const newHint = (onlyNewIds && onlyNewIds.size) ? (' · فلتر جديد فقط') : '';
+  $('inboxCount').textContent = inboxList.length + ' ظاهر · إجمالي الوارد ' + inboxAll + newHint;
 
   MATRIX.forEach(q => {
     const list = listForQuad(q, f);
