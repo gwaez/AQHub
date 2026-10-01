@@ -1,0 +1,9 @@
+/**
+ * Shell preset: jarvis-default
+ * Top nav chrome — matches classic AQHub Control / board layout.
+ * Structural rules live in aq-theme-layouts.css via data-aq-* attrs.
+ * This file marks the preset id for tooling and optional overrides.
+ */
+html[data-aq-shell="jarvis-default"] {
+  --aq-layout-preset: jarvis-default;
+}

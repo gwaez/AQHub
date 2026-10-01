@@ -25,6 +25,8 @@ test("Start-Board.ps1 does not always open a browser tab", () => {
   assert.match(start, /AQHUB_OPEN_BROWSER/);
   assert.match(start, /if \(\$wantOpen\)/);
   assert.doesNotMatch(start, /Start-Process "http:\/\/127\.0\.0\.1:\$Port\/board\.html"/);
+  assert.match(start, /\$homeUrl = "http:\/\/127\.0\.0\.1:\$Port\/"/);
+  assert.match(start, /Start-Process \$homeUrl/);
   assert.match(start, /Invoke-WizardBridge -Req \$req -Res \$res -Path \$path -DataDir \$dataDir -Root \$Root/);
 });
 
@@ -49,6 +51,15 @@ test("merged tree keeps filters dashboard UX and wizard roam/drag", () => {
   assert.match(main, /startDragging/);
   const styles = read("desktop-wizard/src/styles.css");
   assert.match(styles, /--char-scale/);
+});
+
+test("Setup-AQWizard and tray open control home, not board.html", () => {
+  const wizardSetup = read("Setup-AQWizard.ps1");
+  assert.match(wizardSetup, /\$BoardUrl = 'http:\/\/127\.0\.0\.1:8766\/'/);
+  assert.doesNotMatch(wizardSetup, /\$BoardUrl = 'http:\/\/127\.0\.0\.1:8766\/board\.html'/);
+  const aqhub = read("desktop-wizard/src-tauri/src/aqhub.rs");
+  assert.match(aqhub, /\/index\.html/);
+  assert.doesNotMatch(aqhub, /aqhub_url\("\/board\.html"\)/);
 });
 
 test("Background bat calls VBS then opens the homepage and exits", () => {

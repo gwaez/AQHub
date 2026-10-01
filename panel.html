@@ -179,11 +179,12 @@
   }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 </style>
+<link rel="stylesheet" href="./theme-studio/aq-theme-layouts.css" />
 <script src="./theme.js"></script>
 </head>
 <body>
   <div class="shell">
-    <div class="top">
+    <div class="top" data-aq-chrome="nav">
       <div class="brand">
         <div class="logo" aria-hidden="true"></div>
         <div>
@@ -191,13 +192,13 @@
           <p>لوحة التحكم الداخلية — البوتات · الحسابات · الأنظمة</p>
         </div>
       </div>
-      <div class="top-actions">
+      <div class="top-actions" data-aq-chrome="actions">
         <button class="btn ghost" type="button" id="btnRefresh">تحديث الحالة</button>
         <a class="btn primary" href="./board.html">فتح لوحة التاسكات</a>
       </div>
     </div>
 
-    <section class="hero">
+    <section class="hero" data-aq-chrome="hero">
       <div class="glass hero-main">
         <div class="eyebrow"><i></i> Core ready</div>
         <h2>مركز واحد تشغّل منه الشغل… والأنظمة تتوصل واحد واحد.</h2>
@@ -227,7 +228,7 @@
       </div>
     </div>
 
-    <div class="grid" id="systemsGrid"></div>
+    <div class="grid" id="systemsGrid" data-aq-chrome="grid"></div>
 
     <section class="glass bots">
       <div>
@@ -336,12 +337,12 @@ const systems = [
   {
     id: 'themes',
     icon: '◈',
-    name: 'ثيمات التصميم',
-    desc: 'محرّر نظام التصميم: ألوان، خطوط، ظلال، توهج HUD — حفظ ثيمات وتبديلها واستيراد/تصدير JSON محمول.',
+    name: 'Theme Studio',
+    desc: 'محرّر نظام تصميم كامل (قابل لإعادة الاستخدام): ألوان، كثافة، مسافات، وصفات مكوّنات، HUD — استيراد/تصدير JSON + برومبت للـ AI.',
     status: 'on',
     statusLabel: 'موصول',
-    primary: { label: 'فتح محرّر الثيمات', href: './themes.html' },
-    secondary: { label: 'المخطط', href: './data/themes/_schema.md' }
+    primary: { label: 'فتح Theme Studio', href: './themes.html' },
+    secondary: { label: 'الوحدة', href: './theme-studio/README.md' }
   },
   {
     id: 'crm',

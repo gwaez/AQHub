@@ -1,0 +1,31 @@
+/**
+ * Shell preset: side-rail-ops (demo — structurally different from Jarvis)
+ * Side rail navigation, compact cards, primary-first actions, drawer overlays.
+ * Loaded by aq-theme-apply.js when chrome.shellPreset === "side-rail-ops".
+ */
+html[data-aq-shell="side-rail-ops"] {
+  --aq-layout-preset: side-rail-ops;
+  --aq-sidebar-width: 220px;
+}
+
+/* Extra rail polish beyond shared data-aq-nav=side rules */
+html[data-aq-shell="side-rail-ops"] .shell > .top,
+html[data-aq-shell="side-rail-ops"] .app > .top,
+html[data-aq-shell="side-rail-ops"] [data-aq-chrome="nav"] {
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--aq-accent, #22d3ee) 10%, transparent), transparent 40%),
+    var(--aq-surface, rgba(12, 24, 38, 0.96));
+  box-shadow: inset -1px 0 0 var(--aq-border-strong, rgba(34, 211, 238, 0.28));
+}
+
+html[data-aq-shell="side-rail-ops"] .btn.primary,
+html[data-aq-shell="side-rail-ops"] .aq-btn.primary {
+  border-radius: 10px;
+  box-shadow: 0 0 18px color-mix(in srgb, var(--aq-glow, rgba(34, 211, 238, 0.45)) 50%, transparent);
+}
+
+html[data-aq-shell="side-rail-ops"] .card,
+html[data-aq-shell="side-rail-ops"] .glass.card,
+html[data-aq-shell="side-rail-ops"] .preview-card {
+  border-inline-start: 3px solid var(--aq-accent, #22d3ee);
+}

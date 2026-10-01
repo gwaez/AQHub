@@ -2,11 +2,18 @@
   "meta": {
     "id": "daylight-ops",
     "name": "Daylight Ops",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "author": "AQHub",
     "description": "Light operational theme — paper surfaces, teal accents, readable daylight matrix. Use when a bright board is preferred.",
-    "styleKeywords": ["light", "daylight", "ops", "teal", "paper"],
-    "mode": "light"
+    "styleKeywords": [
+      "light",
+      "daylight",
+      "ops",
+      "teal",
+      "paper"
+    ],
+    "mode": "light",
+    "studio": "theme-studio"
   },
   "color": {
     "bg": "#e8eef5",
@@ -35,23 +42,29 @@
       "md": "0.95rem",
       "lg": "1.15rem",
       "xl": "1.45rem"
-    }
+    },
+    "lineHeight": "1.5",
+    "letterSpacing": "0"
   },
   "shape": {
     "radiusSm": "10px",
     "radiusMd": "14px",
     "radiusLg": "16px",
-    "borderWidth": "1px"
+    "borderWidth": "1px",
+    "radiusPill": "999px"
   },
   "elevation": {
     "shadowSm": "0 10px 30px rgba(15, 23, 42, 0.06)",
     "shadowMd": "0 24px 80px rgba(15, 23, 42, 0.12)",
-    "glowBlur": "12px"
+    "glowBlur": "12px",
+    "shadowLg": "0 24px 80px rgba(15, 23, 42, 0.12)"
   },
   "motion": {
     "fast": "120ms",
     "normal": "180ms",
-    "slow": "280ms"
+    "slow": "280ms",
+    "easing": "cubic-bezier(0.2, 0.8, 0.2, 1)",
+    "hoverLift": "translateY(-1px)"
   },
   "cssVariables": {
     "--aq-bg": "#e8eef5",
@@ -118,6 +131,160 @@
     "--do": "#cfe8d5",
     "--sched": "#e8f2e0",
     "--deleg": "#ead9e3",
-    "--elim": "#e8c5c8"
+    "--elim": "#e8c5c8",
+    "--aq-space-unit": "4px",
+    "--aq-space-0": "0",
+    "--aq-space-1": "4px",
+    "--aq-space-2": "8px",
+    "--aq-space-3": "12px",
+    "--aq-space-4": "16px",
+    "--aq-space-5": "24px",
+    "--aq-space-6": "32px",
+    "--aq-space-7": "48px",
+    "--aq-space-8": "64px",
+    "--aq-density": "comfortable",
+    "--aq-density-mult": "1",
+    "--aq-shell-max": "1280px",
+    "--aq-shell-pad": "28px 22px",
+    "--aq-section-gap": "16px",
+    "--aq-card-pad": "16px",
+    "--aq-grid-gap": "10px",
+    "--aq-sidebar-width": "286px",
+    "--aq-hud-glow-strength": "0.22",
+    "--aq-hud-glow-spread": "18px",
+    "--aq-hud-scanline": "0",
+    "--aq-hud-grid": "0",
+    "--aq-icon-stroke": "1.75",
+    "--aq-icon-sm": "14px",
+    "--aq-icon-md": "18px",
+    "--aq-icon-lg": "24px",
+    "--aq-radius-pill": "999px",
+    "--aq-easing": "cubic-bezier(0.2, 0.8, 0.2, 1)",
+    "--aq-hover-lift": "translateY(-1px)",
+    "--aq-comp-shell-pattern": "solid",
+    "--aq-comp-shell-blur": "0",
+    "--aq-comp-card-radius": "var(--aq-radius-md)",
+    "--aq-comp-card-padding": "var(--aq-space-4)",
+    "--aq-comp-card-backdrop-blur": "14px",
+    "--aq-comp-button-radius": "var(--aq-radius-md)",
+    "--aq-comp-button-padding": "10px 14px",
+    "--aq-comp-button-font-weight": "600",
+    "--aq-comp-button-primary-style": "solid",
+    "--aq-comp-input-radius": "12px",
+    "--aq-comp-input-padding": "9px 11px",
+    "--aq-comp-input-background": "#ffffff",
+    "--aq-comp-chip-radius": "999px",
+    "--aq-comp-chip-padding": "3px 8px",
+    "--aq-comp-chip-font-size": "0.72rem",
+    "--aq-comp-nav-height": "52px",
+    "--aq-comp-nav-blur": "12px",
+    "--aq-comp-nav-gap": "8px",
+    "--aq-comp-table-row-height": "40px",
+    "--aq-comp-table-header-weight": "700",
+    "--aq-comp-table-cell-padding": "8px 10px",
+    "--aq-comp-sheet-radius": "18px",
+    "--aq-comp-sheet-max-width": "500px",
+    "--aq-comp-sheet-backdrop": "rgba(2,8,16,.55)",
+    "--aq-shell-preset": "jarvis-default",
+    "--aq-nav-position": "top",
+    "--aq-card-density": "comfortable",
+    "--aq-btn-hierarchy": "primary-end",
+    "--aq-overlay-mode": "sheet"
+  },
+  "spacing": {
+    "unit": "4px",
+    "scale": {
+      "0": "0",
+      "1": "4px",
+      "2": "8px",
+      "3": "12px",
+      "4": "16px",
+      "5": "24px",
+      "6": "32px",
+      "7": "48px",
+      "8": "64px"
+    }
+  },
+  "layout": {
+    "density": "comfortable",
+    "shellMaxWidth": "1280px",
+    "shellPadding": "16px 18px",
+    "sectionGap": "16px",
+    "cardPadding": "16px",
+    "gridGap": "10px",
+    "sidebarWidth": "286px",
+    "shellPreset": "jarvis-default",
+    "navPosition": "top",
+    "cardDensity": "comfortable",
+    "buttonHierarchy": "primary-end",
+    "overlayMode": "sheet"
+  },
+  "hud": {
+    "glowStrength": "0.22",
+    "glowSpread": "18px",
+    "scanlineOpacity": "0",
+    "gridOpacity": "0",
+    "accentPulse": false
+  },
+  "iconography": {
+    "style": "line",
+    "strokeWidth": "1.75",
+    "sizeSm": "14px",
+    "sizeMd": "18px",
+    "sizeLg": "24px"
+  },
+  "components": {
+    "shell": {
+      "pattern": "solid",
+      "blur": "0",
+      "border": "1px solid var(--aq-border)"
+    },
+    "card": {
+      "radius": "var(--aq-radius-md)",
+      "padding": "var(--aq-space-4)",
+      "backdropBlur": "0"
+    },
+    "button": {
+      "radius": "12px",
+      "padding": "8px 12px",
+      "fontWeight": "600",
+      "primaryStyle": "solid"
+    },
+    "input": {
+      "radius": "10px",
+      "padding": "7px 9px",
+      "background": "#ffffff"
+    },
+    "chip": {
+      "radius": "999px",
+      "padding": "3px 8px",
+      "fontSize": "0.72rem"
+    },
+    "nav": {
+      "height": "52px",
+      "blur": "12px",
+      "gap": "8px"
+    },
+    "table": {
+      "rowHeight": "40px",
+      "headerWeight": "700",
+      "cellPadding": "8px 10px"
+    },
+    "sheet": {
+      "radius": "16px",
+      "maxWidth": "560px",
+      "backdrop": "rgba(15,23,42,.45)"
+    }
+  },
+  "chrome": {
+    "shellPreset": "jarvis-default",
+    "nav": "top",
+    "cardDensity": "comfortable",
+    "buttonHierarchy": "primary-end",
+    "overlay": "sheet",
+    "classMap": {},
+    "cssModules": [
+      "theme-studio/layouts/jarvis-default.css"
+    ]
   }
 }
