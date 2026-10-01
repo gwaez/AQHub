@@ -9,7 +9,11 @@
   var STORAGE_KEY = 'aqhub.activeThemeCache';
   var LAYOUT_LINK_ID = 'aq-theme-layout-module';
   var DOCK_ID = 'aq-chrome-dock';
+  var SOFT_RAIL_ID = 'aq-soft-rail';
+  var SOFT_ASIDE_ID = 'aq-soft-aside';
+  var SOFT_ANALYTICS_ID = 'aq-soft-analytics';
   var appliedId = null;
+  var softDnDInstalled = false;
   var DENSITY_MULT = { compact: 0.85, comfortable: 1, spacious: 1.2 };
 
   /** Built-in shell / UI Kit presets */
@@ -58,6 +62,16 @@
       bottomBar: true,
       grid: 'soft',
       cssModule: 'theme-studio/layouts/clay-dock.css'
+    },
+    'soft-ui-interactive': {
+      nav: 'soft-dual',
+      cardDensity: 'spacious',
+      buttonHierarchy: 'primary-end',
+      overlay: 'sheet',
+      bottomBar: false,
+      analyticsPanel: true,
+      grid: 'soft',
+      cssModule: 'theme-studio/layouts/soft-ui-interactive.css'
     }
   };
 
@@ -161,7 +175,7 @@
       var actions = nav.querySelector('[data-aq-chrome="actions"], .top-actions, .actions, .aqts-row');
       if (actions) actions.setAttribute('data-aq-chrome', 'actions');
     }
-    var grid = shell.querySelector('#systemsGrid, .grid');
+    var grid = shell.querySelector('#systemsGrid, .grid, .aqts-grid');
     if (grid) grid.setAttribute('data-aq-chrome', 'grid');
     var hero = shell.querySelector('.hero');
     if (hero) hero.setAttribute('data-aq-chrome', 'hero');
@@ -191,6 +205,245 @@
     return dock;
   }
 
+  function pageFile() {
+    try {
+      var parts = String(location.pathname || '').split('/');
+      return (parts[parts.length - 1] || 'index.html').toLowerCase() || 'index.html';
+    } catch (e0) {
+      return 'index.html';
+    }
+  }
+
+  function softSvg(paths) {
+    return '<svg viewBox="0 0 24 24" aria-hidden="true">' + paths + '</svg>';
+  }
+
+  function removeSoftChrome() {
+    [SOFT_RAIL_ID, SOFT_ASIDE_ID, SOFT_ANALYTICS_ID].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el && el.parentNode) el.parentNode.removeChild(el);
+    });
+    root().removeAttribute('data-aq-soft-chrome');
+    root().removeAttribute('data-aq-soft-analytics');
+    document.querySelectorAll('.aq-drag-ghost, .aq-drag-lift-clone').forEach(function (n) {
+      if (n.parentNode) n.parentNode.removeChild(n);
+    });
+  }
+
+  function markSoftActive(rootEl, page) {
+    if (!rootEl) return;
+    rootEl.querySelectorAll('[data-soft-page]').forEach(function (a) {
+      var key = a.getAttribute('data-soft-page') || '';
+      var on = key === page || (key === 'index.html' && (page === '' || page === '/'));
+      if (key === 'eisenhower.html' && page.indexOf('eisenhower') === 0) on = true;
+      if (key === 'board.html' && page.indexOf('board') === 0) on = true;
+      if (key === 'themes.html' && page.indexOf('themes') === 0) on = true;
+      a.classList.toggle('on', !!on);
+    });
+  }
+
+  function ensureSoftChrome(theme, chrome) {
+    var host = findShell();
+    if (!host) return;
+    var page = pageFile();
+    var showAnalytics = !!(chrome && chrome.analyticsPanel !== false);
+    if (page.indexOf('themes') === 0) showAnalytics = false;
+    root().setAttribute('data-aq-soft-chrome', '1');
+    root().setAttribute('data-aq-soft-analytics', showAnalytics ? '1' : '0');
+
+    var rail = document.getElementById(SOFT_RAIL_ID);
+    if (!rail) {
+      rail = document.createElement('aside');
+      rail.id = SOFT_RAIL_ID;
+      rail.className = 'aq-soft-rail';
+      rail.setAttribute('data-aq-chrome', 'soft-rail');
+      rail.setAttribute('aria-label', 'شريط التنقل');
+      rail.innerHTML =
+        '<a class="aq-soft-logo" href="./index.html" title="AQHub">AQ</a>' +
+        '<nav class="aq-soft-rail-nav">' +
+          '<a href="./index.html" data-soft-page="index.html" title="الرئيسية">' + softSvg('<path d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-5v-6H10v6H5a1 1 0 0 1-1-1z"/>') + '</a>' +
+          '<a href="./eisenhower.html" data-soft-page="eisenhower.html" title="وارد">' + softSvg('<path d="M4 7h16M4 12h16M4 17h10"/><rect x="3" y="4" width="18" height="16" rx="3"/>') + '</a>' +
+          '<a href="./board.html" data-soft-page="board.html" title="اللوحة">' + softSvg('<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>') + '</a>' +
+          '<a href="./themes.html" data-soft-page="themes.html" title="ثيم">' + softSvg('<circle cx="12" cy="12" r="3"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M5 5l1.8 1.8M17.2 17.2 19 19M19 5l-1.8 1.8M5 19l1.8-1.8"/>') + '</a>' +
+        '</nav>' +
+        '<div class="aq-soft-rail-foot">' +
+          '<a href="./wizard.html" data-soft-page="wizard.html" title="إعدادات" style="width:44px;height:44px;margin-inline:auto;border-radius:14px;display:grid;place-items:center;color:var(--aq-text-muted);text-decoration:none">' +
+            softSvg('<circle cx="12" cy="12" r="3"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M18.4 5.6 17 7M7 17l-1.4 1.4"/>') +
+          '</a>' +
+        '</div>';
+      host.insertBefore(rail, host.firstChild);
+    }
+
+    var aside = document.getElementById(SOFT_ASIDE_ID);
+    if (!aside) {
+      aside = document.createElement('aside');
+      aside.id = SOFT_ASIDE_ID;
+      aside.className = 'aq-soft-aside';
+      aside.setAttribute('data-aq-chrome', 'soft-aside');
+      aside.setAttribute('aria-label', 'لوحة المشروع');
+      aside.innerHTML =
+        '<div class="aq-soft-profile">' +
+          '<div class="aq-soft-avatar" aria-hidden="true">T</div>' +
+          '<div><strong>Tawfeeq</strong><span>AQHub · Pro</span></div>' +
+        '</div>' +
+        '<label class="aq-soft-search">' +
+          '<span aria-hidden="true">⌕</span>' +
+          '<input type="search" placeholder="بحث في اللوحة…" data-aq-soft-search="1" />' +
+        '</label>' +
+        '<nav class="aq-soft-nav-tree" aria-label="تبويبات AQHub">' +
+          '<div class="lab">Project Board</div>' +
+          '<a href="./eisenhower.html" data-soft-page="eisenhower.html"><i></i>وارد</a>' +
+          '<a href="./eisenhower.html" data-soft-page="eisenhower.html" data-soft-tab="matrix"><i></i>مصفوفة</a>' +
+          '<a href="./board.html" data-soft-page="board.html" data-soft-tab="focus"><i></i>تركيز</a>' +
+          '<a href="./themes.html" data-soft-page="themes.html"><i></i>ثيم</a>' +
+          '<a href="./wizard.html" data-soft-page="wizard.html"><i></i>إعدادات</a>' +
+        '</nav>' +
+        '<div>' +
+          '<div class="lab" style="font-size:.72rem;font-weight:700;color:var(--aq-text-faint);margin:4px 2px 8px">Member in board</div>' +
+          '<div class="aq-soft-members" aria-hidden="true"><span>A</span><span>M</span><span>S</span><span class="more">+3</span></div>' +
+        '</div>' +
+        '<div class="aq-soft-cta">' +
+          '<a class="plus" href="./board.html" title="مهمة جديدة">+</a>' +
+          '<p>Add New Project · مهمة جديدة</p>' +
+        '</div>';
+      if (rail.nextSibling) host.insertBefore(aside, rail.nextSibling);
+      else host.appendChild(aside);
+
+      var search = aside.querySelector('[data-aq-soft-search]');
+      if (search) {
+        search.addEventListener('keydown', function (ev) {
+          if (ev.key !== 'Enter') return;
+          var q = String(search.value || '').trim();
+          var boardQ = document.getElementById('q');
+          if (boardQ) {
+            boardQ.value = q;
+            try { boardQ.dispatchEvent(new Event('input', { bubbles: true })); } catch (e1) {}
+            return;
+          }
+          if (q) location.href = './board.html';
+        });
+      }
+    }
+
+    if (showAnalytics) {
+      var analytics = document.getElementById(SOFT_ANALYTICS_ID);
+      if (!analytics) {
+        analytics = document.createElement('aside');
+        analytics.id = SOFT_ANALYTICS_ID;
+        analytics.className = 'aq-soft-analytics';
+        analytics.setAttribute('data-aq-chrome', 'soft-analytics');
+        analytics.setAttribute('aria-label', 'ملخص');
+        analytics.innerHTML =
+          '<div class="aq-soft-ring" style="--aq-soft-ring-pct:72%"><div><b>72%</b><small>Overall</small></div></div>' +
+          '<div class="aq-soft-stats">' +
+            '<div><strong data-aq-soft-stat="total">—</strong><span>Total</span></div>' +
+            '<div><strong data-aq-soft-stat="done">—</strong><span>Completed</span></div>' +
+            '<div><strong data-aq-soft-stat="doing">—</strong><span>In Progress</span></div>' +
+            '<div><strong data-aq-soft-stat="wait">—</strong><span>Waiting</span></div>' +
+          '</div>' +
+          '<div class="aq-soft-cal"><b>اليوم</b><span>Focus · Inbox · Board</span></div>' +
+          '<div class="aq-soft-msg"><b>Theme Studio</b><span>Soft UI Interactive نشط</span></div>';
+        host.appendChild(analytics);
+      }
+      syncSoftAnalytics();
+    } else {
+      var oldA = document.getElementById(SOFT_ANALYTICS_ID);
+      if (oldA && oldA.parentNode) oldA.parentNode.removeChild(oldA);
+    }
+
+    markSoftActive(host, page);
+    installSoftDnD();
+  }
+
+  function syncSoftAnalytics() {
+    var map = {
+      total: document.getElementById('statTotal'),
+      doing: document.getElementById('statDoing'),
+      done: document.getElementById('statDone'),
+      hot: document.getElementById('statHot')
+    };
+    var set = function (key, val) {
+      var node = document.querySelector('[data-aq-soft-stat="' + key + '"]');
+      if (node) node.textContent = val == null || val === '' ? '—' : String(val);
+    };
+    if (map.total) {
+      set('total', map.total.textContent);
+      set('doing', map.doing ? map.doing.textContent : '—');
+      set('done', map.done ? map.done.textContent : '—');
+      set('wait', map.hot ? map.hot.textContent : '—');
+      return;
+    }
+    var cards = document.querySelectorAll('.card, article.card');
+    var total = cards.length;
+    var done = document.querySelectorAll('.card.done, article.card.done').length;
+    set('total', total || '—');
+    set('done', total ? done : '—');
+    set('doing', total ? Math.max(0, total - done) : '—');
+    set('wait', '—');
+  }
+
+  function clearSoftDragArtifacts(card) {
+    if (!card) return;
+    card.classList.remove('aq-drag-source', 'aq-drag-lift');
+    if (card._aqGhost && card._aqGhost.parentNode) card._aqGhost.parentNode.removeChild(card._aqGhost);
+    if (card._aqClone && card._aqClone.parentNode) card._aqClone.parentNode.removeChild(card._aqClone);
+    card._aqGhost = null;
+    card._aqClone = null;
+  }
+
+  function installSoftDnD() {
+    if (softDnDInstalled) return;
+    softDnDInstalled = true;
+
+    document.addEventListener('dragstart', function (e) {
+      if (root().getAttribute('data-aq-shell') !== 'soft-ui-interactive') return;
+      var card = e.target && e.target.closest ? e.target.closest('.card, article.card') : null;
+      if (!card || !e.dataTransfer) return;
+
+      clearSoftDragArtifacts(card);
+
+      var ghost = document.createElement('div');
+      ghost.className = 'aq-drag-ghost';
+      ghost.style.height = Math.max(56, card.offsetHeight) + 'px';
+      if (card.parentNode) card.parentNode.insertBefore(ghost, card);
+      card._aqGhost = ghost;
+      card.classList.add('aq-drag-source');
+
+      try {
+        var clone = card.cloneNode(true);
+        clone.classList.add('aq-drag-lift', 'aq-drag-lift-clone');
+        clone.classList.remove('dragging', 'dragging-group', 'aq-drag-source', 'selected');
+        clone.setAttribute('aria-hidden', 'true');
+        clone.style.position = 'absolute';
+        clone.style.top = '-9999px';
+        clone.style.left = '-9999px';
+        clone.style.width = card.offsetWidth + 'px';
+        clone.style.pointerEvents = 'none';
+        clone.style.opacity = '1';
+        document.body.appendChild(clone);
+        card._aqClone = clone;
+        var ox = typeof e.offsetX === 'number' ? e.offsetX : Math.round(card.offsetWidth / 3);
+        var oy = typeof e.offsetY === 'number' ? e.offsetY : 24;
+        e.dataTransfer.setDragImage(clone, ox, oy);
+      } catch (e2) {}
+
+      try { e.dataTransfer.effectAllowed = e.dataTransfer.effectAllowed || 'move'; } catch (e3) {}
+    }, true);
+
+    document.addEventListener('dragend', function (e) {
+      if (root().getAttribute('data-aq-shell') !== 'soft-ui-interactive') return;
+      var card = e.target && e.target.closest ? e.target.closest('.card, article.card') : null;
+      clearSoftDragArtifacts(card);
+      document.querySelectorAll('.aq-drag-ghost, .aq-drag-lift-clone').forEach(function (n) {
+        if (n.parentNode) n.parentNode.removeChild(n);
+      });
+      document.querySelectorAll('.aq-drag-source').forEach(function (n) {
+        n.classList.remove('aq-drag-source');
+      });
+      setTimeout(syncSoftAnalytics, 40);
+    }, true);
+  }
+
   /**
    * Remount application chrome markers / dock for structural skins.
    * Does not destroy page content — relocates chrome affordances via attrs + optional dock.
@@ -200,7 +453,13 @@
     root().setAttribute('data-aq-grid', chrome.grid || 'default');
     if (chrome.bottomBar) ensureDock(theme);
     else removeDock();
+    if (chrome.shellPreset === 'soft-ui-interactive') ensureSoftChrome(theme, chrome);
+    else removeSoftChrome();
     applyClassMap(chrome.classMap);
+    if (chrome.shellPreset === 'soft-ui-interactive') {
+      setTimeout(syncSoftAnalytics, 80);
+      setTimeout(syncSoftAnalytics, 400);
+    }
   }
 
   function mergeChrome(theme) {
@@ -221,6 +480,7 @@
       buttonHierarchy: chrome.buttonHierarchy || layout.buttonHierarchy || patch.buttonHierarchy || preset.buttonHierarchy,
       overlay: chrome.overlay || chrome.overlayMode || layout.overlayMode || patch.overlay || preset.overlay,
       bottomBar: !!(chrome.bottomBar != null ? chrome.bottomBar : (patch.bottomBar != null ? patch.bottomBar : preset.bottomBar)),
+      analyticsPanel: !!(chrome.analyticsPanel != null ? chrome.analyticsPanel : (patch.analyticsPanel != null ? patch.analyticsPanel : preset.analyticsPanel)),
       grid: chrome.grid || layout.grid || patch.grid || preset.grid || 'default',
       classMap: chrome.classMap || patch.classMap || patch.htmlClassMap || {},
       cssModules: chrome.cssModules || patch.cssModules || (preset.cssModule ? [preset.cssModule] : []),
@@ -231,6 +491,7 @@
   function navAttr(nav) {
     if (nav === 'top-pill') return 'top';
     if (nav === 'side-icon') return 'side';
+    if (nav === 'soft-dual') return 'soft-dual';
     return nav || 'top';
   }
 
@@ -417,7 +678,7 @@
       theme.chrome = theme.chrome || {};
       theme.layout = theme.layout || {};
       var p = raw.layoutPatch;
-      ['shellPreset', 'nav', 'cardDensity', 'buttonHierarchy', 'overlay', 'bottomBar', 'grid'].forEach(function (k) {
+      ['shellPreset', 'nav', 'cardDensity', 'buttonHierarchy', 'overlay', 'bottomBar', 'analyticsPanel', 'grid'].forEach(function (k) {
         if (p[k] != null) theme.chrome[k] = p[k];
       });
       if (p.shellPreset) theme.layout.shellPreset = p.shellPreset;
@@ -486,7 +747,8 @@
     normalizePayload: normalizeThemePayload,
     remountChrome: function (theme) { return applyChrome(theme || {}); },
     shellPresets: SHELL_PRESETS,
-    version: '1.3.0-ui-kit'
+    syncSoftAnalytics: syncSoftAnalytics,
+    version: '1.4.0-ui-kit'
   };
 
   if (!optsNoAuto()) {

@@ -25,7 +25,7 @@
     '      "shellPreset","navPosition","cardDensity","buttonHierarchy","overlayMode","grid"',
     '    },',
     '    "chrome": {',
-    '      "shellPreset":"jarvis-default|crextio-airy|neon-glass-rail|clay-dock|side-rail-ops|<custom>",',
+    '      "shellPreset":"jarvis-default|soft-ui-interactive|crextio-airy|neon-glass-rail|clay-dock|side-rail-ops|<custom>",',
     '      "nav":"top|top-pill|side|side-icon|bottom",',
     '      "cardDensity":"compact|comfortable|spacious",',
     '      "buttonHierarchy":"primary-end|primary-start|stacked",',
@@ -59,6 +59,7 @@
     '}',
     '',
     'Map screenshot vibes to built-in UI Kit presets when close:',
+    '0) Soft UI dual chrome (icon rail + project sidebar + floating cards) + Kanban drag lift/ghost → shellPreset "soft-ui-interactive"',
     '1) Light airy HR / Crextio-like (top pill nav, white modular cards, mustard) → shellPreset "crextio-airy"',
     '2) Dark glass analytics (left icon rail, hero+mosaic, neon) → shellPreset "neon-glass-rail"',
     '3) Clay music dashboard (colored side nav, soft raised cards, bottom floating CTA) → shellPreset "clay-dock"',
@@ -68,7 +69,7 @@
     '2) Runtime loads theme-studio/aq-theme-apply.js',
     '3) Sets data-aq-shell / data-aq-nav / data-aq-card-density / data-aq-btn-hierarchy / data-aq-overlay',
     '4) Loads theme-studio/aq-theme-layouts.css + layouts/<preset>.css',
-    '5) Remounts chrome markers (+ bottom dock when bottomBar:true) on index.html / panel.html / board / eisenhower',
+    '5) Remounts chrome markers (+ soft dual rail/aside/analytics, or bottom dock when bottomBar:true) on index/panel/board/eisenhower/themes',
     '',
     'Rules:',
     '- Fill EVERY theme field with concrete CSS values.',
@@ -78,7 +79,7 @@
     '',
     '---',
     'ابنِ حزمة UI Kit لـ Theme Studio من لقطات الشاشة: توكنات + كروم هيكلي (ناف / بطاقات / أزرار / sheet|drawer).',
-    'أرجع JSON بالشكل { theme, layoutPatch } فقط. presets جاهزة: crextio-airy · neon-glass-rail · clay-dock.',
+    'أرجع JSON بالشكل { theme, layoutPatch } فقط. presets جاهزة: soft-ui-interactive · crextio-airy · neon-glass-rail · clay-dock.',
     'مسار التطبيق: theme-studio/aq-theme-apply.js بعد اللصق في Theme Studio.'
   ].join('\n');
 

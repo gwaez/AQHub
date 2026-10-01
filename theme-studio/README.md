@@ -10,11 +10,12 @@ Not CSS variables alone — **structural chrome remount**: nav placement (top / 
 
 | Preset id | Vibe | Structure |
 |-----------|------|-----------|
+| `soft-ui-interactive` | Soft UI + Kanban motion | Icon rail + project sidebar (وارد · مصفوفة · تركيز · ثيم · إعدادات) · floating cards · drag lift / dashed ghost · optional analytics panel |
 | `crextio-airy` | Light HR / Crextio-like | Top pill nav · modular white cards · mustard |
 | `neon-glass-rail` | Dark glass analytics | Left icon rail · hero+mosaic · neon |
 | `clay-dock` | Clay music dashboard | Colored side nav · soft cards · bottom floating CTA |
 
-Activate from Theme Studio quick buttons, or `PUT /api/themes/active` with the id, then open `index.html` / `panel.html`.
+Activate from Theme Studio quick buttons, or `PUT /api/themes/active` with the id, then open `index.html` / `board.html` / `eisenhower.html` / `themes.html`.
 
 ## Drop into another app
 

@@ -541,10 +541,13 @@ function moveTask(id,status){ const t=state.tasks.find(x=>x.id===id); if(!t||t.s
 function cardHTML(t){
   const bot=t.botAction&&t.botAction!=='none'?`<span class="tag bot">${esc(t.botAction)}</span>`:'';
   const canOpen=t.source==='email'||t.entryId||t.sourceRef;
-  return `<div class="title" data-room="1" title="${esc(t.title)}">${esc(t.title)}</div>
+  const pct=Math.max(0,Math.min(100,Number(t.progress)|| (t.status==='done'?100:t.status==='doing'?55:18)));
+  return `<div class="meta"><span class="tag cat src">${esc(t.source||'task')}</span>${bot}</div>
+    <div class="title" data-room="1" title="${esc(t.title)}">${esc(t.title)}</div>
+    <div class="prog" aria-label="progress ${pct}%"><i style="--p:${pct}%"></i><b>${pct}%</b></div>
+    <div class="soft-foot"><span class="avatars" aria-hidden="true"><span></span><span></span></span><span>att ${(t.attachments&&t.attachments.length)||0} · msg ${(t.comments&&t.comments.length)||0}</span></div>
     <div class="meta">
       <button class="prio" type="button" data-p="${esc(t.priority)}"><span class="pip"></span><span class="pip"></span><span class="pip"></span></button>
-      <span class="tag src">${esc(t.source)}</span>${bot}
     </div>
     <div class="row"><button class="mini" data-room="1">غرفة</button><button class="mini" data-open="1" ${canOpen?'':'disabled'}>مصدر</button><button class="mini ghost" data-edit="1">نوت/أمر</button></div>`;
 }

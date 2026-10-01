@@ -126,11 +126,12 @@ Maps to real shell variants on Control Center, board, Eisenhower, panel.
 | Field | Effect |
 |-------|--------|
 | `shellPreset` | Sets `data-aq-shell` + loads layout CSS module |
-| `nav` | `top` \| `top-pill` \| `side` \| `side-icon` \| `bottom` → remounts chrome |
+| `nav` | `top` \| `top-pill` \| `side` \| `side-icon` \| `soft-dual` \| `bottom` → remounts chrome |
 | `cardDensity` | Sets `data-aq-card-density` — card padding/gaps |
 | `buttonHierarchy` | Sets `data-aq-btn-hierarchy` — primary order / stack |
 | `overlay` | Sets `data-aq-overlay` — board sheet vs side drawer |
 | `bottomBar` | Injects floating `#aq-chrome-dock` CTA (clay-dock) |
+| `analyticsPanel` | Injects `#aq-soft-analytics` (soft-ui-interactive) |
 | `grid` | `default` \| `modular` \| `mosaic` \| `soft` hint for card grids |
 | `classMap` | Optional HTML class map applied at runtime |
 | `cssModules` | Structural CSS files under `theme-studio/layouts/` |
@@ -142,6 +143,7 @@ Maps to real shell variants on Control Center, board, Eisenhower, panel.
 |----|-----|-------|---------|---------|-------|
 | `jarvis-default` | top | comfortable | primary-end | sheet | Classic AQHub |
 | `side-rail-ops` | side | compact | primary-start | drawer | Ops demo rail |
+| `soft-ui-interactive` | soft-dual | spacious | primary-end | sheet | Soft UI rail+aside · Kanban drag lift/ghost · analytics panel |
 | `crextio-airy` | top-pill | spacious | primary-end | sheet | Light HR / mustard |
 | `neon-glass-rail` | side-icon | comfortable | stacked | drawer | Dark glass + neon |
 | `clay-dock` | side | comfortable | primary-start | sheet | Clay side + **bottomBar** dock |

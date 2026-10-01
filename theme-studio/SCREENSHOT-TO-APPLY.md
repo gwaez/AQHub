@@ -20,6 +20,7 @@ Full app chrome beats a single widget. The three reference vibes map to built-in
 
 | Screenshot vibe | Activate preset |
 |-----------------|-----------------|
+| Soft UI dual chrome + interactive Kanban drag | `soft-ui-interactive` |
 | Light airy HR, pill top nav, mustard | `crextio-airy` |
 | Dark glass, left icon rail, neon | `neon-glass-rail` |
 | Clay side nav + bottom floating CTA | `clay-dock` |
@@ -55,7 +56,7 @@ Paste prompt + attach screenshot(s). Expect raw JSON:
 
 Theme Studio → JSON zone → **Apply + Save custom + Activate**
 
-Or skip AI and click a UI Kit quick button (`Crextio Airy` / `Neon Glass` / `Clay Dock`).
+Or skip AI and click a UI Kit quick button (`Soft UI Interactive` / `Crextio Airy` / `Neon Glass` / `Clay Dock`).
 
 ### 5. Verify on real shells
 

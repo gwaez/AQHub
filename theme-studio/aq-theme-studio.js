@@ -26,6 +26,7 @@
   ];
 
   var UI_KIT_PRESETS = [
+    { id: 'soft-ui-interactive', label: 'Soft UI Interactive (rail + Kanban)' },
     { id: 'crextio-airy', label: 'Crextio Airy (pill top)' },
     { id: 'neon-glass-rail', label: 'Neon Glass (icon rail)' },
     { id: 'clay-dock', label: 'Clay Dock (side + bottom CTA)' },
@@ -79,6 +80,7 @@
       buttonHierarchy: 'primary-end',
       overlay: 'sheet',
       bottomBar: false,
+      analyticsPanel: false,
       grid: 'default',
       classMap: { '.top': 'aq-chrome-nav', '.top-actions': 'aq-chrome-actions' },
       cssModules: ['theme-studio/layouts/jarvis-default.css'],
@@ -159,7 +161,7 @@
               '<button class="aqts-btn" type="button" data-aqts="export">Export JSON</button>' +
               '<button class="aqts-btn ghost" type="button" data-aqts="delete" hidden>Delete custom</button>' +
             '</div>' +
-            '<p class="aqts-hint" style="margin-top:12px">Module: <code>theme-studio/</code> · Demo kits: <code>crextio-airy</code> · <code>neon-glass-rail</code> · <code>clay-dock</code> · Docs: <a href="./theme-studio/SCREENSHOT-TO-APPLY.md" target="_blank" rel="noopener">screenshot → apply</a></p>' +
+            '<p class="aqts-hint" style="margin-top:12px">Module: <code>theme-studio/</code> · Demo kits: <code>soft-ui-interactive</code> · <code>crextio-airy</code> · <code>neon-glass-rail</code> · <code>clay-dock</code> · Docs: <a href="./theme-studio/SCREENSHOT-TO-APPLY.md" target="_blank" rel="noopener">screenshot → apply</a></p>' +
           '</section>' +
           '<section class="aqts-glass">' +
             '<h2>Live preview</h2>' +
@@ -305,13 +307,14 @@
         '<p class="aqts-hint">Structural UI Kit chrome — remounts real shell via <code>data-aq-*</code> + layout CSS modules + optional bottom dock.</p>' +
         '<label>shellPreset<select data-f="chrome.shellPreset">' +
           '<option value="jarvis-default">jarvis-default</option>' +
+          '<option value="soft-ui-interactive">soft-ui-interactive</option>' +
           '<option value="crextio-airy">crextio-airy</option>' +
           '<option value="neon-glass-rail">neon-glass-rail</option>' +
           '<option value="clay-dock">clay-dock</option>' +
           '<option value="side-rail-ops">side-rail-ops</option>' +
         '</select></label>' +
         '<div class="aqts-colors">' +
-          '<label>nav<select data-f="chrome.nav"><option value="top">top</option><option value="top-pill">top-pill</option><option value="side">side</option><option value="side-icon">side-icon</option><option value="bottom">bottom</option></select></label>' +
+          '<label>nav<select data-f="chrome.nav"><option value="top">top</option><option value="top-pill">top-pill</option><option value="side">side</option><option value="side-icon">side-icon</option><option value="soft-dual">soft-dual</option><option value="bottom">bottom</option></select></label>' +
           '<label>cardDensity<select data-f="chrome.cardDensity"><option value="compact">compact</option><option value="comfortable">comfortable</option><option value="spacious">spacious</option></select></label>' +
           '<label>buttonHierarchy<select data-f="chrome.buttonHierarchy"><option value="primary-end">primary-end</option><option value="primary-start">primary-start</option><option value="stacked">stacked</option></select></label>' +
           '<label>overlay<select data-f="chrome.overlay"><option value="sheet">sheet</option><option value="drawer">drawer</option></select></label>' +
@@ -319,6 +322,7 @@
           '<label>cssModule<input data-f="chrome.cssModule" dir="ltr" placeholder="theme-studio/layouts/crextio-airy.css" /></label>' +
         '</div>' +
         '<label class="aqts-row" style="display:flex;gap:8px;align-items:center"><input data-f="chrome.bottomBar" type="checkbox" /> bottomBar (floating CTA dock)</label>' +
+        '<label class="aqts-row" style="display:flex;gap:8px;align-items:center"><input data-f="chrome.analyticsPanel" type="checkbox" /> analyticsPanel (soft-ui right summary)</label>' +
         '<p class="aqts-hint">Also mirrored on <code>layout.shellPreset / navPosition / cardDensity / buttonHierarchy / overlayMode</code>. Apply script: <code>theme-studio/aq-theme-apply.js</code>.</p>';
     } else if (tab === 'shape') {
       html =
@@ -749,7 +753,7 @@
           self.activeId = j.activeThemeId || id;
           return self.refresh();
         }).then(function () {
-          self.toast('UI Kit activated: ' + id + ' — open index/panel to see chrome remount');
+          self.toast('UI Kit activated: ' + id + ' — chrome remounts here + index/board/eisenhower');
         }).catch(function (e) { self.toast('UI Kit failed: ' + e.message); });
       };
     });
@@ -811,6 +815,6 @@
 
   global.AQThemeStudio = {
     mount: mount,
-    version: '1.3.0-ui-kit'
+    version: '1.4.0-ui-kit'
   };
 })(window);
