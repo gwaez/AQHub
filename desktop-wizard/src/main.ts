@@ -51,7 +51,7 @@ function browserWindowPort(): CharacterWindowPort {
       if (plate instanceof HTMLElement) plate.style.visibility = "hidden";
     },
     async openAqHub() {
-      window.open("http://127.0.0.1:8766/board.html", "_blank");
+      window.open("http://127.0.0.1:8766/index.html", "_blank");
     },
     async openAqHubPath(path: string) {
       const p = path.startsWith("/") ? path : `/${path}`;

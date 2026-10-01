@@ -14,7 +14,7 @@ param(
 )
 
 $ErrorActionPreference = 'Continue'
-$BoardUrl = 'http://127.0.0.1:8766/board.html'
+$BoardUrl = 'http://127.0.0.1:8766/'
 $MinNodeMajor = 20
 
 function Write-Step {

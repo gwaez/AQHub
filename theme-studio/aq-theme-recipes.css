@@ -1,0 +1,126 @@
+/**
+ * Theme Studio — optional component recipes.
+ * Bind UI to --aq-comp-* and --aq-* tokens set by aq-theme-apply.js.
+ * Include this stylesheet in host apps that want shared control styling.
+ */
+
+.aq-shell {
+  max-width: var(--aq-shell-max, 1280px);
+  margin-inline: auto;
+  padding: var(--aq-shell-pad, 28px 22px);
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--aq-section-gap, 16px) * var(--aq-density-mult, 1));
+}
+
+.aq-card,
+.aq-shell[data-pattern="glass"],
+.aq-glass {
+  background: var(--aq-comp-card-background, var(--aq-surface));
+  border: var(--aq-comp-card-border, 1px solid var(--aq-border));
+  border-radius: var(--aq-comp-card-radius, var(--aq-radius-md));
+  padding: var(--aq-comp-card-padding, var(--aq-card-pad, var(--aq-space-4, 16px)));
+  box-shadow: var(--aq-shadow-sm);
+  backdrop-filter: blur(var(--aq-comp-card-backdrop-blur, var(--aq-comp-shell-blur, 14px)));
+}
+
+.aq-btn {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--aq-border);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--aq-text);
+  border-radius: var(--aq-comp-button-radius, var(--aq-radius-md));
+  padding: var(--aq-comp-button-padding, 10px 14px);
+  font: inherit;
+  font-weight: var(--aq-comp-button-font-weight, 600);
+  cursor: pointer;
+  text-decoration: none;
+  transition: border-color var(--aq-motion-fast, 120ms) var(--aq-easing, ease),
+    transform var(--aq-motion-fast, 120ms) var(--aq-easing, ease),
+    background var(--aq-motion-fast, 120ms) var(--aq-easing, ease);
+}
+.aq-btn:hover {
+  border-color: var(--aq-border-strong);
+  transform: var(--aq-hover-lift, none);
+}
+.aq-btn.primary {
+  border-color: transparent;
+  color: #04131a;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--aq-accent), var(--aq-accent-2));
+  box-shadow: 0 0 var(--aq-hud-glow-spread, 18px) color-mix(in srgb, var(--aq-glow) 55%, transparent);
+}
+
+.aq-input,
+.aq-select,
+.aq-textarea {
+  width: 100%;
+  border: 1px solid var(--aq-border);
+  background: var(--aq-comp-input-background, rgba(7, 11, 18, 0.55));
+  color: var(--aq-text);
+  border-radius: var(--aq-comp-input-radius, 12px);
+  padding: var(--aq-comp-input-padding, 9px 11px);
+  font: inherit;
+}
+
+.aq-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--aq-border);
+  border-radius: var(--aq-comp-chip-radius, 999px);
+  padding: var(--aq-comp-chip-padding, 3px 8px);
+  font-size: var(--aq-comp-chip-font-size, 0.72rem);
+  font-weight: 700;
+  color: var(--aq-accent);
+  background: color-mix(in srgb, var(--aq-accent) 12%, transparent);
+}
+
+.aq-nav {
+  min-height: var(--aq-comp-nav-height, 52px);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--aq-comp-nav-gap, 8px);
+  backdrop-filter: blur(var(--aq-comp-nav-blur, 12px));
+}
+
+.aq-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.aq-table th,
+.aq-table td {
+  padding: var(--aq-comp-table-cell-padding, 8px 10px);
+  border-bottom: 1px solid var(--aq-border);
+  height: var(--aq-comp-table-row-height, 40px);
+}
+.aq-table th {
+  font-weight: var(--aq-comp-table-header-weight, 700);
+  color: var(--aq-text-muted);
+  text-align: inherit;
+}
+
+.aq-sheet {
+  border-radius: var(--aq-comp-sheet-radius, 18px);
+  max-width: var(--aq-comp-sheet-max-width, 500px);
+  background: var(--aq-surface-elevated);
+  border: 1px solid var(--aq-border-strong);
+  box-shadow: var(--aq-shadow-md);
+}
+
+html[data-aq-hud-pulse="1"] .aq-btn.primary,
+html[data-aq-hud-pulse="1"] .aq-chip {
+  animation: aq-hud-pulse var(--aq-motion-slow, 280ms) ease-in-out infinite alternate;
+}
+@keyframes aq-hud-pulse {
+  from { filter: brightness(1); }
+  to { filter: brightness(1.08); }
+}
+
+html[data-aq-density="compact"] .aq-shell { --aq-density-mult: 0.85; }
+html[data-aq-density="comfortable"] .aq-shell { --aq-density-mult: 1; }
+html[data-aq-density="spacious"] .aq-shell { --aq-density-mult: 1.2; }
