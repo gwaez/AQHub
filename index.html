@@ -179,6 +179,7 @@
   }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 </style>
+<script src="./theme.js"></script>
 </head>
 <body>
   <div class="shell">
@@ -311,6 +312,16 @@ const systems = [
     statusLabel: 'موصول',
     primary: { label: 'فتح إعدادات الساحر', href: './wizard.html' },
     secondary: { label: 'أيزنهاور', href: './eisenhower.html' }
+  },
+  {
+    id: 'themes',
+    icon: '◈',
+    name: 'ثيمات التصميم',
+    desc: 'محرّر نظام التصميم: ألوان، خطوط، ظلال، توهج HUD — حفظ ثيمات وتبديلها واستيراد/تصدير JSON محمول.',
+    status: 'on',
+    statusLabel: 'موصول',
+    primary: { label: 'فتح محرّر الثيمات', href: './themes.html' },
+    secondary: { label: 'المخطط', href: './data/themes/_schema.md' }
   },
   {
     id: 'outlook',
