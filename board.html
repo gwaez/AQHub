@@ -147,11 +147,12 @@ body{color:var(--text);font-family:"IBM Plex Sans Arabic",system-ui,sans-serif;b
 .bgchip.show{display:inline-flex}
 .bgchip .dot{width:8px;height:8px;border-radius:50%;background:#fbbf24;box-shadow:0 0 8px #fbbf24;animation:pulse 1.2s ease infinite}
 </style>
+<link rel="stylesheet" href="./theme-studio/aq-theme-layouts.css" />
 <script src="./theme.js"></script>
 </head>
 <body>
 <div class="app">
-  <header class="top">
+  <header class="top" data-aq-chrome="nav">
     <div class="brand"><div class="logo"></div><div><h1>AQAAR Command</h1><p>كروت خفيفة · أوامر بوت · إيميل مباشر</p></div></div>
     <div class="views" id="viewSwitch">
       <button class="chipbtn on" type="button" data-view="kanban">كانبان</button>
@@ -169,7 +170,7 @@ body{color:var(--text);font-family:"IBM Plex Sans Arabic",system-ui,sans-serif;b
       <button class="chipbtn" type="button" data-filter="rejected">مرفوض <b id="statRejected">0</b></button>
       <button class="chipbtn" type="button" data-filter="needs_reply">يحتاج رد <b id="statNeedsReply">0</b></button>
     </div>
-    <div class="actions">
+    <div class="actions" data-aq-chrome="actions">
       <button class="btn icon" id="btnNotif" type="button">🔔<span class="badge" id="notifBadge" hidden>0</span></button>
       <button class="btn" id="btnSync" type="button">مزامنة إيميل</button>
       <a class="btn ghost" href="./index.html">Control</a>

@@ -1,0 +1,327 @@
+/**
+ * Theme Studio — structural application chrome.
+ * Driven by html[data-aq-shell|nav|card-density|btn-hierarchy|overlay].
+ * Applies to Control Center (.shell), board (.app), Eisenhower (.shell).
+ */
+
+/* ========== NAV: SIDE ========== */
+html[data-aq-nav="side"] body {
+  min-height: 100%;
+}
+
+/* Control Center / Eisenhower / Theme Studio hosts */
+html[data-aq-nav="side"] .shell {
+  display: grid !important;
+  grid-template-columns: var(--aq-sidebar-width, 220px) minmax(0, 1fr);
+  grid-auto-rows: auto;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  gap: 0 !important;
+  min-height: 100vh;
+  align-items: start;
+}
+
+html[data-aq-nav="side"] .shell > .top,
+html[data-aq-nav="side"] .shell > [data-aq-chrome="nav"] {
+  grid-column: 1;
+  grid-row: 1 / span 50;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  justify-content: flex-start !important;
+  position: sticky;
+  top: 0;
+  align-self: stretch;
+  min-height: 100vh;
+  margin: 0 !important;
+  padding: 18px 14px !important;
+  gap: 14px !important;
+  border-radius: 0 !important;
+  border: 0 !important;
+  border-inline-end: 1px solid var(--aq-border, var(--stroke, rgba(125, 211, 252, 0.16))) !important;
+  background: var(--aq-surface, var(--card, rgba(12, 24, 38, 0.92)));
+  z-index: 5;
+}
+
+html[data-aq-nav="side"] .shell > .top .brand,
+html[data-aq-nav="side"] .shell > [data-aq-chrome="nav"] .brand {
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+html[data-aq-nav="side"] .shell > .top .top-actions,
+html[data-aq-nav="side"] .shell > .top > .row,
+html[data-aq-nav="side"] .shell > [data-aq-chrome="nav"] .top-actions,
+html[data-aq-nav="side"] .shell > [data-aq-chrome="nav"] > .row,
+html[data-aq-nav="side"] .shell > [data-aq-chrome="nav"] [data-aq-chrome="actions"] {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  width: 100%;
+  gap: 8px !important;
+}
+
+html[data-aq-nav="side"] .shell > .top .btn,
+html[data-aq-nav="side"] .shell > [data-aq-chrome="nav"] .btn {
+  width: 100%;
+  justify-content: center;
+}
+
+html[data-aq-nav="side"] .shell > *:not(.top):not([data-aq-chrome="nav"]) {
+  grid-column: 2;
+  padding-inline: clamp(14px, 2vw, 28px);
+}
+
+html[data-aq-nav="side"] .shell > .top + * {
+  padding-top: 22px;
+}
+
+/* Board shell (.app > header.top) */
+html[data-aq-nav="side"] .app {
+  display: grid !important;
+  grid-template-columns: var(--aq-sidebar-width, 220px) minmax(0, 1fr);
+  grid-auto-rows: auto;
+  max-width: none !important;
+  gap: 0 !important;
+  padding: 0 !important;
+  min-height: 100vh;
+}
+
+html[data-aq-nav="side"] .app > .top,
+html[data-aq-nav="side"] .app > header.top {
+  grid-column: 1;
+  grid-row: 1 / span 40;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  position: sticky;
+  top: 0;
+  min-height: 100vh;
+  margin: 0 !important;
+  border-radius: 0 !important;
+  border: 0 !important;
+  border-inline-end: 1px solid var(--line, var(--aq-border)) !important;
+  padding: 12px 10px !important;
+  gap: 10px !important;
+  z-index: 5;
+}
+
+html[data-aq-nav="side"] .app > .top .views,
+html[data-aq-nav="side"] .app > .top .filters,
+html[data-aq-nav="side"] .app > .top .actions {
+  display: flex !important;
+  flex-direction: column !important;
+  width: 100%;
+  flex-wrap: nowrap !important;
+}
+
+html[data-aq-nav="side"] .app > .toolbar,
+html[data-aq-nav="side"] .app > .work,
+html[data-aq-nav="side"] .app > *:not(.top):not(header) {
+  grid-column: 2;
+  padding-inline: 12px;
+}
+
+html[data-aq-nav="side"] .app > .toolbar {
+  padding-top: 12px;
+}
+
+/* ========== NAV: BOTTOM ========== */
+html[data-aq-nav="bottom"] .shell {
+  display: flex !important;
+  flex-direction: column !important;
+  min-height: 100vh;
+  padding-bottom: 0 !important;
+}
+
+html[data-aq-nav="bottom"] .shell > .top,
+html[data-aq-nav="bottom"] .shell > [data-aq-chrome="nav"] {
+  order: 999;
+  position: sticky;
+  bottom: 0;
+  margin-top: auto !important;
+  margin-bottom: 0 !important;
+  z-index: 20;
+  border-radius: 16px 16px 0 0 !important;
+  border: 1px solid var(--aq-border, var(--stroke)) !important;
+  border-bottom: 0 !important;
+  background: color-mix(in srgb, var(--aq-surface, #0c1826) 92%, transparent);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.35);
+  padding: 10px 14px !important;
+}
+
+html[data-aq-nav="bottom"] .app {
+  display: flex !important;
+  flex-direction: column !important;
+  min-height: 100vh;
+}
+
+html[data-aq-nav="bottom"] .app > .top,
+html[data-aq-nav="bottom"] .app > header.top {
+  order: 999;
+  position: sticky;
+  bottom: 0;
+  z-index: 20;
+  margin-top: auto;
+  border-radius: 14px 14px 0 0 !important;
+  box-shadow: 0 -10px 32px rgba(0, 0, 0, 0.4);
+}
+
+/* ========== CARD DENSITY ========== */
+html[data-aq-card-density="compact"] .card,
+html[data-aq-card-density="compact"] .glass.card,
+html[data-aq-card-density="compact"] .aq-card,
+html[data-aq-card-density="compact"] .preview-card {
+  padding: 10px 12px !important;
+  min-height: 0 !important;
+  gap: 6px !important;
+  border-radius: var(--aq-radius-sm, 10px) !important;
+}
+
+html[data-aq-card-density="compact"] .grid {
+  gap: 8px !important;
+}
+
+html[data-aq-card-density="compact"] .card h4,
+html[data-aq-card-density="compact"] .card .title {
+  font-size: 0.9rem !important;
+}
+
+html[data-aq-card-density="spacious"] .card,
+html[data-aq-card-density="spacious"] .glass.card,
+html[data-aq-card-density="spacious"] .aq-card {
+  padding: 22px 22px !important;
+  min-height: 220px;
+  gap: 16px !important;
+}
+
+html[data-aq-card-density="spacious"] .grid {
+  gap: 18px !important;
+}
+
+/* ========== BUTTON HIERARCHY / PLACEMENT ========== */
+html[data-aq-btn-hierarchy="primary-start"] .top-actions,
+html[data-aq-btn-hierarchy="primary-start"] [data-aq-chrome="actions"],
+html[data-aq-btn-hierarchy="primary-start"] .actions,
+html[data-aq-btn-hierarchy="primary-start"] .sheet-f,
+html[data-aq-btn-hierarchy="primary-start"] .card-actions {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+html[data-aq-btn-hierarchy="primary-start"] .top-actions .btn.primary,
+html[data-aq-btn-hierarchy="primary-start"] [data-aq-chrome="actions"] .btn.primary,
+html[data-aq-btn-hierarchy="primary-start"] .actions .btn.primary,
+html[data-aq-btn-hierarchy="primary-start"] .sheet-f .btn.primary,
+html[data-aq-btn-hierarchy="primary-start"] .card-actions .btn.primary {
+  order: -10;
+}
+
+html[data-aq-btn-hierarchy="primary-end"] .top-actions .btn.primary,
+html[data-aq-btn-hierarchy="primary-end"] [data-aq-chrome="actions"] .btn.primary,
+html[data-aq-btn-hierarchy="primary-end"] .actions .btn.primary,
+html[data-aq-btn-hierarchy="primary-end"] .sheet-f .btn.primary {
+  order: 10;
+  margin-inline-start: auto;
+}
+
+html[data-aq-btn-hierarchy="stacked"] .top-actions,
+html[data-aq-btn-hierarchy="stacked"] [data-aq-chrome="actions"],
+html[data-aq-btn-hierarchy="stacked"] .card-actions,
+html[data-aq-btn-hierarchy="stacked"] .sheet-f {
+  flex-direction: column !important;
+  align-items: stretch !important;
+}
+
+html[data-aq-btn-hierarchy="stacked"] .top-actions .btn,
+html[data-aq-btn-hierarchy="stacked"] [data-aq-chrome="actions"] .btn,
+html[data-aq-btn-hierarchy="stacked"] .card-actions .btn {
+  width: 100%;
+  justify-content: center;
+}
+
+/* ========== OVERLAY: DRAWER vs SHEET ========== */
+html[data-aq-overlay="drawer"] .sheet {
+  left: auto !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  top: 0 !important;
+  width: min(420px, 94vw) !important;
+  max-height: 100vh !important;
+  height: 100vh !important;
+  border-radius: 16px 0 0 16px !important;
+  transform: translateX(110%) !important;
+}
+
+html[data-aq-overlay="drawer"] .sheet.open {
+  transform: translateX(0) !important;
+}
+
+html[dir="rtl"][data-aq-overlay="drawer"] .sheet {
+  right: auto !important;
+  left: 0 !important;
+  border-radius: 0 16px 16px 0 !important;
+  transform: translateX(-110%) !important;
+}
+
+html[dir="rtl"][data-aq-overlay="drawer"] .sheet.open {
+  transform: translateX(0) !important;
+}
+
+html[data-aq-overlay="sheet"] .sheet {
+  /* preserve page defaults — no forced override beyond tokens */
+}
+
+/* Component recipe hooks from chrome */
+html[data-aq-btn-style="solid"] .btn.primary,
+html[data-aq-btn-style="solid"] .aq-btn.primary {
+  background: var(--aq-accent) !important;
+  background-image: none !important;
+}
+
+html[data-aq-btn-style="outline"] .btn.primary,
+html[data-aq-btn-style="outline"] .aq-btn.primary {
+  background: transparent !important;
+  color: var(--aq-accent) !important;
+  border: 1px solid var(--aq-accent) !important;
+  box-shadow: none !important;
+}
+
+/* Mobile: collapse side rail to top strip */
+@media (max-width: 840px) {
+  html[data-aq-nav="side"] .shell,
+  html[data-aq-nav="side"] .app {
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  html[data-aq-nav="side"] .shell > .top,
+  html[data-aq-nav="side"] .shell > [data-aq-chrome="nav"],
+  html[data-aq-nav="side"] .app > .top,
+  html[data-aq-nav="side"] .app > header.top {
+    position: sticky;
+    top: 0;
+    min-height: 0 !important;
+    height: auto !important;
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+    border-inline-end: 0 !important;
+    border-bottom: 1px solid var(--aq-border, var(--stroke)) !important;
+  }
+
+  html[data-aq-nav="side"] .shell > .top .top-actions,
+  html[data-aq-nav="side"] .shell > .top > .row,
+  html[data-aq-nav="side"] .app > .top .actions {
+    flex-direction: row !important;
+    width: auto;
+  }
+
+  html[data-aq-nav="side"] .shell > *:not(.top):not([data-aq-chrome="nav"]),
+  html[data-aq-nav="side"] .app > .toolbar,
+  html[data-aq-nav="side"] .app > .work {
+    grid-column: auto;
+    padding-inline: 12px;
+  }
+}

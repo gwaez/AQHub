@@ -184,7 +184,12 @@
     "--aq-comp-table-cell-padding": "8px 10px",
     "--aq-comp-sheet-radius": "18px",
     "--aq-comp-sheet-max-width": "500px",
-    "--aq-comp-sheet-backdrop": "rgba(2,8,16,.55)"
+    "--aq-comp-sheet-backdrop": "rgba(2,8,16,.55)",
+    "--aq-shell-preset": "jarvis-default",
+    "--aq-nav-position": "top",
+    "--aq-card-density": "comfortable",
+    "--aq-btn-hierarchy": "primary-end",
+    "--aq-overlay-mode": "sheet"
   },
   "spacing": {
     "unit": "4px",
@@ -207,7 +212,12 @@
     "sectionGap": "16px",
     "cardPadding": "16px",
     "gridGap": "10px",
-    "sidebarWidth": "286px"
+    "sidebarWidth": "286px",
+    "shellPreset": "jarvis-default",
+    "navPosition": "top",
+    "cardDensity": "comfortable",
+    "buttonHierarchy": "primary-end",
+    "overlayMode": "sheet"
   },
   "hud": {
     "glowStrength": "0.35",
@@ -265,5 +275,16 @@
       "maxWidth": "500px",
       "backdrop": "rgba(2,8,16,.55)"
     }
+  },
+  "chrome": {
+    "shellPreset": "jarvis-default",
+    "nav": "top",
+    "cardDensity": "comfortable",
+    "buttonHierarchy": "primary-end",
+    "overlay": "sheet",
+    "classMap": {},
+    "cssModules": [
+      "theme-studio/layouts/jarvis-default.css"
+    ]
   }
 }

@@ -155,6 +155,7 @@ function Repair-ThemeDocument {
   if (-not $Theme.hud) { $Theme | Add-Member -NotePropertyName hud -NotePropertyValue ([pscustomobject]@{}) -Force }
   if (-not $Theme.iconography) { $Theme | Add-Member -NotePropertyName iconography -NotePropertyValue ([pscustomobject]@{}) -Force }
   if (-not $Theme.components) { $Theme | Add-Member -NotePropertyName components -NotePropertyValue ([pscustomobject]@{}) -Force }
+  if (-not $Theme.chrome) { $Theme | Add-Member -NotePropertyName chrome -NotePropertyValue ([pscustomobject]@{}) -Force }
   if (-not $Theme.cssVariables) {
     $Theme | Add-Member -NotePropertyName cssVariables -NotePropertyValue (New-ThemeCssVariablesFromParts -Theme $Theme) -Force
   }
@@ -504,6 +505,29 @@ function Invoke-ThemeBridge {
     }
     $theme = $incoming
     if ($incoming.PSObject.Properties['theme'] -and $incoming.theme) { $theme = $incoming.theme }
+    # Merge optional AI layoutPatch into chrome/layout (UI Kit structural skin)
+    if ($incoming.PSObject.Properties['layoutPatch'] -and $incoming.layoutPatch) {
+      $patch = $incoming.layoutPatch
+      if (-not $theme.chrome) { $theme | Add-Member -NotePropertyName chrome -NotePropertyValue ([pscustomobject]@{}) -Force }
+      if (-not $theme.layout) { $theme | Add-Member -NotePropertyName layout -NotePropertyValue ([pscustomobject]@{}) -Force }
+      foreach ($key in @('shellPreset','nav','cardDensity','buttonHierarchy','overlay','bottomBar','grid','cssModules','applyScript')) {
+        if ($patch.PSObject.Properties[$key]) {
+          $theme.chrome | Add-Member -NotePropertyName $key -NotePropertyValue $patch.$key -Force
+        }
+      }
+      if ($patch.PSObject.Properties['htmlClassMap']) {
+        $theme.chrome | Add-Member -NotePropertyName classMap -NotePropertyValue $patch.htmlClassMap -Force
+      } elseif ($patch.PSObject.Properties['classMap']) {
+        $theme.chrome | Add-Member -NotePropertyName classMap -NotePropertyValue $patch.classMap -Force
+      }
+      if ($theme.chrome.PSObject.Properties['shellPreset']) {
+        $theme.layout | Add-Member -NotePropertyName shellPreset -NotePropertyValue $theme.chrome.shellPreset -Force
+      }
+      if ($theme.chrome.PSObject.Properties['nav']) {
+        $theme.layout | Add-Member -NotePropertyName navPosition -NotePropertyValue $theme.chrome.nav -Force
+      }
+      $theme | Add-Member -NotePropertyName layoutPatch -NotePropertyValue $patch -Force
+    }
     try {
       $saved = Save-ThemeDocument -DataDir $DataDir -Theme $theme -AsCustom
     } catch {

@@ -1,39 +1,39 @@
 {
   "meta": {
-    "id": "jarvis-hud",
-    "name": "Jarvis HUD (sample)",
-    "version": "1.1.0",
+    "id": "clay-dock",
+    "name": "Clay Dock",
+    "version": "1.3.0",
     "author": "AQHub",
-    "description": "SAMPLE / portable Theme Studio design-system package. Paste this JSON (or a screenshot + theme-studio AI prompt) to any model and say: build a complete Theme Studio theme with these specs. Import via Theme Studio. Includes layout/chrome structural recipes.",
+    "description": "UI Kit skin from claymorphism music dashboard refs — mint side nav, soft raised pastel cards, floating bottom CTA dock.",
     "styleKeywords": [
-      "Jarvis",
-      "dark",
-      "luminous",
-      "HUD",
-      "cyan",
-      "glass",
-      "ops"
+      "clay",
+      "claymorphism",
+      "side-nav",
+      "bottom-dock",
+      "pastel",
+      "soft",
+      "ui-kit"
     ],
-    "mode": "dark",
+    "mode": "light",
     "studio": "theme-studio"
   },
   "color": {
-    "bg": "#050a12",
-    "bgSecondary": "#0a1220",
-    "surface": "rgba(12, 24, 38, 0.92)",
-    "surfaceElevated": "rgba(15, 32, 51, 0.96)",
-    "border": "rgba(125, 211, 252, 0.16)",
-    "borderStrong": "rgba(34, 211, 238, 0.35)",
-    "text": "#e8f3ff",
-    "textMuted": "#8aa4bc",
-    "textFaint": "#5d6d86",
-    "accent": "#22d3ee",
-    "accent2": "#60a5fa",
-    "accent3": "#a78bfa",
-    "success": "#34d399",
-    "warning": "#fbbf24",
-    "danger": "#fb7185",
-    "glow": "rgba(34, 211, 238, 0.45)"
+    "bg": "#f8f3ea",
+    "bgSecondary": "#f3ebdd",
+    "surface": "#c5ded3",
+    "surfaceElevated": "#fffdf8",
+    "border": "#e6dcc9",
+    "borderStrong": "#cbbfa8",
+    "text": "#24312c",
+    "textMuted": "#4b5d56",
+    "textFaint": "#7a8b84",
+    "accent": "#5fbfa3",
+    "accent2": "#f0a58a",
+    "accent3": "#c5ded3",
+    "success": "#059669",
+    "warning": "#d97706",
+    "danger": "#e11d48",
+    "glow": "rgba(95, 191, 163, 0.35)"
   },
   "typography": {
     "fontFamily": "\"IBM Plex Sans Arabic\", \"Segoe UI\", Tahoma, sans-serif",
@@ -49,17 +49,17 @@
     "letterSpacing": "0"
   },
   "shape": {
-    "radiusSm": "10px",
-    "radiusMd": "14px",
-    "radiusLg": "22px",
-    "borderWidth": "1px",
+    "radiusSm": "16px",
+    "radiusMd": "24px",
+    "radiusLg": "28px",
+    "borderWidth": "0px",
     "radiusPill": "999px"
   },
   "elevation": {
-    "shadowSm": "0 10px 30px rgba(0, 0, 0, 0.28)",
-    "shadowMd": "0 24px 80px rgba(0, 0, 0, 0.45)",
-    "glowBlur": "18px",
-    "shadowLg": "0 24px 80px rgba(0, 0, 0, 0.45)"
+    "shadowSm": "0 12px 28px rgba(15,23,42,0.07)",
+    "shadowMd": "0 18px 40px rgba(15,23,42,0.1)",
+    "glowBlur": "14px",
+    "shadowLg": "0 24px 50px rgba(15,23,42,0.12)"
   },
   "motion": {
     "fast": "120ms",
@@ -69,22 +69,22 @@
     "hoverLift": "translateY(-1px)"
   },
   "cssVariables": {
-    "--aq-bg": "#050a12",
-    "--aq-bg-secondary": "#0a1220",
-    "--aq-surface": "rgba(12, 24, 38, 0.92)",
-    "--aq-surface-elevated": "rgba(15, 32, 51, 0.96)",
-    "--aq-border": "rgba(125, 211, 252, 0.16)",
-    "--aq-border-strong": "rgba(34, 211, 238, 0.35)",
-    "--aq-text": "#e8f3ff",
-    "--aq-text-muted": "#8aa4bc",
-    "--aq-text-faint": "#5d6d86",
-    "--aq-accent": "#22d3ee",
-    "--aq-accent-2": "#60a5fa",
-    "--aq-accent-3": "#a78bfa",
+    "--aq-bg": "#f8f3ea",
+    "--aq-bg-secondary": "#f3ebdd",
+    "--aq-surface": "#c5ded3",
+    "--aq-surface-elevated": "#fffdf8",
+    "--aq-border": "#e6dcc9",
+    "--aq-border-strong": "#cbbfa8",
+    "--aq-text": "#24312c",
+    "--aq-text-muted": "#4b5d56",
+    "--aq-text-faint": "#7a8b84",
+    "--aq-accent": "#5fbfa3",
+    "--aq-accent-2": "#f0a58a",
+    "--aq-accent-3": "#c5ded3",
     "--aq-success": "#34d399",
     "--aq-warning": "#fbbf24",
     "--aq-danger": "#fb7185",
-    "--aq-glow": "rgba(34, 211, 238, 0.45)",
+    "--aq-glow": "rgba(95, 191, 163, 0.35)",
     "--aq-font": "\"IBM Plex Sans Arabic\", \"Segoe UI\", Tahoma, sans-serif",
     "--aq-font-mono": "\"JetBrains Mono\", ui-monospace, monospace",
     "--aq-fs-xs": "0.72rem",
@@ -102,32 +102,32 @@
     "--aq-motion-fast": "120ms",
     "--aq-motion-normal": "180ms",
     "--aq-motion-slow": "280ms",
-    "--bg": "#050a12",
-    "--bg0": "#050a12",
-    "--bg1": "#0a1220",
+    "--bg": "#f8f3ea",
+    "--bg0": "#f8f3ea",
+    "--bg1": "#f3ebdd",
     "--bg2": "#121a2b",
     "--panel": "rgba(12, 24, 38, 0.92)",
-    "--card": "rgba(12, 24, 38, 0.72)",
-    "--card-solid": "#0f2033",
-    "--stroke": "rgba(125, 211, 252, 0.16)",
-    "--stroke-strong": "rgba(34, 211, 238, 0.35)",
+    "--card": "#fffdf8",
+    "--card-solid": "#fffdf8",
+    "--stroke": "#e6dcc9",
+    "--stroke-strong": "#cbbfa8",
     "--line": "rgba(125, 211, 252, 0.16)",
-    "--text": "#e8f3ff",
-    "--ink": "#e8f3ff",
-    "--muted": "#8aa4bc",
+    "--text": "#24312c",
+    "--ink": "#24312c",
+    "--muted": "#4b5d56",
     "--faint": "#5d6d86",
-    "--accent": "#22d3ee",
+    "--accent": "#5fbfa3",
     "--accent-2": "#60a5fa",
     "--accent-3": "#a78bfa",
-    "--cyan": "#22d3ee",
-    "--teal": "#22d3ee",
+    "--cyan": "#5fbfa3",
+    "--teal": "#5fbfa3",
     "--ok": "#34d399",
     "--warn": "#fbbf24",
     "--danger": "#fb7185",
     "--hot": "#fb7185",
-    "--glow": "rgba(34, 211, 238, 0.45)",
+    "--glow": "rgba(95, 191, 163, 0.35)",
     "--shadow": "0 24px 80px rgba(0, 0, 0, 0.45)",
-    "--radius": "22px",
+    "--radius": "28px",
     "--hdr": "#8aa4bc",
     "--hdr2": "#5d6d86",
     "--do": "rgba(52, 211, 153, 0.18)",
@@ -151,7 +151,7 @@
     "--aq-section-gap": "16px",
     "--aq-card-pad": "16px",
     "--aq-grid-gap": "10px",
-    "--aq-sidebar-width": "286px",
+    "--aq-sidebar-width": "240px",
     "--aq-hud-glow-strength": "0.45",
     "--aq-hud-glow-spread": "18px",
     "--aq-hud-scanline": "0.05",
@@ -163,7 +163,7 @@
     "--aq-radius-pill": "999px",
     "--aq-easing": "cubic-bezier(0.2, 0.8, 0.2, 1)",
     "--aq-hover-lift": "translateY(-1px)",
-    "--aq-comp-shell-pattern": "glass",
+    "--aq-comp-shell-pattern": "clay",
     "--aq-comp-shell-blur": "18px",
     "--aq-comp-card-radius": "var(--aq-radius-md)",
     "--aq-comp-card-padding": "var(--aq-space-4)",
@@ -187,10 +187,10 @@
     "--aq-comp-sheet-radius": "18px",
     "--aq-comp-sheet-max-width": "500px",
     "--aq-comp-sheet-backdrop": "rgba(2,8,16,.55)",
-    "--aq-shell-preset": "jarvis-default",
-    "--aq-nav-position": "top",
+    "--aq-shell-preset": "clay-dock",
+    "--aq-nav-position": "side",
     "--aq-card-density": "comfortable",
-    "--aq-btn-hierarchy": "primary-end",
+    "--aq-btn-hierarchy": "primary-start",
     "--aq-overlay-mode": "sheet"
   },
   "spacing": {
@@ -209,24 +209,25 @@
   },
   "layout": {
     "density": "comfortable",
-    "shellMaxWidth": "1280px",
-    "shellPadding": "28px 22px",
+    "shellMaxWidth": "100%",
+    "shellPadding": "0",
     "sectionGap": "16px",
-    "cardPadding": "16px",
-    "gridGap": "10px",
-    "sidebarWidth": "286px",
-    "shellPreset": "jarvis-default",
-    "navPosition": "top",
+    "cardPadding": "18px",
+    "gridGap": "16px",
+    "sidebarWidth": "240px",
+    "shellPreset": "clay-dock",
+    "navPosition": "side",
     "cardDensity": "comfortable",
-    "buttonHierarchy": "primary-end",
-    "overlayMode": "sheet"
+    "buttonHierarchy": "primary-start",
+    "overlayMode": "sheet",
+    "grid": "soft"
   },
   "hud": {
-    "glowStrength": "0.45",
-    "glowSpread": "18px",
-    "scanlineOpacity": "0.05",
-    "gridOpacity": "0.04",
-    "accentPulse": true
+    "glowStrength": "0.15",
+    "glowSpread": "10px",
+    "scanlineOpacity": "0",
+    "gridOpacity": "0",
+    "accentPulse": false
   },
   "iconography": {
     "style": "line",
@@ -237,19 +238,19 @@
   },
   "components": {
     "shell": {
-      "pattern": "glass",
-      "blur": "18px",
-      "border": "1px solid var(--aq-border)"
+      "pattern": "clay",
+      "blur": "0",
+      "border": "0"
     },
     "card": {
-      "radius": "var(--aq-radius-md)",
-      "padding": "var(--aq-space-4)",
-      "backdropBlur": "14px"
+      "radius": "28px",
+      "padding": "18px",
+      "backdropBlur": "0"
     },
     "button": {
-      "radius": "var(--aq-radius-md)",
-      "padding": "10px 14px",
-      "fontWeight": "600",
+      "radius": "999px",
+      "padding": "10px 16px",
+      "fontWeight": "800",
       "primaryStyle": "gradient"
     },
     "input": {
@@ -263,9 +264,10 @@
       "fontSize": "0.72rem"
     },
     "nav": {
-      "height": "52px",
-      "blur": "12px",
-      "gap": "8px"
+      "height": "auto",
+      "blur": "0",
+      "gap": "10px",
+      "position": "side"
     },
     "table": {
       "rowHeight": "40px",
@@ -275,18 +277,25 @@
     "sheet": {
       "radius": "18px",
       "maxWidth": "500px",
-      "backdrop": "rgba(2,8,16,.55)"
+      "backdrop": "rgba(2,8,16,.55)",
+      "mode": "sheet"
     }
   },
   "chrome": {
-    "shellPreset": "jarvis-default",
-    "nav": "top",
+    "shellPreset": "clay-dock",
+    "nav": "side",
     "cardDensity": "comfortable",
-    "buttonHierarchy": "primary-end",
+    "buttonHierarchy": "primary-start",
     "overlay": "sheet",
-    "classMap": {},
+    "bottomBar": true,
+    "grid": "soft",
+    "classMap": {
+      ".top": "aq-chrome-nav",
+      ".top-actions": "aq-chrome-actions"
+    },
     "cssModules": [
-      "theme-studio/layouts/jarvis-default.css"
-    ]
+      "theme-studio/layouts/clay-dock.css"
+    ],
+    "applyScript": "theme-studio/aq-theme-apply.js"
   }
 }

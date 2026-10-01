@@ -1,0 +1,119 @@
+/**
+ * UI Kit preset: crextio-airy
+ * Light airy HR dashboard — top pill nav, modular white cards, mustard accent.
+ */
+html[data-aq-shell="crextio-airy"] {
+  --aq-layout-preset: crextio-airy;
+  --aq-sidebar-width: 0px;
+}
+
+html[data-aq-shell="crextio-airy"] body {
+  background:
+    radial-gradient(900px 520px at 90% -10%, color-mix(in srgb, var(--aq-accent, #e6b94d) 28%, transparent), transparent 55%),
+    linear-gradient(180deg, var(--aq-bg, #f3f5f8), var(--aq-bg-secondary, #eef1f6)) !important;
+}
+
+html[data-aq-shell="crextio-airy"] .shell {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 22px 22px 48px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 18px;
+}
+
+/* Floating top pill chrome */
+html[data-aq-shell="crextio-airy"] .shell > .top,
+html[data-aq-shell="crextio-airy"] .shell > [data-aq-chrome="nav"] {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 16px !important;
+  padding: 10px 14px !important;
+  margin: 0 0 8px !important;
+  border-radius: 999px !important;
+  border: 1px solid color-mix(in srgb, var(--aq-border, #dbe3ee) 80%, transparent) !important;
+  background: color-mix(in srgb, var(--aq-surface, #fff) 88%, transparent) !important;
+  box-shadow: 0 10px 40px rgba(15, 23, 42, 0.08);
+  backdrop-filter: blur(14px);
+  position: sticky;
+  top: 12px;
+  z-index: 20;
+}
+
+html[data-aq-shell="crextio-airy"] .shell > .top .brand h1 {
+  font-size: 1.05rem;
+}
+
+html[data-aq-shell="crextio-airy"] .shell > .top .brand p {
+  display: none;
+}
+
+html[data-aq-shell="crextio-airy"] [data-aq-chrome="actions"],
+html[data-aq-shell="crextio-airy"] .top-actions {
+  display: inline-flex !important;
+  flex-direction: row !important;
+  align-items: center;
+  gap: 6px !important;
+  padding: 4px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--aq-text, #1f2937) 6%, transparent);
+}
+
+html[data-aq-shell="crextio-airy"] [data-aq-chrome="actions"] .btn,
+html[data-aq-shell="crextio-airy"] .top-actions .btn {
+  border-radius: 999px !important;
+  border: 0 !important;
+  background: transparent;
+  color: var(--aq-text-muted, #6b7280);
+  box-shadow: none !important;
+  width: auto !important;
+}
+
+html[data-aq-shell="crextio-airy"] [data-aq-chrome="actions"] .btn.primary,
+html[data-aq-shell="crextio-airy"] .top-actions .btn.primary {
+  background: var(--aq-text, #1f2937) !important;
+  color: #fff !important;
+  font-weight: 700;
+}
+
+html[data-aq-shell="crextio-airy"] .hero {
+  grid-template-columns: 1.35fr 0.85fr !important;
+  gap: 16px !important;
+}
+
+html[data-aq-shell="crextio-airy"] .glass,
+html[data-aq-shell="crextio-airy"] .card {
+  background: var(--aq-surface-elevated, #fff) !important;
+  border: 1px solid var(--aq-border, #e8edf4) !important;
+  border-radius: 28px !important;
+  box-shadow: 0 18px 50px rgba(15, 23, 42, 0.07) !important;
+  backdrop-filter: none;
+}
+
+html[data-aq-shell="crextio-airy"] .grid {
+  grid-template-columns: repeat(3, 1fr) !important;
+  gap: 16px !important;
+}
+
+html[data-aq-shell="crextio-airy"] .btn.primary {
+  background: var(--aq-accent, #e6b94d) !important;
+  color: #1a1408 !important;
+  border-radius: 999px !important;
+  border: 0 !important;
+  box-shadow: 0 8px 22px color-mix(in srgb, var(--aq-accent, #e6b94d) 35%, transparent);
+}
+
+html[data-aq-shell="crextio-airy"] .aq-chrome-dock { display: none !important; }
+
+@media (max-width: 900px) {
+  html[data-aq-shell="crextio-airy"] .grid,
+  html[data-aq-shell="crextio-airy"] .hero {
+    grid-template-columns: 1fr !important;
+  }
+  html[data-aq-shell="crextio-airy"] .shell > .top {
+    border-radius: 22px !important;
+    flex-wrap: wrap;
+  }
+}

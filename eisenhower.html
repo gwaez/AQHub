@@ -265,6 +265,7 @@ body.view-mode .pa-tabs,body.view-mode .hint-edit{display:none !important}
   .col-gutter{display:none}
 }
 </style>
+<link rel="stylesheet" href="./theme-studio/aq-theme-layouts.css" />
 <script src="./theme.js"></script>
 </head>
 <body class="view-mode">
@@ -304,13 +305,13 @@ body.view-mode .pa-tabs,body.view-mode .hint-edit{display:none !important}
     <button class="btn small pa-vis" type="button" data-toggle-mod="doing">تنفيذ</button>
     <button class="btn small pa-vis" type="button" data-toggle-mod="trash">تراش</button>
   </div>
-  <div class="top">
+  <div class="top" data-aq-chrome="nav">
     <div>
       <h1>صندوق أيزنهاور لإدارة المهام</h1>
       <p class="muted">عرض كلاسيكي للعمل اليومي · «تعديل التخطيط» اختياري · التجريب مسودة لحد «حفظ» · «إعادة ضبط التخطيط» يرجع الشكل الأصلي</p>
       <div class="row" style="margin-top:8px"><span class="badge wait" id="badge">…</span><span id="status">—</span><span class="sel-hint" id="selHint"></span></div>
     </div>
-    <div class="row">
+    <div class="row" data-aq-chrome="actions">
       <button class="btn" type="button" id="btnEditMode">تعديل التخطيط</button>
       <button class="btn danger-ghost" type="button" id="btnResetLayout">إعادة ضبط التخطيط</button>
       <button class="btn primary" type="button" id="btnSave">حفظ التاسكات</button>
