@@ -33,14 +33,28 @@ h1{margin:0;font-size:1.28rem;font-weight:700}
 .badge.wait{color:var(--warn,#fbbf24);border-color:color-mix(in srgb,var(--warn,#fbbf24) 40%,transparent);background:color-mix(in srgb,var(--warn,#fbbf24) 12%,transparent)}
 .badge.off{color:var(--muted)}
 
-.lay-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;margin-bottom:8px;flex:0 0 auto}
+.top-actions{justify-content:flex-end}
+.settings-box{margin-bottom:8px;flex:0 0 auto;border:1px solid var(--line);border-radius:14px;background:color-mix(in srgb,var(--ink) 3%,var(--surface));overflow:hidden}
+.settings-box.open{border-color:color-mix(in srgb,var(--teal) 35%,var(--line))}
+.settings-toggle{width:100%;justify-content:space-between;border:0;border-radius:0;background:transparent;padding:10px 12px;font-weight:700}
+.settings-toggle:hover{background:color-mix(in srgb,var(--teal) 8%,transparent)}
+.settings-toggle .chev{display:inline-block;transition:transform .18s ease;color:var(--muted);font-size:.85rem}
+.settings-box.open .settings-toggle .chev{transform:rotate(180deg);color:var(--teal)}
+.settings-panel{display:none;padding:0 12px 12px;border-top:1px solid var(--line)}
+.settings-box.open .settings-panel{display:block}
+.settings-panel .lay-bar{margin:10px 0 0;padding-top:10px;border-top:1px solid var(--line)}
+.settings-panel .opts-row{margin-top:10px}
+.lay-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;margin-bottom:0;flex:0 0 auto}
 .quick-wrap{position:relative}
 .quick-menu{position:absolute;top:calc(100% + 4px);inset-inline-end:0;z-index:40;min-width:160px;background:var(--surface-2);border:1px solid var(--stroke-ui);border-radius:12px;padding:4px;box-shadow:var(--aq-shadow-sm,0 12px 30px rgba(0,0,0,.35))}
 .quick-menu button{display:block;width:100%;text-align:right;border:0;background:transparent;padding:7px 10px;font:inherit;font-size:.78rem;font-weight:700;cursor:pointer;border-radius:8px;color:var(--ink)}
 .quick-menu button:hover,.quick-menu button.on{background:color-mix(in srgb,var(--teal) 12%,transparent);color:var(--teal)}
 .btn-add-manual{border-color:var(--teal);color:var(--teal)}
-.chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center;min-height:28px}
+.chips-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px;min-height:0;flex:0 0 auto}
+.chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center;min-height:0}
 .chip{display:inline-flex;align-items:center;gap:6px;border:1px solid color-mix(in srgb,var(--teal) 45%,transparent);background:color-mix(in srgb,var(--teal) 12%,transparent);color:var(--teal);border-radius:999px;padding:3px 8px;font-size:.72rem;font-weight:700}
+.chip.chip-new{border-color:color-mix(in srgb,var(--ok,#34d399) 50%,transparent);background:color-mix(in srgb,var(--ok,#34d399) 14%,transparent);color:var(--ok,#34d399)}
+.chip.chip-new button{color:var(--ok,#34d399)}
 .chip button{border:0;background:transparent;color:var(--teal);cursor:pointer;font:inherit;font-weight:800;padding:0 2px}
 .sel-hint{font-size:.75rem;color:var(--muted)}
 
@@ -308,42 +322,52 @@ body.view-mode .pa-tabs,body.view-mode .hint-edit{display:none !important}
   <div class="top" data-aq-chrome="nav">
     <div>
       <h1>صندوق أيزنهاور لإدارة المهام</h1>
-      <p class="muted">عرض كلاسيكي للعمل اليومي · «تعديل التخطيط» اختياري · التجريب مسودة لحد «حفظ» · «إعادة ضبط التخطيط» يرجع الشكل الأصلي</p>
+      <p class="muted">عرض كلاسيكي للعمل اليومي · سحب التاسكات يفلتر الجديد فقط · الإعدادات والفلاتر داخل الصندوق أدناه</p>
       <div class="row" style="margin-top:8px"><span class="badge wait" id="badge">…</span><span id="status">—</span><span class="sel-hint" id="selHint"></span></div>
     </div>
-    <div class="row" data-aq-chrome="actions">
-      <button class="btn" type="button" id="btnEditMode">تعديل التخطيط</button>
-      <button class="btn danger-ghost" type="button" id="btnResetLayout">إعادة ضبط التخطيط</button>
-      <button class="btn primary" type="button" id="btnSave">حفظ التاسكات</button>
-      <button class="btn" type="button" id="btnImport">سحب تاسكات مفتوحة</button>
-      <label class="btn" style="cursor:pointer"><input type="checkbox" id="fShowTrash" style="margin-left:6px" /> إظهار التراش</label>
-      <a class="btn" href="./board.html">لوحة التاسكات</a>
-      <a class="btn" href="./themes.html">Theme Studio</a>
-      <a class="btn" href="./index.html">← التحكم</a>
+    <div class="row top-actions" data-aq-chrome="actions">
+      <button class="btn primary" type="button" id="btnImport">سحب تاسكات مفتوحة</button>
+      <button class="btn" type="button" id="btnSave">حفظ التاسكات</button>
+      <a class="btn ghost" href="./index.html">← التحكم</a>
     </div>
   </div>
 
-  <div class="lay-bar">
-    <div class="row">
-      <button class="btn small on" type="button" id="btnOrientStack">عمودي</button>
-      <button class="btn small" type="button" id="btnOrientSplit">أفقي</button>
-      <button class="btn small" type="button" id="btnToggleInbox">تصغير الوارد</button>
-      <button class="btn small" type="button" id="btnToggleMatrix">تصغير المصفوفة</button>
-      <button class="btn small on" type="button" id="btnToggleSide">التصفية</button>
-      <button class="btn small" type="button" id="btnQuickEmail">فلتر إيميلات</button>
-      <div class="quick-wrap">
-        <button class="btn small" type="button" id="btnQuickDate">فلتر اليوم أو الأسبوع</button>
-        <div class="quick-menu" id="dateQuickMenu" hidden>
-          <button type="button" data-range="today">اليوم</button>
-          <button type="button" data-range="week">هذا الأسبوع</button>
-          <button type="button" data-range="clear">مسح</button>
+  <div class="settings-box" id="settingsBox">
+    <button class="btn settings-toggle" type="button" id="btnToggleSettings" aria-expanded="false" aria-controls="settingsPanel">
+      <span>إعدادات · فلاتر · تخطيط</span>
+      <span class="chev" aria-hidden="true">▾</span>
+    </button>
+    <div class="settings-panel" id="settingsPanel">
+      <div class="row opts-row">
+        <button class="btn small" type="button" id="btnEditMode">تعديل التخطيط</button>
+        <button class="btn small danger-ghost" type="button" id="btnResetLayout">إعادة ضبط التخطيط</button>
+        <label class="btn small" style="cursor:pointer"><input type="checkbox" id="fShowTrash" style="margin-left:6px" /> إظهار التراش</label>
+        <a class="btn small" href="./board.html">لوحة التاسكات</a>
+        <a class="btn small" href="./themes.html">ثيم</a>
+      </div>
+      <div class="lay-bar">
+        <div class="row">
+          <button class="btn small on" type="button" id="btnOrientStack">عمودي</button>
+          <button class="btn small" type="button" id="btnOrientSplit">أفقي</button>
+          <button class="btn small" type="button" id="btnToggleInbox">تصغير الوارد</button>
+          <button class="btn small" type="button" id="btnToggleMatrix">تصغير المصفوفة</button>
+          <button class="btn small on" type="button" id="btnToggleSide">التصفية</button>
+          <button class="btn small" type="button" id="btnQuickEmail">فلتر إيميلات</button>
+          <div class="quick-wrap">
+            <button class="btn small" type="button" id="btnQuickDate">فلتر اليوم أو الأسبوع</button>
+            <div class="quick-menu" id="dateQuickMenu" hidden>
+              <button type="button" data-range="today">اليوم</button>
+              <button type="button" data-range="week">هذا الأسبوع</button>
+              <button type="button" data-range="clear">مسح</button>
+            </div>
+          </div>
+          <button class="btn small btn-add-manual" type="button" id="btnManualTask">إضافة تاسك يدوي</button>
         </div>
       </div>
     </div>
-    <div class="row">
-      <button class="btn small btn-add-manual" type="button" id="btnManualTask">إضافة تاسك يدوي</button>
-      <div class="chips" id="filterChips"></div>
-    </div>
+  </div>
+  <div class="chips-bar">
+    <div class="chips" id="filterChips"></div>
   </div>
 
   <div class="workspace stack" id="workspace">
@@ -617,6 +641,8 @@ let lastClickedId = null;
 let lastClickedList = [];
 let dragged = false;
 let filterMode = 'live';
+/** After pull/sync: show only newly imported item ids (null = show all). */
+let onlyNewIds = null;
 let committed = emptyFilter();
 let draft = emptyFilter();
 let perDirty = {};
@@ -688,6 +714,7 @@ function uniqueEmails(){
 }
 
 function matches(it, f){
+  if (onlyNewIds && onlyNewIds.size && !onlyNewIds.has(it.id)) return false;
   if (f.quads && f.quads.length && !f.quads.includes(it.quad||'inbox')) return false;
   if (f.sources && f.sources.length && !f.sources.includes(it.source||'manual')) return false;
   if (f.emails && f.emails.length){
@@ -839,7 +866,8 @@ function render(){
   const inboxList = listForQuad('inbox', f);
   fillHost($('inbox'), inboxList);
   const inboxAll = items.filter(i => i.quad==='inbox').length;
-  $('inboxCount').textContent = inboxList.length + ' ظاهر · إجمالي الوارد ' + inboxAll;
+  const newHint = (onlyNewIds && onlyNewIds.size) ? (' · فلتر جديد فقط') : '';
+  $('inboxCount').textContent = inboxList.length + ' ظاهر · إجمالي الوارد ' + inboxAll + newHint;
 
   MATRIX.forEach(q => {
     const list = listForQuad(q, f);
@@ -877,6 +905,7 @@ function renderChips(){
   const box = $('filterChips');
   const f = committed;
   const chips = [];
+  if (onlyNewIds && onlyNewIds.size) chips.push({k:'onlyNew', t:'جديد فقط ('+onlyNewIds.size+')', cls:'chip-new'});
   if (f.q) chips.push({k:'q', t:'بحث: '+f.q});
   (f.sources||[]).forEach(s => chips.push({k:'source:'+s, t:'مصدر: '+s}));
   (f.emails||[]).forEach(s => chips.push({k:'email:'+s, t:'إيميل: '+s}));
@@ -886,11 +915,12 @@ function renderChips(){
   if (f.hasEmail) chips.push({k:'hasEmail', t:f.hasEmail==='yes'?'فيه إيميل':'من غير إيميل'});
   if (f.dateFrom||f.dateTo) chips.push({k:'date', t:(f.dateFrom||'…')+' → '+(f.dateTo||'…')});
   if (Number(f.ageMin)>0 || (f.ageMax!=null && f.ageMax!=='' && Number(f.ageMax)<sliderMax())) chips.push({k:'age', t:(f.ageMin||0)+'–'+f.ageMax+' يوم'});
-  if (!chips.length){ box.innerHTML = '<span class="muted" style="font-size:.75rem">مفيش فلاتر متطبقة</span>'; return; }
-  box.innerHTML = chips.map(c => '<span class="chip">'+escapeHtml(c.t)+'<button type="button" data-chip="'+escapeHtml(c.k)+'">×</button></span>').join('');
+  if (!chips.length){ box.innerHTML = ''; return; }
+  box.innerHTML = chips.map(c => '<span class="chip'+(c.cls?' '+c.cls:'')+'">'+escapeHtml(c.t)+'<button type="button" data-chip="'+escapeHtml(c.k)+'" aria-label="إزالة الفلتر">×</button></span>').join('');
   box.querySelectorAll('[data-chip]').forEach(b => b.onclick = () => removeChip(b.getAttribute('data-chip')));
 }
 function removeChip(k){
+  if (k==='onlyNew'){ onlyNewIds = null; render(); return; }
   if (k==='q') committed.q='';
   else if (k.startsWith('source:')) committed.sources = (committed.sources||[]).filter(s => s!==k.slice(7));
   else if (k.startsWith('email:')) committed.emails = (committed.emails||[]).filter(s => s!==k.slice(6));
@@ -905,6 +935,7 @@ function removeChip(k){
   persistFilters();
   render();
 }
+function clearOnlyNewFilter(){ onlyNewIds = null; }
 
 function readDraft(){
   draft.q = $('fQ').value||'';
@@ -1094,6 +1125,7 @@ function applyAll(){
   render();
 }
 function clearAllFilters(){
+  clearOnlyNewFilter();
   committed = emptyFilter();
   committed.ageMax = sliderMax();
   draft = clone(committed);
@@ -1101,6 +1133,17 @@ function clearAllFilters(){
   writeFilterUi();
   persistFilters();
   render();
+}
+
+function setSettingsOpen(open){
+  const box = $('settingsBox');
+  const btn = $('btnToggleSettings');
+  if (!box || !btn) return;
+  box.classList.toggle('open', !!open);
+  btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+}
+function toggleSettings(){
+  setSettingsOpen(!$('settingsBox').classList.contains('open'));
 }
 
 function moveItem(id, quad){ moveItems([id], quad); }
@@ -2325,22 +2368,30 @@ async function importOpenTasks(){
     const r = await fetch('/api/tasks');
     const j = await r.json();
     const list = Array.isArray(j) ? j : (j.tasks||[]);
-    let n=0;
+    const newIds = [];
     list.forEach(t => {
       const st = String(t.status||t.state||'').toLowerCase();
       if (st.includes('done')||st.includes('closed')||st.includes('مكتمل')) return;
       const title = t.title||t.subject||t.id;
       if (!title) return;
       if (items.some(i => (t.id && i.taskId===t.id) || i.title===String(title))) return;
+      const id = uid();
       items.unshift({
-        id: uid(), taskId: t.id||'', title: String(title), source:'task',
+        id, taskId: t.id||'', title: String(title), source:'task',
         quad:'inbox', done:false, note: String(t.boxNote||t.notes||''),
         createdAt: new Date().toISOString(), updatedAt: new Date().toISOString()
       });
-      n++;
+      newIds.push(id);
     });
-    if (n){ markDirty(); fillChoiceLists(); render(); }
-    alert(n ? ('اتضاف '+n+' تاسك للوارد') : 'مفيش جديد (أو موجود/في التراش)');
+    const n = newIds.length;
+    if (n){
+      /* Pull/sync must surface NEW tasks only — not the entire inbox. */
+      onlyNewIds = new Set(newIds);
+      markDirty(); fillChoiceLists(); render();
+    }
+    alert(n
+      ? ('اتضاف '+n+' تاسك جديد · العرض: جديد فقط (مش كل الوارد)')
+      : 'مفيش جديد (أو موجود/في التراش)');
   } catch(e){ alert('فشل السحب: '+e.message); }
 }
 
@@ -2356,6 +2407,7 @@ $('btnAdd').onclick = addNew;
 $('newTitle').addEventListener('keydown', e => { if (e.key==='Enter') addNew(); });
 $('btnSave').onclick = save;
 $('btnImport').onclick = importOpenTasks;
+$('btnToggleSettings').onclick = toggleSettings;
 $('noteCancel').onclick = closeNote;
 $('noteClear').onclick = clearNote;
 $('noteSave').onclick = saveNote;
