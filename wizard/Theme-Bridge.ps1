@@ -142,11 +142,20 @@ function Repair-ThemeDocument {
   if (-not $Theme.meta.name) { $Theme.meta | Add-Member -NotePropertyName name -NotePropertyValue $id -Force }
   if (-not $Theme.meta.version) { $Theme.meta | Add-Member -NotePropertyName version -NotePropertyValue '1.0.0' -Force }
   if (-not $Theme.meta.mode) { $Theme.meta | Add-Member -NotePropertyName mode -NotePropertyValue 'custom' -Force }
+  if (-not $Theme.meta.PSObject.Properties['studio']) {
+    $Theme.meta | Add-Member -NotePropertyName studio -NotePropertyValue 'theme-studio' -Force
+  }
   if (-not $Theme.color) { $Theme | Add-Member -NotePropertyName color -NotePropertyValue ([pscustomobject]@{}) -Force }
   if (-not $Theme.typography) { $Theme | Add-Member -NotePropertyName typography -NotePropertyValue ([pscustomobject]@{}) -Force }
   if (-not $Theme.shape) { $Theme | Add-Member -NotePropertyName shape -NotePropertyValue ([pscustomobject]@{}) -Force }
+  if (-not $Theme.spacing) { $Theme | Add-Member -NotePropertyName spacing -NotePropertyValue ([pscustomobject]@{}) -Force }
+  if (-not $Theme.layout) { $Theme | Add-Member -NotePropertyName layout -NotePropertyValue ([pscustomobject]@{}) -Force }
   if (-not $Theme.elevation) { $Theme | Add-Member -NotePropertyName elevation -NotePropertyValue ([pscustomobject]@{}) -Force }
   if (-not $Theme.motion) { $Theme | Add-Member -NotePropertyName motion -NotePropertyValue ([pscustomobject]@{}) -Force }
+  if (-not $Theme.hud) { $Theme | Add-Member -NotePropertyName hud -NotePropertyValue ([pscustomobject]@{}) -Force }
+  if (-not $Theme.iconography) { $Theme | Add-Member -NotePropertyName iconography -NotePropertyValue ([pscustomobject]@{}) -Force }
+  if (-not $Theme.components) { $Theme | Add-Member -NotePropertyName components -NotePropertyValue ([pscustomobject]@{}) -Force }
+  if (-not $Theme.chrome) { $Theme | Add-Member -NotePropertyName chrome -NotePropertyValue ([pscustomobject]@{}) -Force }
   if (-not $Theme.cssVariables) {
     $Theme | Add-Member -NotePropertyName cssVariables -NotePropertyValue (New-ThemeCssVariablesFromParts -Theme $Theme) -Force
   }
@@ -242,6 +251,63 @@ function New-ThemeCssVariablesFromParts {
     Set-ThemeTok $map '--aq-motion-fast' $m.fast
     Set-ThemeTok $map '--aq-motion-normal' $m.normal
     Set-ThemeTok $map '--aq-motion-slow' $m.slow
+    Set-ThemeTok $map '--aq-easing' $m.easing
+    Set-ThemeTok $map '--aq-hover-lift' $m.hoverLift
+  }
+  $sp = $Theme.spacing
+  if ($sp) {
+    Set-ThemeTok $map '--aq-space-unit' $sp.unit
+    if ($sp.scale) {
+      foreach ($prop in $sp.scale.PSObject.Properties) {
+        Set-ThemeTok $map ('--aq-space-' + $prop.Name) $prop.Value
+      }
+    }
+  }
+  $lay = $Theme.layout
+  if ($lay) {
+    Set-ThemeTok $map '--aq-density' $lay.density
+    $mult = switch ([string]$lay.density) {
+      'compact' { '0.85' }
+      'spacious' { '1.2' }
+      default { '1' }
+    }
+    Set-ThemeTok $map '--aq-density-mult' $mult
+    Set-ThemeTok $map '--aq-shell-max' $lay.shellMaxWidth
+    Set-ThemeTok $map '--aq-shell-pad' $lay.shellPadding
+    Set-ThemeTok $map '--aq-section-gap' $lay.sectionGap
+    Set-ThemeTok $map '--aq-card-pad' $lay.cardPadding
+    Set-ThemeTok $map '--aq-grid-gap' $lay.gridGap
+    Set-ThemeTok $map '--aq-sidebar-width' $lay.sidebarWidth
+  }
+  $hud = $Theme.hud
+  if ($hud) {
+    Set-ThemeTok $map '--aq-hud-glow-strength' $hud.glowStrength
+    Set-ThemeTok $map '--aq-hud-glow-spread' $hud.glowSpread
+    Set-ThemeTok $map '--aq-hud-scanline' $hud.scanlineOpacity
+    Set-ThemeTok $map '--aq-hud-grid' $hud.gridOpacity
+  }
+  $ico = $Theme.iconography
+  if ($ico) {
+    Set-ThemeTok $map '--aq-icon-stroke' $ico.strokeWidth
+    Set-ThemeTok $map '--aq-icon-sm' $ico.sizeSm
+    Set-ThemeTok $map '--aq-icon-md' $ico.sizeMd
+    Set-ThemeTok $map '--aq-icon-lg' $ico.sizeLg
+  }
+  $comps = $Theme.components
+  if ($comps) {
+    foreach ($cprop in $comps.PSObject.Properties) {
+      $recipe = $cprop.Value
+      if (-not $recipe) { continue }
+      foreach ($rprop in $recipe.PSObject.Properties) {
+        $slug = ([regex]::Replace([string]$rprop.Name, '([A-Z])', '-$1')).ToLowerInvariant().TrimStart('-')
+        Set-ThemeTok $map ('--aq-comp-' + $cprop.Name + '-' + $slug) $rprop.Value
+      }
+    }
+  }
+  if ($s -and $s.radiusPill) { Set-ThemeTok $map '--aq-radius-pill' $s.radiusPill }
+  if ($t) {
+    Set-ThemeTok $map '--aq-lh' $t.lineHeight
+    Set-ThemeTok $map '--aq-tracking' $t.letterSpacing
   }
   return $map
 }
@@ -439,6 +505,29 @@ function Invoke-ThemeBridge {
     }
     $theme = $incoming
     if ($incoming.PSObject.Properties['theme'] -and $incoming.theme) { $theme = $incoming.theme }
+    # Merge optional AI layoutPatch into chrome/layout (UI Kit structural skin)
+    if ($incoming.PSObject.Properties['layoutPatch'] -and $incoming.layoutPatch) {
+      $patch = $incoming.layoutPatch
+      if (-not $theme.chrome) { $theme | Add-Member -NotePropertyName chrome -NotePropertyValue ([pscustomobject]@{}) -Force }
+      if (-not $theme.layout) { $theme | Add-Member -NotePropertyName layout -NotePropertyValue ([pscustomobject]@{}) -Force }
+      foreach ($key in @('shellPreset','nav','cardDensity','buttonHierarchy','overlay','bottomBar','grid','cssModules','applyScript')) {
+        if ($patch.PSObject.Properties[$key]) {
+          $theme.chrome | Add-Member -NotePropertyName $key -NotePropertyValue $patch.$key -Force
+        }
+      }
+      if ($patch.PSObject.Properties['htmlClassMap']) {
+        $theme.chrome | Add-Member -NotePropertyName classMap -NotePropertyValue $patch.htmlClassMap -Force
+      } elseif ($patch.PSObject.Properties['classMap']) {
+        $theme.chrome | Add-Member -NotePropertyName classMap -NotePropertyValue $patch.classMap -Force
+      }
+      if ($theme.chrome.PSObject.Properties['shellPreset']) {
+        $theme.layout | Add-Member -NotePropertyName shellPreset -NotePropertyValue $theme.chrome.shellPreset -Force
+      }
+      if ($theme.chrome.PSObject.Properties['nav']) {
+        $theme.layout | Add-Member -NotePropertyName navPosition -NotePropertyValue $theme.chrome.nav -Force
+      }
+      $theme | Add-Member -NotePropertyName layoutPatch -NotePropertyValue $patch -Force
+    }
     try {
       $saved = Save-ThemeDocument -DataDir $DataDir -Theme $theme -AsCustom
     } catch {

@@ -1,0 +1,192 @@
+/**
+ * UI Kit preset: neon-glass-rail
+ * Dark glassmorphic analytics — left icon rail, hero + mosaic cards, neon accents.
+ */
+html[data-aq-shell="neon-glass-rail"] {
+  --aq-layout-preset: neon-glass-rail;
+  --aq-sidebar-width: 72px;
+}
+
+html[data-aq-shell="neon-glass-rail"] body {
+  background:
+    radial-gradient(800px 500px at 20% 0%, color-mix(in srgb, var(--aq-accent, #ccff00) 12%, transparent), transparent 50%),
+    radial-gradient(700px 480px at 100% 40%, color-mix(in srgb, var(--aq-accent-2, #fb923c) 14%, transparent), transparent 55%),
+    linear-gradient(160deg, #07070a, #12131a 55%, #0a0a0f) !important;
+}
+
+html[data-aq-shell="neon-glass-rail"] .shell {
+  display: grid !important;
+  grid-template-columns: var(--aq-sidebar-width, 72px) minmax(0, 1fr) !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  gap: 0 !important;
+  min-height: 100vh;
+}
+
+html[data-aq-shell="neon-glass-rail"] .shell > .top,
+html[data-aq-shell="neon-glass-rail"] .shell > [data-aq-chrome="nav"] {
+  grid-column: 1;
+  grid-row: 1 / span 40;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 18px !important;
+  min-height: 100vh;
+  margin: 0 !important;
+  padding: 18px 10px !important;
+  border: 0 !important;
+  border-inline-end: 1px solid color-mix(in srgb, #fff 12%, transparent) !important;
+  border-radius: 0 !important;
+  background: color-mix(in srgb, #0c0d12 72%, transparent) !important;
+  backdrop-filter: blur(18px);
+  position: sticky;
+  top: 0;
+  z-index: 8;
+}
+
+html[data-aq-shell="neon-glass-rail"] .shell > .top .brand {
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 8px;
+}
+
+html[data-aq-shell="neon-glass-rail"] .shell > .top .brand > div:last-child,
+html[data-aq-shell="neon-glass-rail"] .shell > .top .brand p,
+html[data-aq-shell="neon-glass-rail"] .shell > .top .brand h1 {
+  display: none;
+}
+
+html[data-aq-shell="neon-glass-rail"] .shell > .top .logo {
+  width: 40px;
+  height: 40px;
+  border-radius: 50% !important;
+  box-shadow: 0 0 18px color-mix(in srgb, var(--aq-accent, #ccff00) 45%, transparent);
+}
+
+html[data-aq-shell="neon-glass-rail"] [data-aq-chrome="actions"],
+html[data-aq-shell="neon-glass-rail"] .top-actions {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  width: 100%;
+  margin-top: auto;
+  gap: 8px !important;
+}
+
+html[data-aq-shell="neon-glass-rail"] [data-aq-chrome="actions"] .btn,
+html[data-aq-shell="neon-glass-rail"] .top-actions .btn {
+  width: 44px;
+  height: 44px;
+  margin-inline: auto;
+  padding: 0 !important;
+  border-radius: 50% !important;
+  font-size: 0;
+  line-height: 0;
+  position: relative;
+  background: color-mix(in srgb, #fff 6%, transparent) !important;
+  border: 1px solid color-mix(in srgb, #fff 14%, transparent) !important;
+  color: transparent !important;
+}
+
+html[data-aq-shell="neon-glass-rail"] [data-aq-chrome="actions"] .btn::before,
+html[data-aq-shell="neon-glass-rail"] .top-actions .btn::before {
+  content: "";
+  position: absolute;
+  inset: 14px;
+  border-radius: 3px;
+  border: 2px solid var(--aq-text, #fff);
+  opacity: 0.85;
+}
+
+html[data-aq-shell="neon-glass-rail"] [data-aq-chrome="actions"] .btn.primary::before,
+html[data-aq-shell="neon-glass-rail"] .top-actions .btn.primary::before {
+  border-color: var(--aq-accent, #ccff00);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--aq-accent, #ccff00) 55%, transparent);
+}
+
+html[data-aq-shell="neon-glass-rail"] .shell > *:not(.top):not([data-aq-chrome="nav"]) {
+  grid-column: 2;
+  padding-inline: clamp(16px, 2.4vw, 28px);
+}
+
+html[data-aq-shell="neon-glass-rail"] .shell > .top + * {
+  padding-top: 22px;
+}
+
+html[data-aq-shell="neon-glass-rail"] .hero {
+  display: grid !important;
+  grid-template-columns: 1.45fr 0.85fr !important;
+  gap: 14px !important;
+}
+
+html[data-aq-shell="neon-glass-rail"] .hero-main {
+  min-height: 240px;
+  border-radius: 28px !important;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--aq-accent, #ccff00) 18%, transparent), transparent 55%),
+    color-mix(in srgb, var(--aq-surface, #16171f) 80%, transparent) !important;
+  border: 1px solid color-mix(in srgb, #fff 12%, transparent) !important;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(18px);
+}
+
+html[data-aq-shell="neon-glass-rail"] .hero-side {
+  display: grid !important;
+  grid-template-rows: 1fr 1fr;
+  gap: 12px;
+}
+
+html[data-aq-shell="neon-glass-rail"] .hero-side .stat:nth-child(n+3) {
+  display: none;
+}
+
+html[data-aq-shell="neon-glass-rail"] .glass,
+html[data-aq-shell="neon-glass-rail"] .card {
+  background: color-mix(in srgb, var(--aq-surface, #16171f) 78%, transparent) !important;
+  border: 1px solid color-mix(in srgb, #fff 12%, transparent) !important;
+  border-radius: 24px !important;
+  backdrop-filter: blur(16px);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
+}
+
+html[data-aq-shell="neon-glass-rail"] .grid {
+  grid-template-columns: repeat(3, 1fr) !important;
+  gap: 14px !important;
+}
+
+html[data-aq-shell="neon-glass-rail"] .btn.primary {
+  background: #fff !important;
+  color: #0a0a0f !important;
+  border-radius: 999px !important;
+  border: 0 !important;
+  box-shadow: 0 0 24px color-mix(in srgb, var(--aq-accent, #ccff00) 35%, transparent);
+}
+
+html[data-aq-shell="neon-glass-rail"] .aq-chrome-dock { display: none !important; }
+
+@media (max-width: 840px) {
+  html[data-aq-shell="neon-glass-rail"] .shell {
+    display: flex !important;
+    flex-direction: column !important;
+  }
+  html[data-aq-shell="neon-glass-rail"] .shell > .top {
+    min-height: 0 !important;
+    flex-direction: row !important;
+    width: 100%;
+    border-inline-end: 0 !important;
+    border-bottom: 1px solid color-mix(in srgb, #fff 12%, transparent) !important;
+  }
+  html[data-aq-shell="neon-glass-rail"] [data-aq-chrome="actions"],
+  html[data-aq-shell="neon-glass-rail"] .top-actions {
+    flex-direction: row !important;
+    margin-top: 0;
+    width: auto;
+  }
+  html[data-aq-shell="neon-glass-rail"] .hero,
+  html[data-aq-shell="neon-glass-rail"] .grid {
+    grid-template-columns: 1fr !important;
+  }
+}

@@ -69,6 +69,8 @@ body{color:var(--text);font-family:"IBM Plex Sans Arabic",system-ui,sans-serif;b
 .card:hover{border-color:rgba(34,211,238,.35)}
 .card.dragging{opacity:.35}
 .card .title{font-size:.8rem;font-weight:650;line-height:1.25;margin:0 0 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* Soft-UI-only card chrome — hidden unless soft-ui-interactive shell is active */
+.card .prog,.card .soft-foot{display:none}
 .meta{display:flex;flex-wrap:wrap;gap:4px;align-items:center}
 .tag{font-size:.62rem;padding:1px 6px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
 .tag.src{color:#a5f3fc}.tag.bot{color:#fde68a;border-color:rgba(251,191,36,.35)}
@@ -147,11 +149,12 @@ body{color:var(--text);font-family:"IBM Plex Sans Arabic",system-ui,sans-serif;b
 .bgchip.show{display:inline-flex}
 .bgchip .dot{width:8px;height:8px;border-radius:50%;background:#fbbf24;box-shadow:0 0 8px #fbbf24;animation:pulse 1.2s ease infinite}
 </style>
+<link rel="stylesheet" href="./theme-studio/aq-theme-layouts.css" />
 <script src="./theme.js"></script>
 </head>
 <body>
 <div class="app">
-  <header class="top">
+  <header class="top" data-aq-chrome="nav">
     <div class="brand"><div class="logo"></div><div><h1>AQAAR Command</h1><p>كروت خفيفة · أوامر بوت · إيميل مباشر</p></div></div>
     <div class="views" id="viewSwitch">
       <button class="chipbtn on" type="button" data-view="kanban">كانبان</button>
@@ -169,11 +172,11 @@ body{color:var(--text);font-family:"IBM Plex Sans Arabic",system-ui,sans-serif;b
       <button class="chipbtn" type="button" data-filter="rejected">مرفوض <b id="statRejected">0</b></button>
       <button class="chipbtn" type="button" data-filter="needs_reply">يحتاج رد <b id="statNeedsReply">0</b></button>
     </div>
-    <div class="actions">
+    <div class="actions" data-aq-chrome="actions">
       <button class="btn icon" id="btnNotif" type="button">🔔<span class="badge" id="notifBadge" hidden>0</span></button>
       <button class="btn" id="btnSync" type="button">مزامنة إيميل</button>
       <a class="btn ghost" href="./index.html">Control</a>
-      <a class="btn ghost" href="./themes.html">ثيم</a>
+      <a class="btn ghost" href="./themes.html">Theme Studio</a>
       <button class="btn" id="btnReload" type="button">تحديث</button>
       <button class="btn primary" id="btnAdd" type="button">جديد</button>
       <button class="btn" id="btnSave" type="button" disabled>حفظ</button>
@@ -334,7 +337,7 @@ function renderNotifs(){ const b=$('notifBadge'); if(unread>0){b.hidden=false;b.
   list.innerHTML=notifications.map(n=>'<div class="note"><div class="t">'+esc(n.title)+'</div><div class="d">'+esc(n.detail||'')+'</div></div>').join('') }
 function normalize(t){
   const status=['backlog','todo','doing','blocked','done'].includes(t.status)?t.status:(t.status==='in_progress'?'doing':'todo');
-  return {id:t.id,title:t.title||'',status,priority:t.priority||'medium',source:t.source||'manual',sourceRef:t.sourceRef||t.source_ref||'',entryId:t.entryId||t.entryID||'',tags:t.tags||[],notes:t.notes||'',boxNote:t.boxNote||'',botAction:t.botAction||'none',botInstruction:t.botInstruction||'',comments:Array.isArray(t.comments)?t.comments:[],suggestedReply:t.suggestedReply||'',due:t.due||null,assignee:t.assignee||'',checklist:Array.isArray(t.checklist)?t.checklist:[],progress:typeof t.progress==='number'?t.progress:0,createdAt:t.createdAt||null,updatedAt:t.updatedAt||null,createdBy:t.createdBy||'',fromEmail:t.fromEmail||'',crmUrl:t.crmUrl||'',sourceUrl:t.sourceUrl||'',chat:Array.isArray(t.chat)?t.chat:[],timeline:Array.isArray(t.timeline)?t.timeline:[],pendingSend:t.pendingSend||null,pendingTrash:!!t.pendingTrash,mailClass:t.mailClass||null};
+  return {id:t.id,title:t.title||'',status,priority:t.priority||'medium',source:t.source||'manual',sourceRef:t.sourceRef||t.source_ref||'',entryId:t.entryId||t.entryID||'',tags:t.tags||[],notes:t.notes||'',boxNote:t.boxNote||'',botAction:t.botAction||'none',botInstruction:t.botInstruction||'',comments:Array.isArray(t.comments)?t.comments:[],suggestedReply:t.suggestedReply||'',due:t.due||null,assignee:t.assignee||'',checklist:Array.isArray(t.checklist)?t.checklist:[],progress:(()=>{ if(t.progress==null||t.progress==='') return null; const n=Number(t.progress); return Number.isFinite(n)?n:null; })(),createdAt:t.createdAt||null,updatedAt:t.updatedAt||null,createdBy:t.createdBy||'',fromEmail:t.fromEmail||'',crmUrl:t.crmUrl||'',sourceUrl:t.sourceUrl||'',chat:Array.isArray(t.chat)?t.chat:[],timeline:Array.isArray(t.timeline)?t.timeline:[],pendingSend:t.pendingSend||null,pendingTrash:!!t.pendingTrash,mailClass:t.mailClass||null};
 }
 async function api(path,opts){const r=await fetch(path,opts); if(!r.ok) throw new Error(await r.text()||('HTTP '+r.status)); return r}
 async function reload(silent){
@@ -537,13 +540,22 @@ function cyclePriority(id,e){e.stopPropagation(); const t=state.tasks.find(x=>x.
 async function openSource(id,e){ if(e) e.stopPropagation(); const t=state.tasks.find(x=>x.id===id); if(!t) return;
   try{ const r=await api('/api/open',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:'email',entryId:t.entryId||'',query:t.sourceRef||t.title})}); const j=await r.json(); if(j.ok){notify('done','اتفتح المصدر',''); if(j.entryId&&!t.entryId){t.entryId=j.entryId;markDirty(true)}} else notify('hot','ما اتفتحش',j.error||'')}catch(err){notify('hot','فشل',err.message||err)} }
 function moveTask(id,status){ const t=state.tasks.find(x=>x.id===id); if(!t||t.status===status) return; const prev=t.status; t.status=status; if(status==='done') t.progress=100; t.updatedAt=nowIso(); markDirty(true); render(); notify(status==='done'?'done':'move',status==='done'?'خلصت ✅':prev+' → '+status,t.title) }
+function cardProgressPct(t){
+  const raw=t.progress;
+  const n=Number(raw);
+  if(raw!=null&&raw!==''&&Number.isFinite(n)) return Math.max(0,Math.min(100,n));
+  return t.status==='done'?100:t.status==='doing'?55:18;
+}
 function cardHTML(t){
   const bot=t.botAction&&t.botAction!=='none'?`<span class="tag bot">${esc(t.botAction)}</span>`:'';
   const canOpen=t.source==='email'||t.entryId||t.sourceRef;
-  return `<div class="title" data-room="1" title="${esc(t.title)}">${esc(t.title)}</div>
+  const pct=cardProgressPct(t);
+  return `<div class="meta"><span class="tag cat src">${esc(t.source||'task')}</span>${bot}</div>
+    <div class="title" data-room="1" title="${esc(t.title)}">${esc(t.title)}</div>
+    <div class="prog" aria-label="progress ${pct}%"><i style="--p:${pct}%"></i><b>${pct}%</b></div>
+    <div class="soft-foot"><span class="avatars" aria-hidden="true"><span></span><span></span></span><span>att ${(t.attachments&&t.attachments.length)||0} · msg ${(t.comments&&t.comments.length)||0}</span></div>
     <div class="meta">
       <button class="prio" type="button" data-p="${esc(t.priority)}"><span class="pip"></span><span class="pip"></span><span class="pip"></span></button>
-      <span class="tag src">${esc(t.source)}</span>${bot}
     </div>
     <div class="row"><button class="mini" data-room="1">غرفة</button><button class="mini" data-open="1" ${canOpen?'':'disabled'}>مصدر</button><button class="mini ghost" data-edit="1">نوت/أمر</button></div>`;
 }

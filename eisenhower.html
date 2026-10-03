@@ -279,6 +279,7 @@ body.view-mode .pa-tabs,body.view-mode .hint-edit{display:none !important}
   .col-gutter{display:none}
 }
 </style>
+<link rel="stylesheet" href="./theme-studio/aq-theme-layouts.css" />
 <script src="./theme.js"></script>
 </head>
 <body class="view-mode">
@@ -318,13 +319,13 @@ body.view-mode .pa-tabs,body.view-mode .hint-edit{display:none !important}
     <button class="btn small pa-vis" type="button" data-toggle-mod="doing">تنفيذ</button>
     <button class="btn small pa-vis" type="button" data-toggle-mod="trash">تراش</button>
   </div>
-  <div class="top">
+  <div class="top" data-aq-chrome="nav">
     <div>
       <h1>صندوق أيزنهاور لإدارة المهام</h1>
       <p class="muted">عرض كلاسيكي للعمل اليومي · سحب التاسكات يفلتر الجديد فقط · الإعدادات والفلاتر داخل الصندوق أدناه</p>
       <div class="row" style="margin-top:8px"><span class="badge wait" id="badge">…</span><span id="status">—</span><span class="sel-hint" id="selHint"></span></div>
     </div>
-    <div class="row top-actions">
+    <div class="row top-actions" data-aq-chrome="actions">
       <button class="btn primary" type="button" id="btnImport">سحب تاسكات مفتوحة</button>
       <button class="btn" type="button" id="btnSave">حفظ التاسكات</button>
       <a class="btn ghost" href="./index.html">← التحكم</a>

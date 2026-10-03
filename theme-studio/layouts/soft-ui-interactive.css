@@ -1,0 +1,765 @@
+/**
+ * UI Kit preset: soft-ui-interactive
+ * Soft UI dashboard shell (icon rail + project sidebar + floating cards)
+ * + interactive Kanban motion (drag lift / dashed ghost).
+ */
+html[data-aq-shell="soft-ui-interactive"] {
+  --aq-layout-preset: soft-ui-interactive;
+  --aq-soft-rail-w: 68px;
+  --aq-soft-aside-w: 268px;
+  --aq-soft-analytics-w: 248px;
+  --aq-soft-shadow: 0 18px 48px rgba(15, 23, 42, 0.08);
+  --aq-soft-shadow-lg: 0 28px 64px rgba(15, 23, 42, 0.12);
+  --aq-sidebar-width: calc(var(--aq-soft-rail-w) + var(--aq-soft-aside-w));
+}
+
+html[data-aq-shell="soft-ui-interactive"] body {
+  background:
+    radial-gradient(900px 520px at 12% -8%, color-mix(in srgb, var(--aq-accent, #3b82f6) 14%, transparent), transparent 55%),
+    radial-gradient(720px 480px at 96% 8%, color-mix(in srgb, var(--aq-accent-3, #a78bfa) 12%, transparent), transparent 50%),
+    linear-gradient(180deg, var(--aq-bg, #f3f5f9), var(--aq-bg-secondary, #eef1f6)) !important;
+  color: var(--aq-text, #1f2937);
+}
+
+/* ===== Shell grid: rail | aside | main [| analytics] ===== */
+html[data-aq-shell="soft-ui-interactive"] .shell,
+html[data-aq-shell="soft-ui-interactive"] .app,
+html[data-aq-shell="soft-ui-interactive"] .aqts-shell {
+  display: grid !important;
+  grid-template-columns: var(--aq-soft-rail-w) var(--aq-soft-aside-w) minmax(0, 1fr) !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  gap: 0 !important;
+  min-height: 100vh;
+  align-items: stretch;
+}
+
+html[data-aq-shell="soft-ui-interactive"][data-aq-soft-analytics="1"] .shell,
+html[data-aq-shell="soft-ui-interactive"][data-aq-soft-analytics="1"] .app,
+html[data-aq-shell="soft-ui-interactive"][data-aq-soft-analytics="1"] .aqts-shell {
+  grid-template-columns: var(--aq-soft-rail-w) var(--aq-soft-aside-w) minmax(0, 1fr) var(--aq-soft-analytics-w) !important;
+}
+
+html[data-aq-shell="soft-ui-interactive"] #aq-soft-rail {
+  grid-column: 1;
+  grid-row: 1 / span 80;
+  position: sticky;
+  top: 0;
+  align-self: stretch;
+  min-height: 100vh;
+  z-index: 12;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 10px;
+  background: #fff;
+  border-inline-end: 1px solid color-mix(in srgb, var(--aq-border, #e5ebf3) 90%, transparent);
+  box-shadow: 4px 0 24px rgba(15, 23, 42, 0.03);
+}
+
+html[data-aq-shell="soft-ui-interactive"] #aq-soft-aside {
+  grid-column: 2;
+  grid-row: 1 / span 80;
+  position: sticky;
+  top: 0;
+  align-self: stretch;
+  min-height: 100vh;
+  z-index: 11;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px 16px;
+  background: color-mix(in srgb, #fff 92%, var(--aq-bg, #f3f5f9));
+  border-inline-end: 1px solid color-mix(in srgb, var(--aq-border, #e5ebf3) 85%, transparent);
+  overflow: auto;
+}
+
+html[data-aq-shell="soft-ui-interactive"] #aq-soft-analytics {
+  grid-column: 4;
+  grid-row: 1 / span 80;
+  position: sticky;
+  top: 0;
+  align-self: stretch;
+  min-height: 100vh;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 14px;
+  background: color-mix(in srgb, #fff 88%, var(--aq-bg, #f3f5f9));
+  border-inline-start: 1px solid color-mix(in srgb, var(--aq-border, #e5ebf3) 85%, transparent);
+  overflow: auto;
+}
+
+html[data-aq-shell="soft-ui-interactive"] .shell > *:not(#aq-soft-rail):not(#aq-soft-aside):not(#aq-soft-analytics),
+html[data-aq-shell="soft-ui-interactive"] .app > *:not(#aq-soft-rail):not(#aq-soft-aside):not(#aq-soft-analytics),
+html[data-aq-shell="soft-ui-interactive"] .aqts-shell > *:not(#aq-soft-rail):not(#aq-soft-aside):not(#aq-soft-analytics) {
+  grid-column: 3;
+  padding-inline: clamp(14px, 2vw, 26px);
+}
+
+html[data-aq-shell="soft-ui-interactive"] .shell > .top + *,
+html[data-aq-shell="soft-ui-interactive"] .app > .top + *,
+html[data-aq-shell="soft-ui-interactive"] .aqts-shell > .aqts-top + * {
+  padding-top: 10px;
+}
+
+/* Collapse original top into a soft pill header inside main column */
+html[data-aq-shell="soft-ui-interactive"] .shell > .top,
+html[data-aq-shell="soft-ui-interactive"] .shell > [data-aq-chrome="nav"],
+html[data-aq-shell="soft-ui-interactive"] .app > .top,
+html[data-aq-shell="soft-ui-interactive"] .app > header.top,
+html[data-aq-shell="soft-ui-interactive"] .aqts-shell > .aqts-top {
+  grid-column: 3 !important;
+  grid-row: auto !important;
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 10px !important;
+  margin: 14px 0 8px !important;
+  padding: 10px 14px !important;
+  min-height: 0 !important;
+  border-radius: 999px !important;
+  border: 1px solid color-mix(in srgb, var(--aq-border, #e5ebf3) 85%, transparent) !important;
+  background: color-mix(in srgb, #fff 90%, transparent) !important;
+  box-shadow: var(--aq-soft-shadow);
+  backdrop-filter: blur(12px);
+  position: sticky;
+  top: 10px;
+  z-index: 9;
+}
+
+html[data-aq-shell="soft-ui-interactive"] .shell > .top .brand p,
+html[data-aq-shell="soft-ui-interactive"] .app > .top .brand p,
+html[data-aq-shell="soft-ui-interactive"] .aqts-top p {
+  display: none;
+}
+
+html[data-aq-shell="soft-ui-interactive"] .shell > .top h1,
+html[data-aq-shell="soft-ui-interactive"] .app > .top h1,
+html[data-aq-shell="soft-ui-interactive"] .aqts-top h1 {
+  font-size: 1.05rem !important;
+}
+
+/* Raised pill tabs (board views / filters) */
+html[data-aq-shell="soft-ui-interactive"] .views,
+html[data-aq-shell="soft-ui-interactive"] .filters,
+html[data-aq-shell="soft-ui-interactive"] .pa-tabs,
+html[data-aq-shell="soft-ui-interactive"] .chipbtn {
+  border-radius: 999px;
+}
+
+html[data-aq-shell="soft-ui-interactive"] .views,
+html[data-aq-shell="soft-ui-interactive"] .filters {
+  background: color-mix(in srgb, var(--aq-text, #1f2937) 5%, transparent) !important;
+  border: 0 !important;
+  padding: 4px !important;
+  gap: 4px !important;
+}
+
+html[data-aq-shell="soft-ui-interactive"] .chipbtn.on,
+html[data-aq-shell="soft-ui-interactive"] .pa-tabs .on,
+html[data-aq-shell="soft-ui-interactive"] .pa-tabs [aria-selected="true"] {
+  background: #fff !important;
+  color: var(--aq-text, #1f2937) !important;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.1);
+  border-radius: 999px !important;
+}
+
+/* Floating soft cards */
+html[data-aq-shell="soft-ui-interactive"] .glass,
+html[data-aq-shell="soft-ui-interactive"] .card,
+html[data-aq-shell="soft-ui-interactive"] .aqts-glass,
+html[data-aq-shell="soft-ui-interactive"] .col,
+html[data-aq-shell="soft-ui-interactive"] .mx,
+html[data-aq-shell="soft-ui-interactive"] .side,
+html[data-aq-shell="soft-ui-interactive"] .mod,
+html[data-aq-shell="soft-ui-interactive"] .lane,
+html[data-aq-shell="soft-ui-interactive"] .q {
+  background: var(--aq-surface-elevated, #fff) !important;
+  border: 1px solid color-mix(in srgb, var(--aq-border, #e8edf4) 90%, transparent) !important;
+  border-radius: 24px !important;
+  box-shadow: var(--aq-soft-shadow) !important;
+  backdrop-filter: none;
+  color: var(--aq-text, #1f2937);
+}
+
+html[data-aq-shell="soft-ui-interactive"] .hero-side .stat,
+html[data-aq-shell="soft-ui-interactive"] .stat {
+  border-radius: 22px !important;
+  background:
+    linear-gradient(160deg, color-mix(in srgb, var(--aq-accent, #3b82f6) 18%, #fff), #fff 55%) !important;
+  border: 1px solid color-mix(in srgb, var(--aq-border, #e8edf4) 80%, transparent) !important;
+  box-shadow: var(--aq-soft-shadow);
+}
+
+html[data-aq-shell="soft-ui-interactive"] .hero-side .stat:nth-child(2) {
+  background:
+    linear-gradient(160deg, color-mix(in srgb, var(--aq-warning, #f59e0b) 20%, #fff), #fff 55%) !important;
+}
+
+html[data-aq-shell="soft-ui-interactive"] .hero-side .stat:nth-child(3) {
+  background:
+    linear-gradient(160deg, color-mix(in srgb, var(--aq-success, #34d399) 22%, #fff), #fff 55%) !important;
+}
+
+html[data-aq-shell="soft-ui-interactive"] .grid {
+  gap: 16px !important;
+}
+
+html[data-aq-shell="soft-ui-interactive"] .btn {
+  border-radius: 999px !important;
+  border-color: color-mix(in srgb, var(--aq-border, #e5ebf3) 90%, transparent);
+  background: #fff;
+  color: var(--aq-text, #1f2937);
+}
+
+html[data-aq-shell="soft-ui-interactive"] .btn.primary {
+  background: linear-gradient(135deg, var(--aq-accent, #3b82f6), var(--aq-accent-2, #6366f1)) !important;
+  color: #fff !important;
+  border: 0 !important;
+  box-shadow: 0 10px 24px color-mix(in srgb, var(--aq-accent, #3b82f6) 35%, transparent);
+}
+
+html[data-aq-shell="soft-ui-interactive"] .aq-chrome-dock { display: none !important; }
+
+/* ===== Soft dual chrome pieces ===== */
+html[data-aq-shell="soft-ui-interactive"] .aq-soft-logo {
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  font-size: 0.85rem;
+  color: #fff;
+  background: linear-gradient(135deg, var(--aq-accent, #3b82f6), var(--aq-accent-3, #a78bfa));
+  box-shadow: 0 10px 22px color-mix(in srgb, var(--aq-accent, #3b82f6) 30%, transparent);
+  text-decoration: none;
+}
+
+html[data-aq-shell="soft-ui-interactive"] .aq-soft-rail-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  margin-top: 8px;
+}
+
+html[data-aq-shell="soft-ui-interactive"] .aq-soft-rail-nav a {
+  width: 44px;
+  height: 44px;
+  margin-inline: auto;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  color: var(--aq-text-muted, #6b7280);
+  text-decoration: none;
+  transition: background var(--aq-motion-fast, 120ms) var(--aq-easing, ease), color var(--aq-motion-fast, 120ms) ease, transform var(--aq-motion-fast, 120ms) ease;
+}
+
+html[data-aq-shell="soft-ui-interactive"] .aq-soft-rail-nav a:hover {
+  background: color-mix(in srgb, var(--aq-accent, #3b82f6) 12%, transparent);
+  color: var(--aq-accent, #3b82f6);
+}
+
+html[data-aq-shell="soft-ui-interactive"] .aq-soft-rail-nav a.on {
+  background: color-mix(in srgb, var(--aq-accent, #3b82f6) 16%, #fff);
+  color: var(--aq-accent, #3b82f6);
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--aq-accent, #3b82f6) 18%, transparent);
+}
+
+html[data-aq-shell="soft-ui-interactive"] .aq-soft-rail-nav svg {
+  width: 20px;
+  height: 20px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+html[data-aq-shell="soft-ui-interactive"] .aq-soft-rail-foot {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+html[data-aq-shell="soft-ui-interactive"] .aq-soft-profile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+html[data-aq-shell="soft-ui-interactive"] .aq-soft-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #93c5fd, #c4b5fd);
+  color: #1e3a8a;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  font-size: 0.85rem;
+  flex: 0 0 auto;
+}
+
+html[data-aq-shell="soft-ui-interactive"] .aq-soft-profile strong {
+  display: block;
+  font-size: 0.92rem;
+}
+
+html[data-aq-shell="soft-ui-interactive"] .aq-soft-profile span {
+  display: block;
+  color: var(--aq-text-muted, #6b7280);
+  font-size: 0.75rem;
+}
+
+html[data-aq-shell="soft-ui-interactive"] .aq-soft-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 999px;
+  background: #fff;
+  border: 1px solid var(--aq-border, #e5ebf3);
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04);
+  color: var(--aq-text-muted, #6b7280);
+  font-size: 0.82rem;
+}
+
+html[data-aq-shell="soft-ui-interactive"] .aq-soft-search input {
+  border: 0 !important;
+  background: transparent !important;
+  padding: 0 !important;
+  width: 100%;
+  color: var(--aq-text, #1f2937);
+  font: inherit;
+  outline: none;
+}
+
+html[data-aq-shell="soft-ui-interactive"] .aq-soft-nav-tree {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+html[data-aq-shell="soft-ui-interactive"] .aq-soft-nav-tree .lab {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--aq-text-faint, #9ca3af);
+  margin: 4px 2px 8px;
+  letter-spacing: 0.02em;
+}
+
+html[data-aq-shell="soft-ui-interactive"] .aq-soft-nav-tree a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  text-decoration: none;
+  color: var(--aq-text, #1f2937);
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: background 120ms ease, color 120ms ease, box-shadow 120ms ease;
+}
+
+html[data-aq-shell="soft-ui-interactive"] .aq-soft-nav-tree a:hover {
+  background: color-mix(in srgb, var(--aq-accent, #3b82f6) 8%, #fff);
+}
+
+html[data-aq-shell="soft-ui-interactive"] .aq-soft-nav-tree a.on {
+  background: color-mix(in srgb, var(--aq-accent, #3b82f6) 14%, #fff);
+  color: var(--aq-accent, #3b82f6);
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--aq-accent, #3b82f6) 12%, transparent);
+}
+
+html[data-aq-shell="soft-ui-interactive"] .aq-soft-nav-tree a i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.45;
+}
+
+html[data-aq-shell="soft-ui-interactive"] .aq-soft-members {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding-inline-start: 4px;
+}
+
+html[data-aq-shell="soft-ui-interactive"] .aq-soft-members span {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  margin-inline-start: -8px;
+  background: linear-gradient(135deg, #bfdbfe, #ddd6fe);
+  display: grid;
+  place-items: center;
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: #334155;
+}
+
+html[data-aq-shell="soft-ui-interactive"] .aq-soft-members span:first-child { margin-inline-start: 0; }
+html[data-aq-shell="soft-ui-interactive"] .aq-soft-members .more {
+  background: color-mix(in srgb, var(--aq-accent, #3b82f6) 16%, #fff);
+  color: var(--aq-accent, #3b82f6);
+}
+
+html[data-aq-shell="soft-ui-interactive"] .aq-soft-cta {
+  margin-top: auto;
+  padding: 16px;
+  border-radius: 22px;
+  border: 1px dashed color-mix(in srgb, var(--aq-accent, #3b82f6) 45%, #cbd5e1);
+  background:
+    linear-gradient(160deg, color-mix(in srgb, var(--aq-accent, #3b82f6) 10%, #fff), #fff 60%);
+  text-align: center;
+}
+
+html[data-aq-shell="soft-ui-interactive"] .aq-soft-cta .plus {
+  width: 42px;
+  height: 42px;
+  margin: 0 auto 8px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--aq-accent, #3b82f6);
+  color: #fff;
+  font-size: 1.4rem;
+  font-weight: 700;
+  box-shadow: 0 10px 22px color-mix(in srgb, var(--aq-accent, #3b82f6) 35%, transparent);
+  text-decoration: none;
+}
+
+html[data-aq-shell="soft-ui-interactive"] .aq-soft-cta p {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--aq-text-muted, #6b7280);
+}
+
+/* Analytics panel widgets */
+html[data-aq-shell="soft-ui-interactive"] .aq-soft-ring {
+  aspect-ratio: 1;
+  max-width: 180px;
+  margin: 8px auto;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background:
+    conic-gradient(var(--aq-accent-3, #8b5cf6) var(--aq-soft-ring-pct, 72%), color-mix(in srgb, #e5e7eb 80%, transparent) 0);
+  position: relative;
+}
+
+html[data-aq-shell="soft-ui-interactive"] .aq-soft-ring::before {
+  content: "";
+  position: absolute;
+  inset: 16px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: inset 0 0 0 1px var(--aq-border, #e5ebf3);
+}
+
+html[data-aq-shell="soft-ui-interactive"] .aq-soft-ring b {
+  position: relative;
+  z-index: 1;
+  font-size: 1.35rem;
+}
+
+html[data-aq-shell="soft-ui-interactive"] .aq-soft-ring small {
+  position: relative;
+  z-index: 1;
+  display: block;
+  color: var(--aq-text-muted, #6b7280);
+  font-size: 0.7rem;
+  text-align: center;
+}
+
+html[data-aq-shell="soft-ui-interactive"] .aq-soft-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+html[data-aq-shell="soft-ui-interactive"] .aq-soft-stats div {
+  padding: 10px 12px;
+  border-radius: 16px;
+  background: #fff;
+  border: 1px solid var(--aq-border, #e5ebf3);
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.04);
+}
+
+html[data-aq-shell="soft-ui-interactive"] .aq-soft-stats strong {
+  display: block;
+  font-size: 1.15rem;
+  line-height: 1.1;
+}
+
+html[data-aq-shell="soft-ui-interactive"] .aq-soft-stats span {
+  font-size: 0.7rem;
+  color: var(--aq-text-muted, #6b7280);
+}
+
+html[data-aq-shell="soft-ui-interactive"] .aq-soft-cal,
+html[data-aq-shell="soft-ui-interactive"] .aq-soft-msg {
+  padding: 14px;
+  border-radius: 18px;
+  color: #fff;
+  box-shadow: var(--aq-soft-shadow);
+}
+
+html[data-aq-shell="soft-ui-interactive"] .aq-soft-cal {
+  background: linear-gradient(135deg, #7c3aed, #6366f1);
+}
+
+html[data-aq-shell="soft-ui-interactive"] .aq-soft-msg {
+  background: linear-gradient(135deg, #2563eb, #38bdf8);
+}
+
+html[data-aq-shell="soft-ui-interactive"] .aq-soft-cal b,
+html[data-aq-shell="soft-ui-interactive"] .aq-soft-msg b {
+  display: block;
+  margin-bottom: 4px;
+}
+
+html[data-aq-shell="soft-ui-interactive"] .aq-soft-cal span,
+html[data-aq-shell="soft-ui-interactive"] .aq-soft-msg span {
+  font-size: 0.78rem;
+  opacity: 0.9;
+}
+
+/* ===== Board / inbox cards — Soft UI + Kanban motion ===== */
+html[data-aq-shell="soft-ui-interactive"] .kanban {
+  gap: 14px !important;
+}
+
+html[data-aq-shell="soft-ui-interactive"] .col {
+  background: color-mix(in srgb, #fff 70%, var(--aq-bg, #f3f5f9)) !important;
+  min-height: 420px;
+  padding: 10px !important;
+}
+
+html[data-aq-shell="soft-ui-interactive"] .col-h {
+  color: var(--aq-text-muted, #6b7280) !important;
+  border-bottom-color: color-mix(in srgb, var(--aq-border, #e5ebf3) 80%, transparent) !important;
+}
+
+html[data-aq-shell="soft-ui-interactive"] .card,
+html[data-aq-shell="soft-ui-interactive"] article.card {
+  background: #fff !important;
+  border-radius: 18px !important;
+  padding: 12px 12px 10px !important;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.07) !important;
+  cursor: grab;
+  transition:
+    transform var(--aq-motion-normal, 180ms) var(--aq-easing, cubic-bezier(0.2, 0.8, 0.2, 1)),
+    box-shadow var(--aq-motion-normal, 180ms) var(--aq-easing, cubic-bezier(0.2, 0.8, 0.2, 1)),
+    opacity var(--aq-motion-fast, 120ms) ease;
+}
+
+html[data-aq-shell="soft-ui-interactive"] .card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 18px 36px rgba(15, 23, 42, 0.12) !important;
+}
+
+html[data-aq-shell="soft-ui-interactive"] .card .tag,
+html[data-aq-shell="soft-ui-interactive"] .card .tag.src,
+html[data-aq-shell="soft-ui-interactive"] .card .tag.cat {
+  border-radius: 999px !important;
+  padding: 3px 9px !important;
+  font-weight: 700;
+  background: color-mix(in srgb, var(--aq-accent, #3b82f6) 12%, #fff);
+  color: var(--aq-accent, #3b82f6);
+  border-color: transparent !important;
+}
+
+html[data-aq-shell="soft-ui-interactive"] .card .tag.bot {
+  background: color-mix(in srgb, var(--aq-warning, #f59e0b) 16%, #fff);
+  color: #b45309;
+}
+
+html[data-aq-shell="soft-ui-interactive"] .card .prog {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0 4px;
+}
+
+html[data-aq-shell="soft-ui-interactive"] .card .prog i {
+  flex: 1;
+  height: 7px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--aq-accent-3, #8b5cf6) 16%, #e5e7eb);
+  position: relative;
+  overflow: hidden;
+  display: block;
+}
+
+html[data-aq-shell="soft-ui-interactive"] .card .prog i::after {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--p, 0%);
+  background: linear-gradient(90deg, var(--aq-accent-3, #8b5cf6), var(--aq-accent, #3b82f6));
+  border-radius: inherit;
+}
+
+html[data-aq-shell="soft-ui-interactive"] .card .prog b {
+  font-size: 0.68rem;
+  color: var(--aq-text-muted, #6b7280);
+  font-weight: 700;
+  min-width: 2.2em;
+}
+
+html[data-aq-shell="soft-ui-interactive"] .card .soft-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 8px;
+  color: var(--aq-text-faint, #9ca3af);
+  font-size: 0.68rem;
+}
+
+html[data-aq-shell="soft-ui-interactive"] .card .avatars {
+  display: inline-flex;
+  align-items: center;
+}
+
+html[data-aq-shell="soft-ui-interactive"] .card .avatars span {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  margin-inline-start: -6px;
+  background: linear-gradient(135deg, #93c5fd, #c4b5fd);
+}
+
+html[data-aq-shell="soft-ui-interactive"] .card .avatars span:first-child { margin-inline-start: 0; }
+
+/* Drag lift + dashed ghost */
+html[data-aq-shell="soft-ui-interactive"] .card.dragging,
+html[data-aq-shell="soft-ui-interactive"] .card.dragging-group,
+html[data-aq-shell="soft-ui-interactive"] .card.aq-drag-source {
+  opacity: 0 !important;
+  box-shadow: none !important;
+}
+
+html[data-aq-shell="soft-ui-interactive"] .aq-drag-ghost {
+  border: 2px dashed color-mix(in srgb, var(--aq-accent-3, #8b5cf6) 55%, #94a3b8);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--aq-accent-3, #8b5cf6) 6%, transparent);
+  min-height: 64px;
+  margin: 0;
+  pointer-events: none;
+}
+
+html[data-aq-shell="soft-ui-interactive"] .aq-drag-lift {
+  border-radius: 18px !important;
+  background: #fff !important;
+  box-shadow: 0 28px 60px rgba(15, 23, 42, 0.22) !important;
+  transform: rotate(4deg) scale(1.03);
+  border: 1px solid color-mix(in srgb, var(--aq-accent-3, #8b5cf6) 25%, #e5e7eb) !important;
+}
+
+html[data-aq-shell="soft-ui-interactive"] .col.over,
+html[data-aq-shell="soft-ui-interactive"] .lane.drag,
+html[data-aq-shell="soft-ui-interactive"] .q.drag {
+  outline: 2px solid color-mix(in srgb, var(--aq-accent, #3b82f6) 45%, transparent);
+  outline-offset: 2px;
+  background: color-mix(in srgb, var(--aq-accent, #3b82f6) 6%, #fff) !important;
+}
+
+html[data-aq-shell="soft-ui-interactive"] .empty {
+  border-style: dashed !important;
+  border-radius: 16px !important;
+  color: var(--aq-text-muted, #6b7280) !important;
+}
+
+/* Eisenhower inbox keeps accordion/filters; soft surfaces only */
+html[data-aq-shell="soft-ui-interactive"] .workspace,
+html[data-aq-shell="soft-ui-interactive"] .dash-pane,
+html[data-aq-shell="soft-ui-interactive"] .lay-bar {
+  color: var(--aq-text, #1f2937);
+}
+
+html[data-aq-shell="soft-ui-interactive"] .lay-bar {
+  border-radius: 18px;
+  background: color-mix(in srgb, #fff 80%, transparent);
+  border: 1px solid var(--aq-border, #e5ebf3);
+  padding: 8px 10px;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.05);
+}
+
+html[data-aq-shell="soft-ui-interactive"] .muted,
+html[data-aq-shell="soft-ui-interactive"] .hint,
+html[data-aq-shell="soft-ui-interactive"] .aqts-hint,
+html[data-aq-shell="soft-ui-interactive"] .aqts-lead {
+  color: var(--aq-text-muted, #6b7280) !important;
+}
+
+html[data-aq-shell="soft-ui-interactive"] .pa-app {
+  display: none;
+}
+
+@media (max-width: 1100px) {
+  html[data-aq-shell="soft-ui-interactive"][data-aq-soft-analytics="1"] .shell,
+  html[data-aq-shell="soft-ui-interactive"][data-aq-soft-analytics="1"] .app,
+  html[data-aq-shell="soft-ui-interactive"][data-aq-soft-analytics="1"] .aqts-shell {
+    grid-template-columns: var(--aq-soft-rail-w) var(--aq-soft-aside-w) minmax(0, 1fr) !important;
+  }
+  html[data-aq-shell="soft-ui-interactive"] #aq-soft-analytics {
+    display: none !important;
+  }
+}
+
+@media (max-width: 860px) {
+  html[data-aq-shell="soft-ui-interactive"] .shell,
+  html[data-aq-shell="soft-ui-interactive"] .app,
+  html[data-aq-shell="soft-ui-interactive"] .aqts-shell,
+  html[data-aq-shell="soft-ui-interactive"][data-aq-soft-analytics="1"] .shell,
+  html[data-aq-shell="soft-ui-interactive"][data-aq-soft-analytics="1"] .app,
+  html[data-aq-shell="soft-ui-interactive"][data-aq-soft-analytics="1"] .aqts-shell {
+    display: flex !important;
+    flex-direction: column !important;
+  }
+  html[data-aq-shell="soft-ui-interactive"] #aq-soft-rail {
+    min-height: 0 !important;
+    flex-direction: row !important;
+    width: 100%;
+    border-inline-end: 0 !important;
+    border-bottom: 1px solid var(--aq-border, #e5ebf3);
+    overflow-x: auto;
+  }
+  html[data-aq-shell="soft-ui-interactive"] .aq-soft-rail-nav {
+    flex-direction: row;
+    margin-top: 0;
+    width: auto;
+  }
+  html[data-aq-shell="soft-ui-interactive"] .aq-soft-rail-foot { display: none; }
+  html[data-aq-shell="soft-ui-interactive"] #aq-soft-aside {
+    min-height: 0 !important;
+    max-height: 42vh;
+    border-inline-end: 0 !important;
+    border-bottom: 1px solid var(--aq-border, #e5ebf3);
+  }
+  html[data-aq-shell="soft-ui-interactive"] .shell > *:not(#aq-soft-rail):not(#aq-soft-aside):not(#aq-soft-analytics),
+  html[data-aq-shell="soft-ui-interactive"] .app > *:not(#aq-soft-rail):not(#aq-soft-aside):not(#aq-soft-analytics),
+  html[data-aq-shell="soft-ui-interactive"] .aqts-shell > *:not(#aq-soft-rail):not(#aq-soft-aside):not(#aq-soft-analytics) {
+    padding-inline: 12px;
+  }
+  html[data-aq-shell="soft-ui-interactive"] .shell > .top,
+  html[data-aq-shell="soft-ui-interactive"] .app > .top,
+  html[data-aq-shell="soft-ui-interactive"] .aqts-shell > .aqts-top {
+    border-radius: 22px !important;
+  }
+}

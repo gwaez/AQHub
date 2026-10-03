@@ -32,14 +32,14 @@ AQHub يبقى محليًا: PowerShell `HttpListener` على `http://127.0.0.1:
 - **بريد P10:** فقاعة تنبيه لآخر مهمة مصدرها إيميل. القراءة عبر AQHub فقط. Outlook Read = Ask، Draft = Ask، Send = Never. المسودة `POST /api/task/chat` بالنص `draft` — **لا** `/api/task/approve-send`
 - **أول تشغيل P12:** فقاعة غير حاجبة لاسم العرض والحجم والزاوية وصلاحيات البريد — تُتخطى إذا كانت الإعدادات موجودة مسبقًا
 - **سجل:** `POST/GET /api/audit` بدون أسرار؛ آخر N سطور في الإعدادات
-- فتح AQHub: `http://127.0.0.1:8766/board.html`
+- فتح AQHub: `http://127.0.0.1:8766/` (Control Center / `index.html` — ليس board)
 - لا إرسال إيميل تلقائي (`APPROVE_SEND` مرفوض حتى بعد التأكيد)
 
 ## التشغيل على ويندوز بجانب AQHub
 
 دليل الجهاز النظيف: [`docs/WINDOWS-SETUP.md`](docs/WINDOWS-SETUP.md)
 
-1. شغّل اللوحة: `Setup-AQHub.ps1` أو `Start-Board-Background.bat` → `http://127.0.0.1:8766/board.html`
+1. شغّل AQHub: `Setup-AQHub.ps1` أو `Start-Board-Background.bat` → `http://127.0.0.1:8766/`
 2. **Node 20+** و **Rust stable ≥ 1.88** و **WebView2** و **VS 2022 Build Tools** (حمل عمل Desktop development with C++). المسار الشائع: `C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools`. السكربت لا يثبّت Build Tools تلقائيًا.
 3. من جذر AQHub:
 

@@ -22,7 +22,8 @@ fn open_url(app: &AppHandle, url: &str) -> Result<(), String> {
 
 #[tauri::command]
 pub fn open_aqhub(app: AppHandle) -> Result<(), String> {
-    open_url(&app, &aqhub_url("/board.html")?)
+    // Control home is index.html — never default-open the task board.
+    open_url(&app, &aqhub_url("/index.html")?)
 }
 
 #[tauri::command]
@@ -33,6 +34,14 @@ pub fn open_aqhub_path(app: AppHandle, path: String) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::aqhub_url;
+
+    #[test]
+    fn home_url_is_index_not_board() {
+        assert_eq!(
+            aqhub_url("/index.html").unwrap(),
+            "http://127.0.0.1:8766/index.html"
+        );
+    }
 
     #[test]
     fn eisenhower_url() {
