@@ -8,12 +8,15 @@
 
   var STORAGE_KEY = 'aqhub.activeThemeCache';
   var LAYOUT_LINK_ID = 'aq-theme-layout-module';
+  var LAYOUT_LINK_ATTR = 'data-aq-layout-module';
   var DOCK_ID = 'aq-chrome-dock';
   var SOFT_RAIL_ID = 'aq-soft-rail';
   var SOFT_ASIDE_ID = 'aq-soft-aside';
   var SOFT_ANALYTICS_ID = 'aq-soft-analytics';
   var appliedId = null;
   var softDnDInstalled = false;
+  /** @type {{selector:string,classes:string[]}[]} */
+  var appliedClassEntries = [];
   var DENSITY_MULT = { compact: 0.85, comfortable: 1, spacious: 1.2 };
 
   /** Built-in shell / UI Kit presets */
@@ -122,19 +125,46 @@
     return base + s;
   }
 
-  function ensureLayoutStylesheet(href) {
-    var existing = document.getElementById(LAYOUT_LINK_ID);
-    if (!href) {
-      if (existing && existing.parentNode) existing.parentNode.removeChild(existing);
+  function clearLayoutStylesheets() {
+    document.querySelectorAll('link[' + LAYOUT_LINK_ATTR + ']').forEach(function (el) {
+      if (el.parentNode) el.parentNode.removeChild(el);
+    });
+    var legacy = document.getElementById(LAYOUT_LINK_ID);
+    if (legacy && legacy.parentNode && !legacy.hasAttribute(LAYOUT_LINK_ATTR)) {
+      legacy.parentNode.removeChild(legacy);
+    }
+  }
+
+  function currentLayoutHrefs() {
+    var nodes = document.querySelectorAll('link[' + LAYOUT_LINK_ATTR + ']');
+    if (nodes.length) {
+      return Array.prototype.map.call(nodes, function (n) { return n.getAttribute('href') || ''; });
+    }
+    var legacy = document.getElementById(LAYOUT_LINK_ID);
+    return legacy ? [legacy.getAttribute('href') || ''] : [];
+  }
+
+  /** Load every declared cssModules entry (order preserved). */
+  function ensureLayoutStylesheets(hrefs) {
+    var wanted = (hrefs || []).map(function (h) { return String(h || '').trim(); }).filter(Boolean);
+    var current = currentLayoutHrefs();
+    if (current.length === wanted.length && current.every(function (h, i) { return h === wanted[i]; })) {
       return;
     }
-    if (existing && existing.getAttribute('href') === href) return;
-    if (existing && existing.parentNode) existing.parentNode.removeChild(existing);
-    var link = document.createElement('link');
-    link.id = LAYOUT_LINK_ID;
-    link.rel = 'stylesheet';
-    link.href = href;
-    document.head.appendChild(link);
+    clearLayoutStylesheets();
+    wanted.forEach(function (href, i) {
+      var link = document.createElement('link');
+      if (i === 0) link.id = LAYOUT_LINK_ID;
+      link.setAttribute(LAYOUT_LINK_ATTR, String(i));
+      link.rel = 'stylesheet';
+      link.href = href;
+      document.head.appendChild(link);
+    });
+  }
+
+  /** @deprecated single-href helper — prefer ensureLayoutStylesheets */
+  function ensureLayoutStylesheet(href) {
+    ensureLayoutStylesheets(href ? [href] : []);
   }
 
   function ensureSharedLayoutsCss(base) {
@@ -146,7 +176,21 @@
     document.head.appendChild(shared);
   }
 
+  function clearAppliedClassMap() {
+    appliedClassEntries.forEach(function (entry) {
+      var nodes;
+      try { nodes = document.querySelectorAll(entry.selector); } catch (e0) { return; }
+      for (var i = 0; i < nodes.length; i++) {
+        for (var j = 0; j < entry.classes.length; j++) {
+          try { nodes[i].classList.remove(entry.classes[j]); } catch (e1) {}
+        }
+      }
+    });
+    appliedClassEntries = [];
+  }
+
   function applyClassMap(classMap) {
+    clearAppliedClassMap();
     if (!classMap || typeof classMap !== 'object') return;
     Object.keys(classMap).forEach(function (selector) {
       var cls = classMap[selector];
@@ -154,6 +198,8 @@
       var nodes;
       try { nodes = document.querySelectorAll(selector); } catch (e1) { return; }
       var parts = String(cls).split(/\s+/).filter(Boolean);
+      if (!parts.length) return;
+      appliedClassEntries.push({ selector: selector, classes: parts.slice() });
       for (var i = 0; i < nodes.length; i++) {
         for (var j = 0; j < parts.length; j++) {
           try { nodes[i].classList.add(parts[j]); } catch (e2) {}
@@ -516,7 +562,9 @@
     var base = resolveStudioBase();
     ensureSharedLayoutsCss(base);
     var modules = c.cssModules || [];
-    ensureLayoutStylesheet(modules.length ? normalizeModuleHref(modules[0], base) : '');
+    ensureLayoutStylesheets(modules.map(function (mod) {
+      return normalizeModuleHref(mod, base);
+    }));
     remountChrome(c, theme);
     return c;
   }
@@ -748,7 +796,7 @@
     remountChrome: function (theme) { return applyChrome(theme || {}); },
     shellPresets: SHELL_PRESETS,
     syncSoftAnalytics: syncSoftAnalytics,
-    version: '1.4.0-ui-kit'
+    version: '1.4.1-ui-kit'
   };
 
   if (!optsNoAuto()) {

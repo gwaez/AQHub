@@ -69,6 +69,8 @@ body{color:var(--text);font-family:"IBM Plex Sans Arabic",system-ui,sans-serif;b
 .card:hover{border-color:rgba(34,211,238,.35)}
 .card.dragging{opacity:.35}
 .card .title{font-size:.8rem;font-weight:650;line-height:1.25;margin:0 0 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* Soft-UI-only card chrome — hidden unless soft-ui-interactive shell is active */
+.card .prog,.card .soft-foot{display:none}
 .meta{display:flex;flex-wrap:wrap;gap:4px;align-items:center}
 .tag{font-size:.62rem;padding:1px 6px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
 .tag.src{color:#a5f3fc}.tag.bot{color:#fde68a;border-color:rgba(251,191,36,.35)}
@@ -335,7 +337,7 @@ function renderNotifs(){ const b=$('notifBadge'); if(unread>0){b.hidden=false;b.
   list.innerHTML=notifications.map(n=>'<div class="note"><div class="t">'+esc(n.title)+'</div><div class="d">'+esc(n.detail||'')+'</div></div>').join('') }
 function normalize(t){
   const status=['backlog','todo','doing','blocked','done'].includes(t.status)?t.status:(t.status==='in_progress'?'doing':'todo');
-  return {id:t.id,title:t.title||'',status,priority:t.priority||'medium',source:t.source||'manual',sourceRef:t.sourceRef||t.source_ref||'',entryId:t.entryId||t.entryID||'',tags:t.tags||[],notes:t.notes||'',boxNote:t.boxNote||'',botAction:t.botAction||'none',botInstruction:t.botInstruction||'',comments:Array.isArray(t.comments)?t.comments:[],suggestedReply:t.suggestedReply||'',due:t.due||null,assignee:t.assignee||'',checklist:Array.isArray(t.checklist)?t.checklist:[],progress:typeof t.progress==='number'?t.progress:0,createdAt:t.createdAt||null,updatedAt:t.updatedAt||null,createdBy:t.createdBy||'',fromEmail:t.fromEmail||'',crmUrl:t.crmUrl||'',sourceUrl:t.sourceUrl||'',chat:Array.isArray(t.chat)?t.chat:[],timeline:Array.isArray(t.timeline)?t.timeline:[],pendingSend:t.pendingSend||null,pendingTrash:!!t.pendingTrash,mailClass:t.mailClass||null};
+  return {id:t.id,title:t.title||'',status,priority:t.priority||'medium',source:t.source||'manual',sourceRef:t.sourceRef||t.source_ref||'',entryId:t.entryId||t.entryID||'',tags:t.tags||[],notes:t.notes||'',boxNote:t.boxNote||'',botAction:t.botAction||'none',botInstruction:t.botInstruction||'',comments:Array.isArray(t.comments)?t.comments:[],suggestedReply:t.suggestedReply||'',due:t.due||null,assignee:t.assignee||'',checklist:Array.isArray(t.checklist)?t.checklist:[],progress:(()=>{ if(t.progress==null||t.progress==='') return null; const n=Number(t.progress); return Number.isFinite(n)?n:null; })(),createdAt:t.createdAt||null,updatedAt:t.updatedAt||null,createdBy:t.createdBy||'',fromEmail:t.fromEmail||'',crmUrl:t.crmUrl||'',sourceUrl:t.sourceUrl||'',chat:Array.isArray(t.chat)?t.chat:[],timeline:Array.isArray(t.timeline)?t.timeline:[],pendingSend:t.pendingSend||null,pendingTrash:!!t.pendingTrash,mailClass:t.mailClass||null};
 }
 async function api(path,opts){const r=await fetch(path,opts); if(!r.ok) throw new Error(await r.text()||('HTTP '+r.status)); return r}
 async function reload(silent){
@@ -538,10 +540,16 @@ function cyclePriority(id,e){e.stopPropagation(); const t=state.tasks.find(x=>x.
 async function openSource(id,e){ if(e) e.stopPropagation(); const t=state.tasks.find(x=>x.id===id); if(!t) return;
   try{ const r=await api('/api/open',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:'email',entryId:t.entryId||'',query:t.sourceRef||t.title})}); const j=await r.json(); if(j.ok){notify('done','اتفتح المصدر',''); if(j.entryId&&!t.entryId){t.entryId=j.entryId;markDirty(true)}} else notify('hot','ما اتفتحش',j.error||'')}catch(err){notify('hot','فشل',err.message||err)} }
 function moveTask(id,status){ const t=state.tasks.find(x=>x.id===id); if(!t||t.status===status) return; const prev=t.status; t.status=status; if(status==='done') t.progress=100; t.updatedAt=nowIso(); markDirty(true); render(); notify(status==='done'?'done':'move',status==='done'?'خلصت ✅':prev+' → '+status,t.title) }
+function cardProgressPct(t){
+  const raw=t.progress;
+  const n=Number(raw);
+  if(raw!=null&&raw!==''&&Number.isFinite(n)) return Math.max(0,Math.min(100,n));
+  return t.status==='done'?100:t.status==='doing'?55:18;
+}
 function cardHTML(t){
   const bot=t.botAction&&t.botAction!=='none'?`<span class="tag bot">${esc(t.botAction)}</span>`:'';
   const canOpen=t.source==='email'||t.entryId||t.sourceRef;
-  const pct=Math.max(0,Math.min(100,Number(t.progress)|| (t.status==='done'?100:t.status==='doing'?55:18)));
+  const pct=cardProgressPct(t);
   return `<div class="meta"><span class="tag cat src">${esc(t.source||'task')}</span>${bot}</div>
     <div class="title" data-room="1" title="${esc(t.title)}">${esc(t.title)}</div>
     <div class="prog" aria-label="progress ${pct}%"><i style="--p:${pct}%"></i><b>${pct}%</b></div>
